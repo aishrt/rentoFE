@@ -20,23 +20,23 @@ cp .env.example .env.local   # VITE_API_URL=http://localhost:4000
 npm run dev                  # http://localhost:5173
 ```
 
-| Page | URL |
-|---|---|
-| Home | `/` |
-| Log in | `/login` |
-| Staff log-in | `/admin/login` |
-| Staff portal (admin and support only) | `/admin` |
+| Page                                  | URL            |
+| ------------------------------------- | -------------- |
+| Home                                  | `/`            |
+| Log in                                | `/login`       |
+| Staff log-in                          | `/admin/login` |
+| Staff portal (admin and support only) | `/admin`       |
 
 Pages linked from the header and footer that later milestones build (Browse cars, How it works, legal pages and so on) show a "Coming soon" page. The list is in `src/routes/public/planned-pages.ts`; remove an entry when its real page is added.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Dev server with hot reload |
-| `npm run build` / `npm run preview` | Production build to `dist/` / serve it locally |
-| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library) |
-| `npm run format` | Prettier |
+| Command                                           | What it does                                   |
+| ------------------------------------------------- | ---------------------------------------------- |
+| `npm run dev`                                     | Dev server with hot reload                     |
+| `npm run build` / `npm run preview`               | Production build to `dist/` / serve it locally |
+| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)              |
+| `npm run format`                                  | Prettier                                       |
 
 ## Folder map
 
@@ -49,8 +49,9 @@ src/
     ui/                 Design system: Button, IconButton, Input, Field, PasswordInput, Card, Badge,
                         IconBadge, Alert, EmptyState, CheckList, Divider, Skeleton, Spinner, Sheet,
                         DropdownMenu, SegmentedTabs, StatCard, Avatar
-    motion/             MotionProvider, presets (fadeUp, swapUp, heroTimeline), Reveal, Stagger,
-                        CountUp, CheckDraw
+    motion/             MotionProvider, presets (fadeUp, swapUp, heroTimeline, staggerIndex), Reveal,
+                        Stagger, CheckDraw, and the React Bits ports: BlurText, Counter, TiltedCard,
+                        Magnet, trackSpotlight
     layout/             Site header and footer, auth and public layouts, Container, PageMeta
     brand/              Logo (placeholder until the client's logo arrives), landscape art
   api/                  Typed fetch client (cookies, one shared token refresh) and API types
@@ -64,4 +65,5 @@ src/
 - **[UI_SYSTEM.md](UI_SYSTEM.md)** documents the tokens, components and motion presets, with usage examples. Read it before building a new screen.
 - Tokens from plan §12.2: pounamu green, ivory, ink and champagne gold; Fraunces for headlines and Inter for text, self-hosted. `design-system.test.ts` rejects hardcoded colours, type sizes, radii and off-token durations in components.
 - Motion (`motion/react`) loads through `LazyMotion`, with its features in a separate chunk. Only `transform` and `opacity` are animated, and `prefers-reduced-motion` turns movement off. Page changes cross-fade with the View Transitions API.
+- A few effects are adapted from [React Bits](https://reactbits.dev) (spotlight cards, tilt, magnet, blur-in headline, shiny and gradient text, rolling counter, staggered menus). Only components built on Motion or CSS are used, because the plan allows no GSAP (§12.4). UI_SYSTEM.md lists each one and what changed.
 - The homepage's first load is about 186 KB of gzipped JavaScript. The plan's budget is 170 KB (§12.5), checked in CI once the pipelines are set up. The biggest single item that could go is tailwind-merge (8.6 KB).

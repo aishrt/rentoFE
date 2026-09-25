@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CountUp } from '@/components/motion/count-up';
+import { Counter } from '@/components/motion/counter';
 import { cn } from '@/lib/cn';
 import { Card } from './card';
 import { IconBadge } from './icon-badge';
@@ -20,7 +20,7 @@ export function StatCard({ label, icon: Icon, value, format, hint, className }: 
   const pending = value === null;
 
   return (
-    <Card className={cn('flex flex-col gap-4 p-5', className)}>
+    <Card spotlight className={cn('flex flex-col gap-4 p-5', className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-muted">{label}</p>
         <IconBadge size="sm" tone={pending ? 'muted' : 'soft'}>
@@ -29,7 +29,7 @@ export function StatCard({ label, icon: Icon, value, format, hint, className }: 
       </div>
       <div>
         <p className="headline text-stat font-medium text-ink">
-          {pending ? <span aria-label="Not tracked yet">—</span> : <CountUp value={value} format={format} />}
+          {pending ? <span aria-label="Not tracked yet">—</span> : <Counter value={value} format={format} />}
         </p>
         {hint && <p className="mt-2 text-xs text-muted">{hint}</p>}
       </div>

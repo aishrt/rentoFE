@@ -13,7 +13,7 @@ These are checked by tests, so a pull request that breaks them fails.
 
 And by convention:
 
-- **Animate only `transform` and `opacity`** (in Tailwind v4, the `translate`, `scale` and `rotate` properties count as transform). When you add `active:scale-*` or `hover:translate-*`, include `scale` or `translate` in the element's transition list, or the change snaps instead of easing.
+- **Animate only `transform` and `opacity`** (in Tailwind v4, the `translate`, `scale` and `rotate` properties count as transform). When you add `active:scale-*` or `hover:translate-*`, include `scale` or `translate` in the element's transition list, or the change snaps instead of easing. The one exception is `BlurText`, which also animates a small `filter: blur()` on a few headline words, once.
 - **Respect reduced motion.** The global rule in `globals.css` shortens every CSS animation and transition, and `MotionConfig reducedMotion="user"` turns Motion's movement into fades. Anything else, such as SVG path drawing, must check `useReducedMotion()` (see `CheckDraw`).
 - **Blur only on sticky bars** (header, booking bar). It is expensive on budget phones.
 - **Touch targets are at least 44 × 44 px.**
@@ -96,9 +96,12 @@ In [`src/components/ui`](src/components/ui). All take `className`. It is merged 
 <Button asChild><Link to="/cars">Browse cars</Link></Button>
 
 <IconButton label="Open menu"><Menu aria-hidden="true" /></IconButton>   // label is required
+<IconButton label="Refresh figures" tooltip="top">…</IconButton>        // bottom (default) · top · none
 ```
 
-Buttons press to 98%, icon buttons to 94%. The gold variant has a sheen on hover; keep it to one per page.
+Buttons press to 98%, icon buttons to 94%. The gold variant has a sheen on hover; keep it to one per page, and wrap it in `Magnet` so it drifts towards the mouse.
+
+Icon buttons show their label as a tooltip: after half a second of hover, or straight away on keyboard focus. It's pure CSS and only rendered while shown, so it never widens the page. Buttons inside an input (`size="inset"`) put it above. Screen readers skip it, because the button's `aria-label` already names it.
 
 Arrow icons nudge towards where their link goes:
 
@@ -119,7 +122,11 @@ Arrow icons nudge towards where their link goes:
 <Card asChild variant="flat" className="p-6">   // classes on the Card, not the child
   <li>…</li>
 </Card>
+
+<Card spotlight>…</Card>                    // a soft light follows the mouse (champagne on `tinted`)
 ```
+
+Use `spotlight` on feature and figure cards (the How it works steps, dashboard figures), not on forms. For an element that isn't a Card, such as the destination tiles, add the `spotlight` class and `onPointerMove={trackSpotlight}`.
 
 ### Forms
 
@@ -131,7 +138,7 @@ Arrow icons nudge towards where their link goes:
 <Input leadingIcon={<MapPin />} trailing={<IconButton size="inset" label="Clear">…</IconButton>} />
 ```
 
-`Field` wires up the label, description, error and ARIA links, and the control shakes once when an error appears. Pass `trailing` on every render, even when hidden, so the input isn't remounted. Labels sit above inputs (no floating labels).
+`Field` wires up the label, description, error and ARIA links, and the control shakes once when an error appears. While the input has focus, its label and leading icon turn green. Pass `trailing` on every render, even when hidden, so the input isn't remounted. Labels sit above inputs (no floating labels).
 
 ### Feedback and status
 
@@ -139,7 +146,7 @@ Arrow icons nudge towards where their link goes:
 <Alert variant="danger" title="We couldn't load the figures">…</Alert>
 <Badge variant="gold">Instant Book</Badge>
 <Skeleton className="h-4 w-40" />                       // match the size of what loads
-<StatCard label="Active hosts" icon={KeyRound} value={12} format={formatNumber} />
+<StatCard label="Active hosts" icon={KeyRound} value={12} format={formatNumber} />  // digits roll in
 
 <EmptyState
   visual={<IconBadge size="xl"><WifiOff /></IconBadge>}
@@ -178,8 +185,14 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 
 <Reveal>…</Reveal>                               // fades up once on scroll into view
 <Stagger as="ul"><StaggerItem as="li" index={i}>…</StaggerItem></Stagger>
-<CountUp value={1234} format={formatNumber} />
 <CheckDraw className="size-3.5" delay={0.2} />
+
+// Adapted from React Bits (see below)
+<h1 className="headline …"><BlurText text={headline} delay={0.12} /></h1>   // words rise and come into focus
+<Counter value={1234} format={formatNumber} />   // digits roll like an odometer
+<TiltedCard><Card spotlight>…</Card></TiltedCard> // decorative panels only
+<Magnet><Button variant="gold" asChild>…</Button></Magnet>
+<li className="stagger-in" style={staggerIndex(i)}>…</li>   // CSS stagger, e.g. menu links in a sheet
 ```
 
 ### CSS utilities ([`src/styles/globals.css`](src/styles/globals.css))
@@ -193,20 +206,46 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | `parallax` / `parallax-exit`                                                 | Desktop scroll parallax on CSS scroll timelines, with no JavaScript. `parallax-exit` is for heroes at the top of the page |
 | `skeleton`, `glass`, `headline`, `eyebrow`                                   | Loading shimmer, sticky-bar blur, display font, small labels                                                              |
 | `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-breathe`, `-bar-in`, … | Keyframe animations                                                                                                       |
+| `spotlight` / `spotlight-on-dark`                                            | A light that follows the mouse (driven by `trackSpotlight`; Cards use the `spotlight` prop)                               |
+| `shiny-text`                                                                 | A glint crosses gold text every few seconds. Short labels on dark backgrounds only; keep `text-gold` on the element       |
+| `gradient-text`                                                              | Slow green-to-bronze fill for one large figure (the 404); keep a text colour on the element                               |
+| `stagger-in`                                                                 | Fade up in turn, with `style={staggerIndex(i)}`; first 6 items only                                                       |
+| `tilt`, `magnet`, `tooltip`                                                  | Used by `TiltedCard`, `Magnet` and `IconButton`; you don't need to add them yourself                                      |
 
 ### Where motion is used
 
-| Where                        | What                                                                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Page changes                 | 320 ms cross-fade (View Transitions). The site header and staff frame have their own `view-transition-name`, so they stay still |
-| Home hero                    | Landscape drifts; headline rises word by word; search panel glides up; landscape falls behind on scroll (desktop)               |
-| Sections                     | Fade up once; lists stagger (first 6 items)                                                                                     |
-| Destination tiles            | Lift on hover, press in, ridges drift with the scroll (desktop)                                                                 |
-| Check-lists, listing preview | Checks draw in, the progress bar fills                                                                                          |
-| Forms                        | Focus ring, shake on error, clear button fades in                                                                               |
-| Menus                        | Pop in from 96%; account chevron turns; staff sidebar's gold bar grows in                                                       |
-| Dashboards                   | Figures count up; tab indicator slides                                                                                          |
-| Loading                      | Skeleton shimmer; brand mark breathes on first load                                                                             |
+| Where              | What                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Page changes       | The old page fades out (200 ms) and the new one rises 8 px into place (320 ms), with View Transitions. The site header and staff frame have their own `view-transition-name`, so they stay still |
+| Home hero          | Landscape drifts; a glint crosses the eyebrow; headline rises and comes into focus word by word; search panel glides up; landscape falls behind on scroll (desktop)                              |
+| Sections           | Fade up once; lists stagger (first 6 items)                                                                                                                                                      |
+| Destination tiles  | Lift on hover with a champagne spotlight, press in, ridges drift with the scroll (desktop)                                                                                                       |
+| How it works steps | Green spotlight on hover                                                                                                                                                                         |
+| Host section       | Listing preview tilts towards the mouse with a spotlight; the gold button drifts towards it; checks draw in, the progress bar fills                                                              |
+| Forms              | Focus ring, label and icon turn green on focus, shake on error, clear button fades in, password eye cross-fades                                                                                  |
+| Menus and sheets   | Dropdowns pop in from 96% and highlighted icons turn green; account chevron turns; sheet links fade up in turn; the close ✕ turns on hover; staff sidebar's gold bar grows in                    |
+| Icon buttons       | Tooltip after half a second of hover, or at once on keyboard focus                                                                                                                               |
+| Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                |
+| Log-in pages       | Form fades up; the side panel's headline comes into focus word by word                                                                                                                           |
+| 404                | The numeral's green-to-bronze gradient drifts slowly                                                                                                                                             |
+| Loading            | Skeleton shimmer; brand mark breathes on first load; the account menu fades in over its placeholder                                                                                              |
+
+### From React Bits
+
+These effects are adapted from [React Bits](https://reactbits.dev). Its components are copied into a project and edited, not installed as a package. Each port was rebuilt to follow these rules: tokens instead of hard-coded colours and timings, `m.*` components for `LazyMotion strict`, and no re-renders while following the mouse. Wherever possible the work moved into CSS, so all of this adds about 0.5 KB to the homepage's gzipped JavaScript. Pointer effects only run with a mouse or trackpad, and everything respects reduced motion.
+
+| React Bits                                                          | Here                                   | What changed                                                                                  |
+| ------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [SpotlightCard](https://reactbits.dev/components/spotlight-card)    | `spotlight` utility, `Card spotlight`  | CSS variables instead of React state on every mouse move; brand-green and champagne light     |
+| [TiltedCard](https://reactbits.dev/components/tilted-card)          | `TiltedCard`                           | Wraps any content instead of an image; the browser eases the tilt, with no spring loop        |
+| [Magnet](https://reactbits.dev/animations/magnet)                   | `Magnet`                               | Pull capped at 8 px; updates once per frame; off for touch and reduced motion                 |
+| [BlurText](https://reactbits.dev/text-animations/blur-text)         | `BlurText`                             | Uses the hero timeline and tokens; renders words only, so the heading keeps its id and name   |
+| [ShinyText](https://reactbits.dev/text-animations/shiny-text)       | `shiny-text` utility                   | A CSS animation instead of a per-frame JavaScript loop; gold and ivory                        |
+| [GradientText](https://reactbits.dev/text-animations/gradient-text) | `gradient-text` utility                | CSS only; primary and gold-text, which both pass AA on ivory                                  |
+| [Counter](https://reactbits.dev/components/counter)                 | `Counter` (replaced `CountUp`)         | Takes a formatter, so separators and currency stay still; screen readers hear the final value |
+| [AnimatedList](https://reactbits.dev/components/animated-list)      | `stagger-in` utility, `staggerIndex()` | Just the entrance, in CSS                                                                     |
+
+Not used, and why: anything built on GSAP (SplitText, ScrollReveal, AnimatedContent, CardNav, PillNav and others) because plan §12.4 allows one animation library, Motion. The WebGL backgrounds and cursors (Aurora, Particles, SplashCursor and others) are too heavy for the speed budget and too loud for the brand. Before adding another React Bits component, check it runs on Motion or CSS.
 
 ## Adding a token
 

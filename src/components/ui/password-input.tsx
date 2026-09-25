@@ -23,7 +23,12 @@ export function PasswordInput(props: PasswordInputProps) {
           disabled={props.disabled}
           onClick={() => setVisible((current) => !current)}
         >
-          {visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+          {/* The new icon fades in as the two swap. */}
+          {visible ? (
+            <EyeOff aria-hidden="true" className="animate-fade-in" />
+          ) : (
+            <Eye aria-hidden="true" className="animate-fade-in" />
+          )}
         </IconButton>
       }
     />

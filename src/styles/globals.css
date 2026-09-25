@@ -441,14 +441,255 @@
 }
 
 /*
- * Page transitions through the View Transitions API (plan §12.4): a short cross-fade. The site header and
- * the staff portal frame have their own `view-transition-name`, so they hold still while the page changes.
+ * Effects adapted from React Bits (reactbits.dev), rebuilt on CSS so they cost almost no JavaScript. The
+ * components that drive them live in src/components/motion; UI_SYSTEM.md lists what came from where.
+ */
+
+/*
+ * A soft light that follows the pointer across a card (React Bits' SpotlightCard). `trackSpotlight` writes
+ * the pointer position to --spotlight-x and --spotlight-y without a re-render, and only the light's opacity
+ * is transitioned. The light sits above the card's background and below its content.
+ */
+@utility spotlight {
+  position: relative;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-image: radial-gradient(
+      24rem circle at var(--spotlight-x, 50%) var(--spotlight-y, 0%),
+      var(--spotlight-color, rgb(14 59 50 / 0.07)),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 320ms var(--ease-out);
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    &:hover::before {
+      opacity: 1;
+    }
+  }
+}
+
+/* A warm champagne light, for spotlight cards on dark or green backgrounds. */
+@utility spotlight-on-dark {
+  --spotlight-color: rgb(200 169 106 / 0.18);
+}
+
+/*
+ * Tilts towards the pointer in 3D (React Bits' TiltedCard). `TiltedCard` writes the angles to --tilt-x and
+ * --tilt-y and the browser eases between them: quickly while the pointer moves, slowly as it settles back.
+ */
+@utility tilt {
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    transform: perspective(60rem) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition:
+      transform 700ms var(--ease-out),
+      scale 700ms var(--ease-out);
+
+    &:hover {
+      scale: 1.02;
+      transition-duration: 320ms;
+    }
+  }
+}
+
+/* Drifts a few pixels towards the pointer as it comes close (React Bits' Magnet). Driven by `Magnet`. */
+@utility magnet {
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    translate: var(--magnet-x, 0) var(--magnet-y, 0);
+    transition: translate 320ms var(--ease-out);
+  }
+}
+
+@keyframes shine {
+  from {
+    background-position: 100% 0;
+  }
+  40%,
+  to {
+    background-position: 0% 0;
+  }
+}
+
+/*
+ * A band of light that crosses gold text every few seconds (React Bits' ShinyText), for a short label on a
+ * dark background. Keep `text-gold` on the element: it is the colour wherever the effect is unavailable.
+ */
+@utility shiny-text {
+  width: fit-content;
+  background-image: linear-gradient(
+    110deg,
+    var(--color-gold) 40%,
+    var(--color-canvas) 50%,
+    var(--color-gold) 60%
+  );
+  background-size: 250% 100%;
+  background-position: 0% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 6s var(--ease-in-out) 1.2s infinite;
+
+  @media (forced-colors: active) {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+@keyframes gradient-pan {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+/*
+ * Text filled with a slow green-to-bronze gradient (React Bits' GradientText), for one large figure such as
+ * the 404. Both colours pass AA on ivory. Keep a text colour on the element as the fallback.
+ */
+@utility gradient-text {
+  width: fit-content;
+  background-image: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-gold-text),
+    var(--color-primary)
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-pan 8s var(--ease-in-out) infinite alternate;
+
+  @media (forced-colors: active) {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Items that fade up one after another as they appear (React Bits' AnimatedList), such as the links in a menu
+ * sheet. Give each item its place with `staggerIndex(index)`; only the first six wait their turn.
+ */
+@utility stagger-in {
+  animation: stagger-in 320ms var(--ease-out) both;
+  animation-delay: calc(min(var(--stagger-index, 0), 5) * 60ms);
+}
+
+/*
+ * The label of an icon button, shown under or above it on hover (after a short pause) and straight away on
+ * keyboard focus. It is only rendered while shown, so it can never widen the page. The button keeps its
+ * aria-label, so the tooltip itself is hidden from screen readers.
+ */
+@utility tooltip {
+  position: absolute;
+  left: 50%;
+  z-index: 50;
+  display: none;
+  width: max-content;
+  max-width: 12rem;
+  translate: -50% 0;
+  border-radius: var(--radius-inner);
+  background-color: var(--color-ink);
+  padding: 0.25rem 0.5rem;
+  color: var(--color-canvas);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.96;
+  transition:
+    opacity 120ms var(--ease-out),
+    scale 120ms var(--ease-out),
+    display 120ms allow-discrete;
+
+  :focus-visible > & {
+    display: block;
+    opacity: 1;
+    scale: 1;
+
+    @starting-style {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  @media (hover: hover) {
+    :hover > & {
+      display: block;
+      opacity: 1;
+      scale: 1;
+      transition-delay: 500ms;
+
+      @starting-style {
+        opacity: 0;
+        scale: 0.96;
+      }
+    }
+  }
+}
+
+@utility tooltip-bottom {
+  top: calc(100% + 0.375rem);
+}
+
+@utility tooltip-top {
+  bottom: calc(100% + 0.375rem);
+}
+
+/*
+ * Page transitions through the View Transitions API (plan §12.4): the old page fades out and the new one
+ * rises gently into place. The site header and the staff portal frame have their own
+ * `view-transition-name`, so they hold still while the page changes.
  */
 ::view-transition-group(*),
 ::view-transition-old(*),
 ::view-transition-new(*) {
   animation-duration: 320ms;
   animation-timing-function: var(--ease-in-out);
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+::view-transition-old(root) {
+  animation: page-out 200ms var(--ease-in-out) both;
+}
+
+::view-transition-new(root) {
+  animation: page-in 320ms var(--ease-out) both;
 }
 
 @media (prefers-reduced-motion: no-preference) {

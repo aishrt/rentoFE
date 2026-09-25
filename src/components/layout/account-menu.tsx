@@ -18,8 +18,9 @@ export function AccountMenu({ user }: { user: SessionUser }) {
 
   return (
     <DropdownMenu>
+      {/* Fades in over the placeholder it replaces once the session and this menu have loaded. */}
       <DropdownMenuTrigger
-        className="flex h-11 items-center gap-2 rounded-full border border-line bg-surface py-1 pr-3 pl-1 transition-[border-color,scale] duration-120 ease-out hover:border-ink/25 active:scale-98 data-[state=open]:border-ink/25"
+        className="flex h-11 animate-fade-in items-center gap-2 rounded-full border border-line bg-surface py-1 pr-3 pl-1 transition-[border-color,scale] duration-120 ease-out hover:border-ink/25 active:scale-98 data-[state=open]:border-ink/25"
         aria-label={`Account menu for ${user.firstName}`}
       >
         <Avatar initials={initials(user)} />

@@ -81,4 +81,6 @@ export const motion = {
   wordStagger: 0.05,
   /** Fade-up distances in px: `sm` for small elements, `md` for scroll reveals, `lg` for panels. */
   travel: { sm: 12, md: 20, lg: 40 },
+  /** Blur in px that headline words come into focus from (BlurText). */
+  blur: 8,
 } as const;

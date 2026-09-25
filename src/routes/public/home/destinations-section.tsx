@@ -3,6 +3,7 @@ import { RidgeLines } from '@/components/brand/ridge-lines';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
+import { trackSpotlight } from '@/components/motion/spotlight';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { cn } from '@/lib/cn';
 import { destinations } from './home-content';
@@ -42,12 +43,14 @@ export function DestinationsSection({ onChoose }: DestinationsSectionProps) {
                 index={index}
                 className={cn(featured && 'sm:col-span-2 lg:col-span-1 lg:row-span-2')}
               >
+                {/* A warm light follows the mouse across the tile as it lifts (spotlight). */}
                 <button
                   type="button"
                   onClick={() => onChoose(destination.name)}
+                  onPointerMove={trackSpotlight}
                   aria-label={`Search cars in ${destination.name}`}
                   className={cn(
-                    'lift-card group flex h-full w-full flex-col rounded-card p-6 text-left text-canvas active:scale-98',
+                    'lift-card spotlight spotlight-on-dark group flex h-full w-full flex-col rounded-card p-6 text-left text-canvas active:scale-98',
                     featured ? 'min-h-72 lg:min-h-[30rem] lg:p-8' : 'min-h-56',
                     destination.tone,
                   )}

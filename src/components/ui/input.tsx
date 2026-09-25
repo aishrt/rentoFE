@@ -34,11 +34,11 @@ export function Input({ className, id, leadingIcon, trailing, ...props }: InputP
 
   if (!leadingIcon && !trailing) return input;
   return (
-    <div className="relative">
+    <div className="group/input relative">
       {leadingIcon && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted [&_svg]:size-4.5"
+          className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted transition-colors duration-120 group-has-[input:focus-visible]/input:text-primary [&_svg]:size-4.5"
         >
           {leadingIcon}
         </span>

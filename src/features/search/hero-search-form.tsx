@@ -19,6 +19,8 @@ export interface SearchPrefill {
 }
 
 const dateInputClasses = 'min-w-0 appearance-none [&::-webkit-date-and-time-value]:text-left';
+// Time inputs carry a clock button and "AM"/"PM", so they get a little less padding to fit their column.
+const timeInputClasses = cn(dateInputClasses, 'px-3');
 
 export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill; className?: string }) {
   const navigate = useNavigate();
@@ -94,19 +96,19 @@ export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
             <fieldset className="grid min-w-0 gap-1.5">
               <legend className="mb-1.5 text-sm font-medium">Pick-up</legend>
-              <div className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-start gap-2">
                 <Field label="Pick-up date" hideLabel error={errors.pickupDate?.message}>
                   <Input type="date" min={today} className={dateInputClasses} {...register('pickupDate')} />
                 </Field>
                 <Field label="Pick-up time" hideLabel error={errors.pickupTime?.message}>
-                  <Input type="time" step={900} className={dateInputClasses} {...register('pickupTime')} />
+                  <Input type="time" step={900} className={timeInputClasses} {...register('pickupTime')} />
                 </Field>
               </div>
             </fieldset>
 
             <fieldset className="grid min-w-0 gap-1.5">
               <legend className="mb-1.5 text-sm font-medium">Return</legend>
-              <div className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-start gap-2">
                 <Field label="Return date" hideLabel error={errors.returnDate?.message}>
                   <Input
                     type="date"
@@ -116,7 +118,7 @@ export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill
                   />
                 </Field>
                 <Field label="Return time" hideLabel error={errors.returnTime?.message}>
-                  <Input type="time" step={900} className={dateInputClasses} {...register('returnTime')} />
+                  <Input type="time" step={900} className={timeInputClasses} {...register('returnTime')} />
                 </Field>
               </div>
             </fieldset>

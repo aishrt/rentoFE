@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import { Logo } from '@/components/brand/logo';
+import { staggerIndex } from '@/components/motion/presets';
 import { Divider } from '@/components/ui/divider';
 import { cn } from '@/lib/cn';
 import { adminNav } from './admin-nav';
@@ -29,9 +30,11 @@ interface AdminSidebarProps {
   /** Called after following a link, so the mobile menu can close. */
   onNavigate?: () => void;
   showLogo?: boolean;
+  /** Fade the groups up one after another as they appear, for the slide-in menu. */
+  staggered?: boolean;
 }
 
-export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: AdminSidebarProps) {
+export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, staggered }: AdminSidebarProps) {
   const t = tones[tone];
 
   return (
@@ -52,7 +55,11 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: Adm
 
       <nav aria-label="Staff portal" className="flex-1 overflow-y-auto px-3 pb-6">
         {adminNav.map((group, groupIndex) => (
-          <div key={group.title ?? groupIndex} className="mt-4 first:mt-2">
+          <div
+            key={group.title ?? groupIndex}
+            className={cn('mt-4 first:mt-2', staggered && 'stagger-in')}
+            style={staggered ? staggerIndex(groupIndex) : undefined}
+          >
             {group.title && <p className={cn('eyebrow mb-1.5 px-3', t.group)}>{group.title}</p>}
             <ul className="grid gap-0.5">
               {group.items.map((item) => {

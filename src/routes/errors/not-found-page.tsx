@@ -9,7 +9,7 @@ export function NotFoundPage() {
     <Container className="flex min-h-[70vh] flex-col items-center justify-center py-20">
       <PageMeta title="Page not found" noindex />
       <EmptyState
-        visual={<p className="headline text-7xl font-medium text-gold-text">404</p>}
+        visual={<p className="headline gradient-text text-7xl font-medium text-gold-text">404</p>}
         title="This road doesn't go anywhere"
         description="The page you're looking for has moved, or never existed."
         actions={

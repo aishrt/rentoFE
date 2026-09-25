@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { staggerIndex } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Divider } from '@/components/ui/divider';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -10,7 +11,10 @@ interface MobileMenuProps {
   signedIn: boolean;
 }
 
-/** The ☰ menu on phones and tablets (plan §12.6). Loaded on first use to keep the homepage light. */
+/**
+ * The ☰ menu on phones and tablets (plan §12.6). Loaded on first use to keep the homepage light. The links
+ * fade up one after another as the sheet slides in.
+ */
 export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
   const close = () => onOpenChange(false);
 
@@ -19,8 +23,8 @@ export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
       <SheetContent title="Menu" side="right">
         <nav aria-label="Main">
           <ul className="grid gap-1">
-            {primaryNav.map((item) => (
-              <li key={item.to}>
+            {primaryNav.map((item, index) => (
+              <li key={item.to} className="stagger-in" style={staggerIndex(index)}>
                 <Link
                   to={item.to}
                   onClick={close}
@@ -33,7 +37,7 @@ export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
           </ul>
         </nav>
         {!signedIn && (
-          <>
+          <div className="stagger-in" style={staggerIndex(primaryNav.length)}>
             <Divider className="my-6" />
             <div className="grid gap-3">
               <Button asChild size="lg" block>
@@ -47,7 +51,7 @@ export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
                 </Link>
               </Button>
             </div>
-          </>
+          </div>
         )}
       </SheetContent>
     </Sheet>

@@ -1,23 +1,23 @@
 import { ArrowRight } from 'lucide-react';
 import { m } from 'motion/react';
-import { Fragment } from 'react';
 import { Link } from 'react-router';
 import { LandscapeArt } from '@/components/brand/landscape-art';
 import { Container } from '@/components/layout/container';
+import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp, heroTimeline } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { HeroSearchForm, type SearchPrefill } from '@/features/search/hero-search-form';
 import { motion } from '@/styles/tokens';
 
-// Animated word by word so the headline wraps naturally (and balanced) at every screen width.
-const HEADLINE_WORDS = 'Rent a car from local owners across New Zealand.'.split(' ');
-const TIMELINE = heroTimeline(HEADLINE_WORDS.length);
+const HEADLINE = 'Rent a car from local owners across New Zealand.';
+const TIMELINE = heroTimeline(HEADLINE.split(' ').length);
 
 /**
- * The cinematic hero (plan §12.4): the landscape drifts slowly, the headline rises in one word after
- * another, then the search panel glides up. On desktop the landscape falls behind as the page scrolls.
- * The spec's proposition and Become a Host prompt sit here (spec §4).
+ * The cinematic hero (plan §12.4): the landscape drifts slowly, the headline rises and comes into focus one
+ * word after another, then the search panel glides up. A glint of light crosses the eyebrow now and then.
+ * On desktop the landscape falls behind as the page scrolls. The spec's proposition and Become a Host
+ * prompt sit here (spec §4).
  */
 export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
   return (
@@ -29,17 +29,11 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
 
       <Container className="grid gap-10 pt-12 pb-14 sm:pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14 lg:pt-20 lg:pb-24 xl:gap-20">
         <div>
-          <m.p className="eyebrow text-gold" {...fadeUp(TIMELINE.eyebrow, motion.travel.sm)}>
+          <m.p className="eyebrow shiny-text text-gold" {...fadeUp(TIMELINE.eyebrow, motion.travel.sm)}>
             Car sharing across Aotearoa
           </m.p>
           <h1 id="hero-heading" className="headline mt-5 text-display font-medium">
-            {HEADLINE_WORDS.map((word, index) => (
-              <Fragment key={index}>
-                <m.span className="inline-block" {...fadeUp(TIMELINE.word(index))}>
-                  {word}
-                </m.span>{' '}
-              </Fragment>
-            ))}
+            <BlurText text={HEADLINE} delay={TIMELINE.word(0)} />
           </h1>
           <m.p className="mt-6 max-w-lg text-lg leading-relaxed text-canvas/80" {...fadeUp(TIMELINE.body)}>
             City runabouts, family SUVs and EVs for the long way round, booked in minutes from people who live

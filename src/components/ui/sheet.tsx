@@ -45,7 +45,10 @@ export function SheetContent({
           </Dialog.Title>
           <Dialog.Close asChild>
             <IconButton label="Close menu">
-              <X aria-hidden="true" />
+              <X
+                aria-hidden="true"
+                className="transition-[rotate] duration-200 ease-out in-[button:hover]:rotate-90"
+              />
             </IconButton>
           </Dialog.Close>
         </div>

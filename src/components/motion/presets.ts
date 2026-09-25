@@ -1,4 +1,5 @@
 import type { MotionProps } from 'motion/react';
+import type { CSSProperties } from 'react';
 import { motion } from '@/styles/tokens';
 
 /*
@@ -6,6 +7,14 @@ import { motion } from '@/styles/tokens';
  *   <m.div {...fadeUp()} />
  * Scroll-triggered versions live in reveal.tsx (Reveal, Stagger).
  */
+
+/**
+ * The place of an item in a CSS `stagger-in` list, for content that appears without Motion (menu links in a
+ * sheet):  <li className="stagger-in" style={staggerIndex(index)}>
+ */
+export function staggerIndex(index: number): CSSProperties {
+  return { '--stagger-index': index } as CSSProperties;
+}
 
 type Entrance = Pick<MotionProps, 'initial' | 'animate' | 'transition'>;
 type Swap = Pick<MotionProps, 'initial' | 'animate' | 'exit' | 'transition'>;

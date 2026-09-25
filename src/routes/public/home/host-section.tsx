@@ -5,7 +5,9 @@ import { RidgeLines } from '@/components/brand/ridge-lines';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { CheckDraw } from '@/components/motion/check-draw';
+import { Magnet } from '@/components/motion/magnet';
 import { Reveal } from '@/components/motion/reveal';
+import { TiltedCard } from '@/components/motion/tilted-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,12 +21,15 @@ const COMPLETED_STEPS = 4;
 const PROGRESS_DELAY = motion.duration.short;
 const FIRST_TICK = PROGRESS_DELAY + motion.duration.medium;
 
-/** An example listing mid-setup. Decorative: the steps are also described in the text beside it. */
+/**
+ * An example listing mid-setup. Decorative: the steps are also described in the text beside it. On desktop
+ * it tilts towards the mouse with a light across it, like a card held up to look at.
+ */
 function ListingPreview() {
   const progress = COMPLETED_STEPS / listingSteps.length;
 
   return (
-    <Card variant="raised" aria-hidden="true" className="relative p-6 text-ink sm:p-7">
+    <Card spotlight variant="raised" aria-hidden="true" className="p-6 text-ink sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="eyebrow text-gold-text">Your listing</p>
@@ -90,12 +95,15 @@ export function HostSection() {
               />
               <CheckList items={hostPoints} tone="dark" className="mt-8" />
               <div className="mt-10 flex flex-wrap gap-3">
-                <Button variant="gold" size="lg" asChild>
-                  <Link to="/become-a-host" viewTransition>
-                    Become a Host
-                    <ArrowRight aria-hidden="true" className="nudge-right" />
-                  </Link>
-                </Button>
+                {/* The page's one gold call to action drifts towards the mouse as it comes near. */}
+                <Magnet>
+                  <Button variant="gold" size="lg" asChild>
+                    <Link to="/become-a-host" viewTransition>
+                      Become a Host
+                      <ArrowRight aria-hidden="true" className="nudge-right" />
+                    </Link>
+                  </Button>
+                </Magnet>
                 <Button variant="outline-light" size="lg" asChild>
                   <Link to="/how-it-works" viewTransition>
                     How hosting works
@@ -105,7 +113,9 @@ export function HostSection() {
             </Reveal>
 
             <Reveal delay={motion.stagger * 2}>
-              <ListingPreview />
+              <TiltedCard>
+                <ListingPreview />
+              </TiltedCard>
             </Reveal>
           </div>
         </div>

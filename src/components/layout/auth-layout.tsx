@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { LandscapeArt } from '@/components/brand/landscape-art';
 import { Logo } from '@/components/brand/logo';
+import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp } from '@/components/motion/presets';
 import { CheckList } from '@/components/ui/check-list';
 import { motion } from '@/styles/tokens';
@@ -68,8 +69,10 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
           className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/30 to-transparent"
         />
         <m.div className="relative mt-auto p-12 xl:p-16" {...fadeUp(motion.stagger * 2)}>
-          <p className="eyebrow text-gold">{copy.eyebrow}</p>
-          <p className="headline mt-4 max-w-md text-title-2 font-medium">{copy.title}</p>
+          <p className="eyebrow shiny-text text-gold">{copy.eyebrow}</p>
+          <p className="headline mt-4 max-w-md text-title-2 font-medium">
+            <BlurText text={copy.title} delay={motion.stagger * 3} />
+          </p>
           <CheckList items={copy.points} tone="dark" className="mt-8" />
         </m.div>
       </aside>

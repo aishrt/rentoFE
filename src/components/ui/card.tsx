@@ -1,6 +1,7 @@
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, PointerEvent } from 'react';
+import { trackSpotlight } from '@/components/motion/spotlight';
 import { cn } from '@/lib/cn';
 
 const cardVariants = cva('', {
@@ -15,8 +16,13 @@ const cardVariants = cva('', {
       /** Translucent panel on dark backgrounds with a light top edge. No blur: that is kept for sticky bars (plan §12.2). */
       tinted: 'rounded-card border border-canvas/15 bg-ink/55 inset-shadow-highlight',
     },
+    spotlight: {
+      true: 'spotlight',
+      false: '',
+    },
   },
-  defaultVariants: { variant: 'elevated' },
+  compoundVariants: [{ variant: 'tinted', spotlight: true, className: 'spotlight-on-dark' }],
+  defaultVariants: { variant: 'elevated', spotlight: false },
 });
 
 type CardProps = ComponentProps<'div'> &
@@ -28,9 +34,26 @@ type CardProps = ComponentProps<'div'> &
     asChild?: boolean;
   };
 
-export function Card({ className, variant, asChild = false, ...props }: CardProps) {
+/**
+ * `spotlight` adds a soft light that follows the mouse across the card (React Bits' SpotlightCard): green on
+ * light cards, champagne on `tinted` ones. Use it on feature and figure cards, not on forms.
+ */
+export function Card({ className, variant, spotlight, asChild = false, onPointerMove, ...props }: CardProps) {
   const Component = asChild ? Slot : 'div';
-  return <Component className={cn(cardVariants({ variant }), className)} {...props} />;
+  const handlePointerMove = spotlight
+    ? (event: PointerEvent<HTMLDivElement>) => {
+        trackSpotlight(event);
+        onPointerMove?.(event);
+      }
+    : onPointerMove;
+
+  return (
+    <Component
+      className={cn(cardVariants({ variant, spotlight }), className)}
+      onPointerMove={handlePointerMove}
+      {...props}
+    />
+  );
 }
 
 export function CardHeader({ className, ...props }: ComponentProps<'div'>) {

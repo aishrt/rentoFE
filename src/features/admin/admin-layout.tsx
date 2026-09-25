@@ -93,7 +93,7 @@ export function AdminLayout({ user }: { user: SessionUser }) {
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" title="Staff portal" className="[&>div:last-child]:px-0">
-          <AdminSidebar tone="light" showLogo={false} onNavigate={() => setMenuOpen(false)} />
+          <AdminSidebar tone="light" showLogo={false} staggered onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
       </Sheet>
 

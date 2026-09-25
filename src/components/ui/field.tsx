@@ -37,15 +37,22 @@ export function Field({
 
   return (
     <FieldContext value={{ id: controlId, invalid: Boolean(error), describedBy }}>
-      <div className={cn('grid gap-1.5', className)}>
+      <div className={cn('group/field grid gap-1.5', className)}>
         <div className={cn('flex items-baseline justify-between gap-3', hideLabel && 'sr-only')}>
-          <label htmlFor={controlId} className="text-sm font-medium text-ink">
+          {/* The label turns green while its control has focus, so it's clear which field you're in. */}
+          <label
+            htmlFor={controlId}
+            className="text-sm font-medium text-ink transition-colors duration-120 group-has-[input:focus-visible]/field:text-primary"
+          >
             {label}
           </label>
           {labelAside}
         </div>
-        {/* Shakes once when an error appears; the global reduced-motion rule turns it off. */}
-        <div className={cn(error && 'animate-shake')}>{children}</div>
+        {/*
+         * Shakes once when an error appears; the global reduced-motion rule turns it off. `min-w-0` keeps
+         * controls with a wide built-in size, such as time inputs, inside a narrow column.
+         */}
+        <div className={cn('min-w-0', error && 'animate-shake')}>{children}</div>
         {description && (
           <p id={descriptionId} className="text-sm text-muted">
             {description}
