@@ -46,9 +46,11 @@ src/
   routes/               Pages: public/ (home, coming soon), auth/, admin/, errors/
   features/             Feature code: auth/ (session, login form, staff guard), admin/, search/
   components/
-    ui/                 Design system: Button, Input, Field, PasswordInput, Card, Badge, Alert,
-                        Skeleton, Spinner, Sheet, DropdownMenu, SegmentedTabs, StatCard, Avatar
-    motion/             MotionProvider, Reveal, Stagger, CountUp
+    ui/                 Design system: Button, IconButton, Input, Field, PasswordInput, Card, Badge,
+                        IconBadge, Alert, EmptyState, CheckList, Divider, Skeleton, Spinner, Sheet,
+                        DropdownMenu, SegmentedTabs, StatCard, Avatar
+    motion/             MotionProvider, presets (fadeUp, swapUp, heroTimeline), Reveal, Stagger,
+                        CountUp, CheckDraw
     layout/             Site header and footer, auth and public layouts, Container, PageMeta
     brand/              Logo (placeholder until the client's logo arrives), landscape art
   api/                  Typed fetch client (cookies, one shared token refresh) and API types
@@ -59,6 +61,7 @@ src/
 
 ## Design and motion
 
-- Tokens from plan §12.2: pounamu green, ivory, ink and champagne gold; Fraunces for headlines and Inter for text, self-hosted.
+- **[UI_SYSTEM.md](UI_SYSTEM.md)** documents the tokens, components and motion presets, with usage examples. Read it before building a new screen.
+- Tokens from plan §12.2: pounamu green, ivory, ink and champagne gold; Fraunces for headlines and Inter for text, self-hosted. `design-system.test.ts` rejects hardcoded colours, type sizes, radii and off-token durations in components.
 - Motion (`motion/react`) loads through `LazyMotion`, with its features in a separate chunk. Only `transform` and `opacity` are animated, and `prefers-reduced-motion` turns movement off. Page changes cross-fade with the View Transitions API.
-- The homepage's first load is about 184 KB of gzipped JavaScript. The plan's budget is 170 KB (§12.5), checked in CI once the pipelines are set up.
+- The homepage's first load is about 186 KB of gzipped JavaScript. The plan's budget is 170 KB (§12.5), checked in CI once the pipelines are set up. The biggest single item that could go is tailwind-merge (8.6 KB).
