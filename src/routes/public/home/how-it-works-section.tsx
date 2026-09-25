@@ -2,10 +2,12 @@ import { AnimatePresence, m } from 'motion/react';
 import { useState } from 'react';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
+import { swapUp } from '@/components/motion/presets';
 import { Reveal } from '@/components/motion/reveal';
+import { Card } from '@/components/ui/card';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
-import { motion } from '@/styles/tokens';
 import { guestSteps, hostSteps } from './home-content';
 
 const TABS = [
@@ -52,36 +54,28 @@ export function HowItWorksSection() {
           className="mt-12"
         >
           <AnimatePresence mode="wait" initial={false}>
-            <m.ol
-              key={audience}
-              className="grid gap-5 md:grid-cols-3 lg:gap-8"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: motion.duration.medium, ease: motion.ease.out }}
-            >
+            <m.ol key={audience} className="grid gap-5 md:grid-cols-3 lg:gap-8" {...swapUp}>
               {steps.map(({ icon: Icon, title, text }, index) => (
-                <li key={title} className="relative rounded-card border border-line bg-canvas p-6 lg:p-8">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="headline text-5xl leading-none font-medium text-gold-text"
-                      aria-hidden="true"
-                    >
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="flex size-11 items-center justify-center rounded-full bg-primary text-white"
-                    >
-                      <Icon className="size-5" />
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-semibold">
-                    <span className="sr-only">Step {index + 1}: </span>
-                    {title}
-                  </h3>
-                  <p className="mt-2 text-muted">{text}</p>
-                </li>
+                <Card asChild variant="flat" key={title}>
+                  <li className="relative p-6 lg:p-8">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="headline text-5xl leading-none font-medium text-gold-text"
+                        aria-hidden="true"
+                      >
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <IconBadge size="lg" tone="solid">
+                        <Icon />
+                      </IconBadge>
+                    </div>
+                    <h3 className="mt-8 text-lg font-semibold">
+                      <span className="sr-only">Step {index + 1}: </span>
+                      {title}
+                    </h3>
+                    <p className="mt-2 text-muted">{text}</p>
+                  </li>
+                </Card>
               ))}
             </m.ol>
           </AnimatePresence>

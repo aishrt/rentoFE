@@ -1,6 +1,7 @@
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { safetyFeatures } from './home-content';
 
 export function SafetySection() {
@@ -23,12 +24,9 @@ export function SafetySection() {
         <Stagger as="ul" className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {safetyFeatures.map(({ icon: Icon, title, text }, index) => (
             <StaggerItem as="li" key={title} index={index}>
-              <span
-                aria-hidden="true"
-                className="flex size-12 items-center justify-center rounded-card bg-primary/8 text-primary"
-              >
-                <Icon className="size-6" />
-              </span>
+              <IconBadge size="lg" shape="square">
+                <Icon />
+              </IconBadge>
               <h3 className="mt-5 text-lg font-semibold">{title}</h3>
               <p className="mt-2 text-muted">{text}</p>
             </StaggerItem>

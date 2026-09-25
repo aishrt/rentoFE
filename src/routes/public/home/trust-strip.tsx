@@ -1,5 +1,6 @@
 import { Container } from '@/components/layout/container';
 import { Stagger, StaggerItem } from '@/components/motion/reveal';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { trustPoints } from './home-content';
 
 export function TrustStrip() {
@@ -12,12 +13,9 @@ export function TrustStrip() {
         >
           {trustPoints.map(({ icon: Icon, title, text }, index) => (
             <StaggerItem as="li" key={title} index={index} className="flex items-start gap-3.5">
-              <span
-                aria-hidden="true"
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/8 text-primary"
-              >
-                <Icon className="size-5" />
-              </span>
+              <IconBadge>
+                <Icon />
+              </IconBadge>
               <div>
                 <p className="font-semibold">{title}</p>
                 <p className="mt-0.5 text-sm text-muted">{text}</p>

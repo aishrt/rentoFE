@@ -3,6 +3,7 @@ import { RidgeLines } from '@/components/brand/ridge-lines';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { cn } from '@/lib/cn';
 import { destinations } from './home-content';
 
@@ -46,23 +47,26 @@ export function DestinationsSection({ onChoose }: DestinationsSectionProps) {
                   onClick={() => onChoose(destination.name)}
                   aria-label={`Search cars in ${destination.name}`}
                   className={cn(
-                    'lift-card group flex h-full w-full flex-col rounded-card p-6 text-left text-canvas',
+                    'lift-card group flex h-full w-full flex-col rounded-card p-6 text-left text-canvas active:scale-98',
                     featured ? 'min-h-72 lg:min-h-[30rem] lg:p-8' : 'min-h-56',
                     destination.tone,
                   )}
                 >
-                  {/* Clipped on its own layer, so the hover shadow outside the tile stays visible. */}
+                  {/*
+                   * Clipped on its own layer, so the hover shadow outside the tile stays visible. On desktop the
+                   * ridges drift with the scroll (plan §12.4); they start a little lower so no gap opens beneath.
+                   */}
                   <span aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-card">
-                    <RidgeLines className="absolute inset-x-0 bottom-0 h-2/5 w-full origin-bottom text-black transition-transform duration-700 ease-out group-hover:scale-104" />
+                    <RidgeLines className="parallax absolute inset-x-0 bottom-0 h-2/5 w-full origin-bottom text-black transition-transform duration-700 ease-out group-hover:scale-104 lg:-bottom-3" />
                   </span>
                   <span className="relative flex items-start justify-between gap-4">
                     <span className="eyebrow text-gold">{destination.region}</span>
-                    <span
-                      aria-hidden="true"
-                      className="flex size-10 items-center justify-center rounded-full bg-canvas/10 transition-transform duration-320 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                    <IconBadge
+                      tone="on-dark"
+                      className="transition-transform duration-320 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                     >
-                      <ArrowUpRight className="size-5" />
-                    </span>
+                      <ArrowUpRight />
+                    </IconBadge>
                   </span>
                   <span className="relative mt-auto pt-10">
                     <span

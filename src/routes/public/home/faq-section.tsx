@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal } from '@/components/motion/reveal';
+import { motion } from '@/styles/tokens';
 import { faqs } from './home-content';
 
 /** Native <details> keeps the FAQ accessible and usable before any JavaScript loads. */
@@ -27,7 +28,7 @@ export function FaqSection() {
           />
         </Reveal>
 
-        <Reveal delay={0.1}>
+        <Reveal delay={motion.stagger * 2}>
           <div className="divide-y divide-line border-y border-line">
             {faqs.map((faq) => (
               <details key={faq.question} className="group">

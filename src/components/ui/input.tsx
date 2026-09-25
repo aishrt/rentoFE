@@ -44,7 +44,12 @@ export function Input({ className, id, leadingIcon, trailing, ...props }: InputP
         </span>
       )}
       {input}
-      {trailing && <div className="absolute inset-y-1 right-1 flex">{trailing}</div>}
+      {/* Clicks on empty space (or a hidden control) fall through to the input. */}
+      {trailing && (
+        <div className="pointer-events-none absolute inset-y-1 right-1 flex *:pointer-events-auto">
+          {trailing}
+        </div>
+      )}
     </div>
   );
 }
