@@ -1,10 +1,11 @@
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { LandscapeArt } from '@/components/brand/landscape-art';
 import { Logo } from '@/components/brand/logo';
-import { cn } from '@/lib/cn';
+import { fadeUp } from '@/components/motion/presets';
+import { CheckList } from '@/components/ui/check-list';
 import { motion } from '@/styles/tokens';
 import { SkipLink } from './root-layout';
 
@@ -41,23 +42,15 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
           <Link
             to="/"
             viewTransition
-            className="group inline-flex min-h-11 items-center gap-1.5 rounded-control px-2 text-sm font-medium text-muted transition-colors duration-120 hover:text-ink"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-control px-2 text-sm font-medium text-muted transition-colors duration-120 hover:text-ink"
           >
-            <ArrowLeft
-              aria-hidden="true"
-              className="size-4 transition-transform duration-200 ease-out group-hover:-translate-x-0.5"
-            />
+            <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
             Back to home
           </Link>
         </header>
 
         <main id="main" className="flex flex-1 items-center justify-center py-10 sm:py-16">
-          <m.div
-            className="w-full max-w-[26rem]"
-            initial={{ opacity: 0, y: motion.travel.md }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: motion.duration.long, ease: motion.ease.out }}
-          >
+          <m.div className="w-full max-w-[26rem]" {...fadeUp()}>
             {children}
           </m.div>
         </main>
@@ -74,27 +67,10 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
           aria-hidden="true"
           className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/30 to-transparent"
         />
-        <m.div
-          className="relative mt-auto p-12 xl:p-16"
-          initial={{ opacity: 0, y: motion.travel.md }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: motion.duration.long, ease: motion.ease.out, delay: 0.15 }}
-        >
+        <m.div className="relative mt-auto p-12 xl:p-16" {...fadeUp(motion.stagger * 2)}>
           <p className="eyebrow text-gold">{copy.eyebrow}</p>
           <p className="headline mt-4 max-w-md text-title-2 font-medium">{copy.title}</p>
-          <ul className="mt-8 grid gap-3">
-            {copy.points.map((point) => (
-              <li key={point} className="flex items-center gap-3 text-canvas/85">
-                <span
-                  className={cn('flex size-6 items-center justify-center rounded-full bg-gold/20 text-gold')}
-                  aria-hidden="true"
-                >
-                  <Check className="size-3.5" />
-                </span>
-                {point}
-              </li>
-            ))}
-          </ul>
+          <CheckList items={copy.points} tone="dark" className="mt-8" />
         </m.div>
       </aside>
     </div>
