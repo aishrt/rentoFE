@@ -5,6 +5,8 @@ import type { SessionUser } from '@/api/types';
 import { Logo } from '@/components/brand/logo';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { isStaff } from './roles';
 import { useLogout, useSession } from './use-session';
 
@@ -28,7 +30,7 @@ export function RequireStaff({ children, fallback }: RequireStaffProps) {
   if (session.isError) {
     return (
       <GuardMessage
-        icon={<WifiOff aria-hidden="true" className="size-6" />}
+        icon={<WifiOff aria-hidden="true" />}
         title="We can't reach Rento Vroom right now"
         body="Check your connection, then try again."
         action={
@@ -56,11 +58,11 @@ function StaffOnly() {
 
   return (
     <GuardMessage
-      icon={<ShieldAlert aria-hidden="true" className="size-6" />}
+      icon={<ShieldAlert aria-hidden="true" />}
       title="Staff access only"
       body="You're logged in with an account that can't open the staff portal. Log out, then log in with a staff account."
       action={
-        <div className="flex flex-wrap justify-center gap-3">
+        <>
           <Button
             loading={logout.isPending}
             onClick={() =>
@@ -73,7 +75,7 @@ function StaffOnly() {
           <Button variant="secondary" asChild>
             <Link to="/">Go to the homepage</Link>
           </Button>
-        </div>
+        </>
       }
     />
   );
@@ -91,20 +93,15 @@ function GuardMessage({
   action: ReactNode;
 }) {
   return (
-    <main
-      id="main"
-      className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 py-16 text-center"
-    >
+    <main id="main" className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-4 py-16">
       <PageMeta title={title} noindex />
       <Logo className="mb-12" />
-      <div className="flex max-w-md animate-fade-up flex-col items-center">
-        <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-primary/8 text-primary">
-          {icon}
-        </span>
-        <h1 className="headline text-title-3 font-medium">{title}</h1>
-        <p className="mt-3 text-muted">{body}</p>
-        <div className="mt-8">{action}</div>
-      </div>
+      <EmptyState
+        visual={<IconBadge size="xl">{icon}</IconBadge>}
+        title={title}
+        description={body}
+        actions={action}
+      />
     </main>
   );
 }

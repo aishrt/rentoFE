@@ -21,7 +21,10 @@ const cardVariants = cva('', {
 
 type CardProps = ComponentProps<'div'> &
   VariantProps<typeof cardVariants> & {
-    /** Render the child element (e.g. a form or list item) with card styles. */
+    /**
+     * Render the child element (e.g. a form or list item) with card styles. Put classes on the Card,
+     * not the child: the child's className is appended without resolving conflicts with the variant.
+     */
     asChild?: boolean;
   };
 

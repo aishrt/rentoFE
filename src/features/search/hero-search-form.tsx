@@ -53,13 +53,8 @@ export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill
   const onSubmit = handleSubmit((values) => navigate(searchUrl(values), { viewTransition: true }));
 
   return (
-    <Card asChild variant="raised">
-      <form
-        noValidate
-        onSubmit={onSubmit}
-        aria-labelledby="search-heading"
-        className={cn('p-5 text-ink sm:p-6', className)}
-      >
+    <Card asChild variant="raised" className={cn('p-5 text-ink sm:p-6', className)}>
+      <form noValidate onSubmit={onSubmit} aria-labelledby="search-heading">
         <h2 id="search-heading" className="headline text-2xl font-medium">
           Find your car
         </h2>

@@ -56,8 +56,8 @@ export function HowItWorksSection() {
           <AnimatePresence mode="wait" initial={false}>
             <m.ol key={audience} className="grid gap-5 md:grid-cols-3 lg:gap-8" {...swapUp}>
               {steps.map(({ icon: Icon, title, text }, index) => (
-                <Card asChild variant="flat" key={title}>
-                  <li className="relative p-6 lg:p-8">
+                <Card asChild variant="flat" key={title} className="relative p-6 lg:p-8">
+                  <li>
                     <div className="flex items-center justify-between">
                       <span
                         className="headline text-5xl leading-none font-medium text-gold-text"
