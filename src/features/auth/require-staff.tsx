@@ -101,7 +101,7 @@ function GuardMessage({
         <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-primary/8 text-primary">
           {icon}
         </span>
-        <h1 className="headline text-3xl font-medium">{title}</h1>
+        <h1 className="headline text-title-3 font-medium">{title}</h1>
         <p className="mt-3 text-muted">{body}</p>
         <div className="mt-8">{action}</div>
       </div>

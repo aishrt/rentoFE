@@ -38,7 +38,7 @@ export interface Destination {
   maoriName?: string;
   region: string;
   tagline: string;
-  /** Tailwind gradient classes for the tile. */
+  /** Background class for the tile: one of the `tone-*` gradients in globals.css. */
   tone: string;
 }
 
@@ -49,34 +49,34 @@ export const destinations: Destination[] = [
     maoriName: 'Tāhuna',
     region: 'Otago',
     tagline: 'Alpine roads, lakes and the ski fields, all within an hour or two.',
-    tone: 'from-[#14493D] via-[#0E3B32] to-[#08120F]',
+    tone: 'tone-queenstown',
   },
   {
     name: 'Auckland',
     maoriName: 'Tāmaki Makaurau',
     region: 'Auckland',
     tagline: 'Harbour city, island ferries and wild west coast beaches.',
-    tone: 'from-[#1C4A55] to-[#0A1513]',
+    tone: 'tone-auckland',
   },
   {
     name: 'Christchurch',
     maoriName: 'Ōtautahi',
     region: 'Canterbury',
     tagline: 'The gateway to Arthur’s Pass and the Southern Alps.',
-    tone: 'from-[#34473C] to-[#0A1310]',
+    tone: 'tone-christchurch',
   },
   {
     name: 'Wellington',
     maoriName: 'Te Whanganui-a-Tara',
     region: 'Wellington',
     tagline: 'The harbour capital, with the Wairarapa wine trail next door.',
-    tone: 'from-[#243C4B] to-[#0A1214]',
+    tone: 'tone-wellington',
   },
   {
     name: 'Rotorua',
     region: 'Bay of Plenty',
     tagline: 'Geothermal valleys, lakes and redwood forest trails.',
-    tone: 'from-[#4B3B22] to-[#110F0A]',
+    tone: 'tone-rotorua',
   },
 ];
 

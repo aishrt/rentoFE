@@ -11,7 +11,7 @@ import { motion } from '@/styles/tokens';
 // Animated word by word so the headline wraps naturally (and balanced) at every screen width.
 const HEADLINE_WORDS = 'Rent a car from local owners across New Zealand.'.split(' ');
 
-const enter = (delay: number, distance: number = motion.travel) => ({
+const enter = (delay: number, distance: number = motion.travel.md) => ({
   initial: { opacity: 0, y: distance },
   animate: { opacity: 1, y: 0 },
   transition: { duration: motion.duration.long, ease: motion.ease.out, delay },
@@ -34,10 +34,7 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
           <m.p className="eyebrow text-gold" {...enter(0, 12)}>
             Car sharing across Aotearoa
           </m.p>
-          <h1
-            id="hero-heading"
-            className="headline mt-5 text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.04] font-medium text-balance"
-          >
+          <h1 id="hero-heading" className="headline mt-5 text-display font-medium">
             {HEADLINE_WORDS.map((word, index) => (
               <Fragment key={index}>
                 <m.span className="inline-block" {...enter(0.1 + index * 0.05, 24)}>

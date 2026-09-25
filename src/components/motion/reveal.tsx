@@ -15,7 +15,7 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
   return (
     <m.div
       className={className}
-      initial={{ opacity: 0, y: motion.travel }}
+      initial={{ opacity: 0, y: motion.travel.md }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={VIEWPORT}
       transition={{ duration: motion.duration.long, ease: motion.ease.out, delay }}
@@ -26,7 +26,7 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
 }
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: motion.travel },
+  hidden: { opacity: 0, y: motion.travel.md },
   visible: (index: number) => ({
     opacity: 1,
     y: 0,

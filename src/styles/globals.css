@@ -7,6 +7,7 @@
   --color-primary: #0e3b32;
   --color-primary-hover: #0a2c25;
   --color-gold: #c8a96a;
+  --color-gold-hover: #d6bc86;
   --color-gold-text: #8a6a2e;
   --color-ink: #0b1210;
   --color-muted: #5e6662;
@@ -16,16 +17,45 @@
   --color-success: #1e8e5a;
   --color-warning: #c98a12;
   --color-danger: #c8372d;
+  --color-danger-hover: #b02f26;
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
 
+  /*
+   * Headline type scale (plan §12.2), used with the `headline` utility. Fluid sizes carry their own
+   * line height. Body and UI text use Tailwind's xs–2xl, plus `ui` (15 px) for navigation and buttons.
+   */
+  --text-display: clamp(2.5rem, 5.2vw, 4.5rem); /* Home hero */
+  --text-display--line-height: 1.04;
+  --text-title-1: clamp(2.25rem, 5vw, 3.5rem); /* Standalone page titles */
+  --text-title-1--line-height: 1.05;
+  --text-title-2: clamp(2rem, 4vw, 2.75rem); /* Section headings */
+  --text-title-2--line-height: 1.08;
+  --text-title-3: clamp(1.875rem, 3vw, 2.25rem); /* Compact page titles: log-in, errors */
+  --text-title-3--line-height: 1.15;
+  --text-stat: 2rem; /* Dashboard figures */
+  --text-stat--line-height: 1;
+  --text-ui: 0.9375rem;
+  --text-ui--line-height: 1.5;
+
+  --radius-inner: 8px; /* Elements nested inside a control, e.g. a button inside an input */
   --radius-control: 10px;
   --radius-card: 16px;
   --radius-sheet: 24px;
 
+  --shadow-input: 0 1px 0 rgb(11 18 16 / 0.02);
   --shadow-card: 0 1px 2px rgb(11 18 16 / 0.04), 0 8px 24px rgb(11 18 16 / 0.06);
   --shadow-lift: 0 2px 4px rgb(11 18 16 / 0.05), 0 16px 40px rgb(11 18 16 / 0.1);
+  /* A 1px light edge along the top of raised, coloured surfaces (primary buttons, dark panels). */
+  --inset-shadow-highlight: inset 0 1px 0 rgb(255 255 255 / 0.14);
+
+  /* Destination tile backgrounds, used as `tone-<name>`. */
+  --tone-queenstown: linear-gradient(to bottom right in oklab, #14493d, var(--color-primary), #08120f);
+  --tone-auckland: linear-gradient(to bottom right in oklab, #1c4a55, #0a1513);
+  --tone-christchurch: linear-gradient(to bottom right in oklab, #34473c, #0a1310);
+  --tone-wellington: linear-gradient(to bottom right in oklab, #243c4b, #0a1214);
+  --tone-rotorua: linear-gradient(to bottom right in oklab, #4b3b22, #110f0a);
 
   /* Motion tokens (plan §12.4). Durations are used as duration-120 / 200 / 320 / 700. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -43,6 +73,9 @@
   --animate-pop-out: pop-out 120ms var(--ease-in-out);
   --animate-progress: progress 2.4s var(--ease-out) both;
   --animate-hero-drift: hero-drift 28s var(--ease-in-out) infinite alternate;
+  --animate-shake: shake 320ms var(--ease-out);
+  --animate-breathe: breathe 1.2s var(--ease-in-out) infinite alternate;
+  --animate-bar-in: bar-in 320ms var(--ease-out);
 
   @keyframes fade-in {
     from {
@@ -143,6 +176,47 @@
       transform: translateX(100%);
     }
   }
+  /* One short, damped shake when a form field becomes invalid. */
+  @keyframes shake {
+    0%,
+    100% {
+      translate: 0;
+    }
+    20% {
+      translate: -6px 0;
+    }
+    40% {
+      translate: 5px 0;
+    }
+    60% {
+      translate: -3px 0;
+    }
+    80% {
+      translate: 2px 0;
+    }
+  }
+  @keyframes breathe {
+    from {
+      opacity: 1;
+      scale: 1;
+    }
+    to {
+      opacity: 0.55;
+      scale: 0.94;
+    }
+  }
+  @keyframes bar-in {
+    from {
+      scale: 1 0;
+    }
+    to {
+      scale: 1 1;
+    }
+  }
+}
+
+@utility tone-* {
+  background-image: --value(--tone-*);
 }
 
 @layer base {

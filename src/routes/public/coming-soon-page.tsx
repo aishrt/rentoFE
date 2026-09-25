@@ -41,7 +41,7 @@ export function ComingSoonPage() {
           <Sparkles aria-hidden="true" />
           Coming soon
         </Badge>
-        <h1 className="headline mt-6 text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.05] font-medium">{title}</h1>
+        <h1 className="headline mt-6 text-title-1 font-medium">{title}</h1>
         {page && <p className="mt-4 text-lg text-muted">{page.description}</p>}
         <p className="mt-2 text-muted">We're putting the finishing touches on this page.</p>
         {pathname === '/search' && <SearchSummary />}

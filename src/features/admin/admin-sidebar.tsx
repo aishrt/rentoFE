@@ -65,12 +65,9 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: Adm
                   return (
                     <li key={item.label}>
                       <span aria-disabled="true" className={cn(itemClasses, 'cursor-default', t.soon)}>
-                        <Icon aria-hidden="true" className="size-[1.125rem]" />
+                        <Icon aria-hidden="true" className="size-4.5" />
                         <span className="flex-1">{item.label}</span>
-                        <span
-                          aria-hidden="true"
-                          className={cn('rounded-full px-2 py-0.5 text-[0.6875rem]', t.chip)}
-                        >
+                        <span aria-hidden="true" className={cn('rounded-full px-2 py-0.5 text-xs', t.chip)}>
                           Soon
                         </span>
                         <span className="sr-only">(coming soon)</span>
@@ -95,7 +92,7 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: Adm
                         )
                       }
                     >
-                      <Icon aria-hidden="true" className="size-[1.125rem]" />
+                      <Icon aria-hidden="true" className="size-4.5" />
                       {item.label}
                     </NavLink>
                   </li>

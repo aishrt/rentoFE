@@ -29,11 +29,11 @@ export function StatCard({ label, icon: Icon, value, format, hint, className }: 
             pending ? 'bg-ink/5 text-muted' : 'bg-primary/8 text-primary',
           )}
         >
-          <Icon className="size-[1.125rem]" />
+          <Icon className="size-4.5" />
         </span>
       </div>
       <div>
-        <p className="headline text-[2rem] leading-none font-medium text-ink">
+        <p className="headline text-stat font-medium text-ink">
           {pending ? <span aria-label="Not tracked yet">—</span> : <CountUp value={value} format={format} />}
         </p>
         {hint && <p className="mt-2 text-xs text-muted">{hint}</p>}

@@ -46,14 +46,14 @@ export function DestinationsSection({ onChoose }: DestinationsSectionProps) {
                   onClick={() => onChoose(destination.name)}
                   aria-label={`Search cars in ${destination.name}`}
                   className={cn(
-                    'lift-card group flex h-full w-full flex-col rounded-card bg-linear-to-br p-6 text-left text-canvas',
+                    'lift-card group flex h-full w-full flex-col rounded-card p-6 text-left text-canvas',
                     featured ? 'min-h-72 lg:min-h-[30rem] lg:p-8' : 'min-h-56',
                     destination.tone,
                   )}
                 >
                   {/* Clipped on its own layer, so the hover shadow outside the tile stays visible. */}
                   <span aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-card">
-                    <RidgeLines className="absolute inset-x-0 bottom-0 h-2/5 w-full origin-bottom text-black transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
+                    <RidgeLines className="absolute inset-x-0 bottom-0 h-2/5 w-full origin-bottom text-black transition-transform duration-700 ease-out group-hover:scale-104" />
                   </span>
                   <span className="relative flex items-start justify-between gap-4">
                     <span className="eyebrow text-gold">{destination.region}</span>

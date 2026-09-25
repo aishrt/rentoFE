@@ -63,7 +63,7 @@ export function SiteHeader() {
                   to={item.to}
                   viewTransition={!item.to.includes('#')}
                   aria-current={pathname === item.to ? 'page' : undefined}
-                  className="link-underline text-[0.9375rem] font-medium text-ink/80 transition-colors duration-120 hover:text-ink"
+                  className="link-underline text-ui font-medium text-ink/80 transition-colors duration-120 hover:text-ink"
                 >
                   {item.label}
                 </Link>

@@ -24,13 +24,7 @@ export function SectionHeading({
   return (
     <div className={cn('max-w-2xl', align === 'center' && 'mx-auto text-center', className)}>
       {eyebrow && <p className={cn('eyebrow mb-3', dark ? 'text-gold' : 'text-gold-text')}>{eyebrow}</p>}
-      <h2
-        id={id}
-        className={cn(
-          'headline text-[clamp(2rem,4vw,2.75rem)] leading-[1.08] font-medium',
-          dark ? 'text-canvas' : 'text-ink',
-        )}
-      >
+      <h2 id={id} className={cn('headline text-title-2 font-medium', dark ? 'text-canvas' : 'text-ink')}>
         {title}
       </h2>
       {description && (

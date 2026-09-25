@@ -27,7 +27,7 @@ export function RouteErrorPage() {
         <Logo />
       </Link>
       <div className="max-w-md animate-fade-up">
-        <h1 className="headline text-3xl font-medium sm:text-4xl">Something went wrong</h1>
+        <h1 className="headline text-title-3 font-medium">Something went wrong</h1>
         <p className="mt-3 text-muted">
           This page didn't load properly. Reloading usually fixes it; if it doesn't, please try again in a few
           minutes.

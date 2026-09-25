@@ -25,7 +25,7 @@ export function AdminLoginPage() {
         <LockKeyhole aria-hidden="true" />
         Staff portal
       </Badge>
-      <h1 className="headline text-[2.25rem] leading-tight font-medium">Staff log-in</h1>
+      <h1 className="headline text-title-3 font-medium">Staff log-in</h1>
       <p className="mt-2 mb-8 text-muted">For Rento Vroom administrators and the support team.</p>
 
       {session.data && (

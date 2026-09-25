@@ -7,10 +7,11 @@ import { Spinner } from './spinner';
 const buttonVariants = cva(
   [
     'relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium',
-    'transition-[background-color,border-color,color,transform] duration-120 ease-out active:scale-[0.98]',
+    // `scale` is listed because Tailwind v4's scale utilities set the `scale` property, not `transform`.
+    'transition-[background-color,border-color,color,scale] duration-120 ease-out active:scale-98',
     'focus-visible:outline-2 focus-visible:outline-offset-2',
     'disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55',
-    '[&_svg]:size-[1.125rem] [&_svg]:shrink-0',
+    '[&_svg]:size-4.5 [&_svg]:shrink-0',
   ],
   {
     variants: {
@@ -18,14 +19,14 @@ const buttonVariants = cva(
         primary: 'bg-primary text-white shadow-sm hover:bg-primary-hover focus-visible:outline-primary',
         secondary: 'border border-line bg-surface text-ink hover:border-ink/25 hover:bg-canvas',
         ghost: 'text-ink hover:bg-ink/5',
-        gold: 'bg-gold text-ink hover:bg-[#D6BC86] focus-visible:outline-gold',
+        gold: 'bg-gold text-ink hover:bg-gold-hover focus-visible:outline-gold',
         'outline-light':
           'border border-canvas/30 text-canvas hover:border-canvas/60 hover:bg-canvas/10 focus-visible:outline-canvas',
-        danger: 'bg-danger text-white hover:bg-[#B02F26] focus-visible:outline-danger',
+        danger: 'bg-danger text-white hover:bg-danger-hover focus-visible:outline-danger',
       },
       size: {
         sm: 'h-10 px-4 text-sm',
-        md: 'h-11 px-5 text-[0.9375rem]',
+        md: 'h-11 px-5 text-ui',
         lg: 'h-12 px-6 text-base',
         icon: 'size-11',
       },

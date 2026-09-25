@@ -29,7 +29,7 @@ export function AdminOverviewPage() {
 
       <header className="animate-fade-up">
         <p className="eyebrow text-gold-text">{formatLongDateNz(now)}</p>
-        <h1 className="headline mt-2 text-[clamp(1.875rem,3vw,2.5rem)] leading-tight font-medium">
+        <h1 className="headline mt-2 text-title-3 font-medium">
           {greetingFor(now)}
           {session.data ? `, ${session.data.firstName}` : ''}
         </h1>

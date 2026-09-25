@@ -15,9 +15,9 @@ const alertVariants = cva('flex animate-fade-up gap-3 rounded-control border p-4
 });
 
 const icons = {
-  info: <Info aria-hidden="true" className="mt-0.5 size-[1.125rem] shrink-0 text-primary" />,
-  success: <CircleCheck aria-hidden="true" className="mt-0.5 size-[1.125rem] shrink-0 text-success" />,
-  danger: <CircleAlert aria-hidden="true" className="mt-0.5 size-[1.125rem] shrink-0 text-danger" />,
+  info: <Info aria-hidden="true" className="mt-0.5 size-4.5 shrink-0 text-primary" />,
+  success: <CircleCheck aria-hidden="true" className="mt-0.5 size-4.5 shrink-0 text-success" />,
+  danger: <CircleAlert aria-hidden="true" className="mt-0.5 size-4.5 shrink-0 text-danger" />,
 };
 
 type AlertProps = Omit<ComponentProps<'div'>, 'title'> &

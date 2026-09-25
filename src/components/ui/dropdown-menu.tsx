@@ -29,7 +29,7 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
   return (
     <Menu.Item
       className={cn(
-        'flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 text-sm text-ink outline-none',
+        'flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-control px-3 text-sm text-ink outline-none',
         'transition-colors duration-120 data-[highlighted]:bg-ink/5 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         '[&_svg]:size-4 [&_svg]:text-muted',
         className,

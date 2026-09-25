@@ -20,7 +20,7 @@ export function LoginPage() {
         description="Log in to Rento Vroom to manage your trips and bookings."
         noindex
       />
-      <h1 className="headline text-[2.25rem] leading-tight font-medium">Welcome back</h1>
+      <h1 className="headline text-title-3 font-medium">Welcome back</h1>
       <p className="mt-2 mb-8 text-muted">Log in to manage your trips, bookings and saved cars.</p>
 
       <LoginForm onSuccess={() => navigate(next, { replace: true, viewTransition: true })} />

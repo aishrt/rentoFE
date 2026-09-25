@@ -54,7 +54,7 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
         <main id="main" className="flex flex-1 items-center justify-center py-10 sm:py-16">
           <m.div
             className="w-full max-w-[26rem]"
-            initial={{ opacity: 0, y: motion.travel }}
+            initial={{ opacity: 0, y: motion.travel.md }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: motion.duration.long, ease: motion.ease.out }}
           >
@@ -76,12 +76,12 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
         />
         <m.div
           className="relative mt-auto p-12 xl:p-16"
-          initial={{ opacity: 0, y: motion.travel }}
+          initial={{ opacity: 0, y: motion.travel.md }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: motion.duration.long, ease: motion.ease.out, delay: 0.15 }}
         >
           <p className="eyebrow text-gold">{copy.eyebrow}</p>
-          <p className="headline mt-4 max-w-md text-[2.75rem] leading-[1.05] font-medium">{copy.title}</p>
+          <p className="headline mt-4 max-w-md text-title-2 font-medium">{copy.title}</p>
           <ul className="mt-8 grid gap-3">
             {copy.points.map((point) => (
               <li key={point} className="flex items-center gap-3 text-canvas/85">

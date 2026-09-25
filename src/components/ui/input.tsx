@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 import { useFieldControl } from './field-context';
 
 const inputClasses = cn(
-  'h-12 w-full rounded-control border border-line bg-surface px-4 text-base text-ink shadow-[0_1px_0_rgb(11_18_16/0.02)]',
+  'h-12 w-full rounded-control border border-line bg-surface px-4 text-base text-ink shadow-input',
   'placeholder:text-muted/75 transition-[border-color,box-shadow] duration-120 ease-out',
   'hover:border-ink/25 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/12',
   'aria-invalid:border-danger aria-invalid:focus-visible:ring-danger/12',
@@ -32,7 +32,7 @@ export function Input({ className, id, leadingIcon, ...props }: InputProps) {
     <div className="relative">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted [&_svg]:size-[1.125rem]"
+        className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted [&_svg]:size-4.5"
       >
         {leadingIcon}
       </span>
