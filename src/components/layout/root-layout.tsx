@@ -1,4 +1,5 @@
 import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
+import { LogoMark } from '@/components/brand/logo';
 
 /** A thin gold bar while the next page's code loads. */
 function NavigationProgress() {
@@ -34,13 +35,11 @@ export function SkipLink() {
   );
 }
 
+/** Shown while the app first loads: the brand mark breathing softly instead of a spinner. */
 export function FullPageLoader() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-canvas" aria-busy="true">
-      <span
-        className="size-10 animate-spin rounded-full border-2 border-primary/15 border-t-primary"
-        aria-hidden="true"
-      />
+      <LogoMark className="size-12 animate-breathe" />
       <span className="sr-only">Loading Rento Vroom</span>
     </div>
   );

@@ -2,6 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { IconButton } from './icon-button';
 
 export const Sheet = Dialog.Root;
 export const SheetTrigger = Dialog.Trigger;
@@ -42,11 +43,10 @@ export function SheetContent({
           <Dialog.Title className={cn('headline text-xl font-medium', hideTitle && 'sr-only')}>
             {title}
           </Dialog.Title>
-          <Dialog.Close
-            aria-label="Close menu"
-            className="flex size-11 items-center justify-center rounded-full text-muted transition-colors duration-120 hover:bg-ink/5 hover:text-ink"
-          >
-            <X aria-hidden="true" className="size-5" />
+          <Dialog.Close asChild>
+            <IconButton label="Close menu">
+              <X aria-hidden="true" />
+            </IconButton>
           </Dialog.Close>
         </div>
         {description ? (

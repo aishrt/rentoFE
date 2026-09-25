@@ -16,13 +16,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-white shadow-sm hover:bg-primary-hover focus-visible:outline-primary',
+        primary:
+          'bg-primary text-white shadow-sm inset-shadow-highlight hover:bg-primary-hover focus-visible:outline-primary',
         secondary: 'border border-line bg-surface text-ink hover:border-ink/25 hover:bg-canvas',
         ghost: 'text-ink hover:bg-ink/5',
-        gold: 'bg-gold text-ink hover:bg-gold-hover focus-visible:outline-gold',
+        gold: 'bg-gold text-ink inset-shadow-highlight hover:bg-gold-hover focus-visible:outline-gold',
         'outline-light':
           'border border-canvas/30 text-canvas hover:border-canvas/60 hover:bg-canvas/10 focus-visible:outline-canvas',
-        danger: 'bg-danger text-white hover:bg-danger-hover focus-visible:outline-danger',
+        danger:
+          'bg-danger text-white inset-shadow-highlight hover:bg-danger-hover focus-visible:outline-danger',
       },
       size: {
         sm: 'h-10 px-4 text-sm',

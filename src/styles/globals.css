@@ -300,6 +300,33 @@
   }
 }
 
+/* An arrow icon that nudges towards where its link or button goes when that parent is hovered or focused. */
+@utility nudge-right {
+  transition: translate 200ms var(--ease-out);
+
+  :focus-visible > & {
+    translate: 0.125rem 0;
+  }
+  @media (hover: hover) {
+    :hover > & {
+      translate: 0.125rem 0;
+    }
+  }
+}
+
+@utility nudge-left {
+  transition: translate 200ms var(--ease-out);
+
+  :focus-visible > & {
+    translate: -0.125rem 0;
+  }
+  @media (hover: hover) {
+    :hover > & {
+      translate: -0.125rem 0;
+    }
+  }
+}
+
 /* Card that lifts on hover. The deeper shadow fades in on a pseudo-element (opacity, not box-shadow). */
 @utility lift-card {
   position: relative;

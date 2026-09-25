@@ -44,7 +44,8 @@ export function Field({
           </label>
           {labelAside}
         </div>
-        {children}
+        {/* Shakes once when an error appears; the global reduced-motion rule turns it off. */}
+        <div className={cn(error && 'animate-shake')}>{children}</div>
         {description && (
           <p id={descriptionId} className="text-sm text-muted">
             {description}
