@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
+import { Divider } from '@/components/ui/divider';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { primaryNav } from './site-nav';
 
@@ -32,18 +33,21 @@ export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
           </ul>
         </nav>
         {!signedIn && (
-          <div className="mt-6 grid gap-3 border-t border-line pt-6">
-            <Button asChild size="lg" block>
-              <Link to="/login" onClick={close}>
-                Log in
-              </Link>
-            </Button>
-            <Button asChild size="lg" block variant="secondary">
-              <Link to="/signup" onClick={close}>
-                Sign up
-              </Link>
-            </Button>
-          </div>
+          <>
+            <Divider className="my-6" />
+            <div className="grid gap-3">
+              <Button asChild size="lg" block>
+                <Link to="/login" onClick={close}>
+                  Log in
+                </Link>
+              </Button>
+              <Button asChild size="lg" block variant="secondary">
+                <Link to="/signup" onClick={close}>
+                  Sign up
+                </Link>
+              </Button>
+            </div>
+          </>
         )}
       </SheetContent>
     </Sheet>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Logo } from '@/components/brand/logo';
+import { Divider } from '@/components/ui/divider';
 import { Container } from './container';
 import { footerNav, socialLinks } from './site-nav';
 
@@ -55,14 +56,13 @@ export function SiteFooter() {
         </nav>
       </Container>
 
-      <div className="border-t border-canvas/10">
-        <Container className="flex flex-col gap-3 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <p>© {YEAR} Rento Vroom. All prices in NZD.</p>
-          <Link to="/admin/login" className="link-underline self-start hover:text-canvas sm:self-auto">
-            Staff log-in
-          </Link>
-        </Container>
-      </div>
+      <Divider tone="dark" />
+      <Container className="flex flex-col gap-3 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p>© {YEAR} Rento Vroom. All prices in NZD.</p>
+        <Link to="/admin/login" className="link-underline self-start hover:text-canvas sm:self-auto">
+          Staff log-in
+        </Link>
+      </Container>
     </footer>
   );
 }

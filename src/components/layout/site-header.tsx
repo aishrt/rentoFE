@@ -3,6 +3,7 @@ import { Suspense, lazy, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from '@/features/auth/use-session';
 import { cn } from '@/lib/cn';
@@ -46,7 +47,8 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200',
+        // Named for view transitions, so the header holds still while the page below it cross-fades.
+        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 [view-transition-name:site-header]',
         scrolled ? 'glass border-line/70' : 'border-transparent bg-canvas',
       )}
     >
@@ -74,11 +76,9 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <HeaderAccount />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            aria-label="Open menu"
+          <IconButton
+            label="Open menu"
+            className="lg:hidden [&_svg]:size-6"
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
             onPointerEnter={loadMobileMenu}
@@ -88,8 +88,8 @@ export function SiteHeader() {
               setMenuOpen(true);
             }}
           >
-            <Menu aria-hidden="true" className="size-6!" />
-          </Button>
+            <Menu aria-hidden="true" />
+          </IconButton>
           {menuRequested && (
             <Suspense fallback={null}>
               <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} signedIn={Boolean(session.data)} />
