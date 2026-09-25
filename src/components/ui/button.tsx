@@ -20,8 +20,9 @@ const buttonVariants = cva(
           'bg-primary text-white shadow-sm inset-shadow-highlight hover:bg-primary-hover focus-visible:outline-primary',
         secondary: 'border border-line bg-surface text-ink hover:border-ink/25 hover:bg-canvas',
         ghost: 'text-ink hover:bg-ink/5',
-        // Gold is the one call to action per page that earns a sheen on hover (plan §12.1: gold sparingly).
-        gold: 'sheen bg-gold text-ink inset-shadow-highlight hover:bg-gold-hover focus-visible:outline-gold',
+        // Accent is the one call to action per page that earns a sheen on hover, on dark or primary backgrounds.
+        accent:
+          'sheen bg-accent text-ink inset-shadow-highlight hover:bg-accent-hover focus-visible:outline-accent',
         'outline-light':
           'border border-canvas/30 text-canvas hover:border-canvas/60 hover:bg-canvas/10 focus-visible:outline-canvas',
         danger:

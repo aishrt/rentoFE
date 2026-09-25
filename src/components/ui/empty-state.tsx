@@ -41,7 +41,7 @@ export function EmptyState({
       )}
     >
       {visual && <div className="mb-5">{visual}</div>}
-      {eyebrow && <p className="eyebrow mb-3 text-gold-text">{eyebrow}</p>}
+      {eyebrow && <p className="eyebrow mb-3 text-primary">{eyebrow}</p>}
       <Title className={cn('headline font-medium', large ? 'text-title-1' : 'text-title-3')}>{title}</Title>
       {description && <div className={cn('text-muted', large ? 'mt-4 text-lg' : 'mt-3')}>{description}</div>}
       {children}

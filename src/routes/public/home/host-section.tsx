@@ -32,10 +32,10 @@ function ListingPreview() {
     <Card spotlight variant="raised" aria-hidden="true" className="p-6 text-ink sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="eyebrow text-gold-text">Your listing</p>
+          <p className="eyebrow text-primary">Your listing</p>
           <p className="headline mt-1.5 text-2xl font-medium">2021 Toyota RAV4 Hybrid</p>
         </div>
-        <Badge variant="gold">Draft</Badge>
+        <Badge variant="accent">Draft</Badge>
       </div>
 
       <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-ink/6">
@@ -95,9 +95,9 @@ export function HostSection() {
               />
               <CheckList items={hostPoints} tone="dark" className="mt-8" />
               <div className="mt-10 flex flex-wrap gap-3">
-                {/* The page's one gold call to action drifts towards the mouse as it comes near. */}
+                {/* The page's one accent call to action drifts towards the mouse as it comes near. */}
                 <Magnet>
-                  <Button variant="gold" size="lg" asChild>
+                  <Button variant="accent" size="lg" asChild>
                     <Link to="/become-a-host" viewTransition>
                       Become a Host
                       <ArrowRight aria-hidden="true" className="nudge-right" />

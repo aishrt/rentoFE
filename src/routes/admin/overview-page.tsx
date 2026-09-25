@@ -29,7 +29,7 @@ export function AdminOverviewPage() {
       <PageMeta title="Overview · Staff portal" noindex />
 
       <header className="animate-fade-up">
-        <p className="eyebrow text-gold-text">{formatLongDateNz(now)}</p>
+        <p className="eyebrow text-primary">{formatLongDateNz(now)}</p>
         <h1 className="headline mt-2 text-title-3 font-medium">
           {greetingFor(now)}
           {session.data ? `, ${session.data.firstName}` : ''}

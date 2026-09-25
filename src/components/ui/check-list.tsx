@@ -4,7 +4,7 @@ import { motion } from '@/styles/tokens';
 
 interface CheckListProps {
   items: readonly string[];
-  /** "dark" for dark or green backgrounds, where the checks turn gold. */
+  /** "dark" for dark or primary backgrounds, where the checks turn pale blue. */
   tone?: 'light' | 'dark';
   className?: string;
 }
@@ -21,7 +21,7 @@ export function CheckList({ items, tone = 'light', className }: CheckListProps) 
             aria-hidden="true"
             className={cn(
               'flex size-6 shrink-0 items-center justify-center rounded-full',
-              dark ? 'bg-gold/20 text-gold' : 'bg-primary/8 text-primary',
+              dark ? 'bg-accent/20 text-accent' : 'bg-primary/8 text-primary',
             )}
           >
             <CheckDraw

@@ -38,7 +38,7 @@ export function SiteFooter() {
         <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {footerNav.map((group) => (
             <div key={group.title}>
-              <h2 className="eyebrow text-gold">{group.title}</h2>
+              <h2 className="eyebrow text-accent">{group.title}</h2>
               <ul className="mt-4 grid gap-3">
                 {group.links.map((link) => (
                   <li key={link.to}>

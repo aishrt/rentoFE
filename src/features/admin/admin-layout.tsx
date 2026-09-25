@@ -43,7 +43,7 @@ function StaffMenu({ user }: { user: SessionUser }) {
         aria-label={`Account menu for ${user.firstName}`}
         className="flex h-11 items-center gap-2.5 rounded-full py-1 pr-2 pl-1 transition-[background-color,scale] duration-120 ease-out hover:bg-ink/5 active:scale-98 data-[state=open]:bg-ink/5 sm:pr-3"
       >
-        <Avatar initials={initials(user)} tone="gold" />
+        <Avatar initials={initials(user)} tone="accent" />
         <span className="hidden text-left sm:block">
           <span className="block text-sm leading-tight font-medium text-ink">{user.firstName}</span>
           <span className="block text-xs leading-tight text-muted">{staffRoleLabel(user)}</span>

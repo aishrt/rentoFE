@@ -2,7 +2,7 @@ import { cn } from '@/lib/cn';
 
 interface LogoMarkProps {
   className?: string;
-  /** Adds a faint outline so the green mark stays visible on dark backgrounds. */
+  /** Adds a faint outline so the blue mark stays visible on dark backgrounds. */
   outlined?: boolean;
 }
 
@@ -20,7 +20,7 @@ export function LogoMark({ className, outlined = false }: LogoMarkProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M9 27c4.5-2.7 9.5-2.7 14 0" className="stroke-gold" strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 27c4.5-2.7 9.5-2.7 14 0" className="stroke-accent" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

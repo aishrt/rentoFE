@@ -29,7 +29,7 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
 
       <Container className="grid gap-10 pt-12 pb-14 sm:pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14 lg:pt-20 lg:pb-24 xl:gap-20">
         <div>
-          <m.p className="eyebrow shiny-text text-gold" {...fadeUp(TIMELINE.eyebrow, motion.travel.sm)}>
+          <m.p className="eyebrow shiny-text text-accent" {...fadeUp(TIMELINE.eyebrow, motion.travel.sm)}>
             Car sharing across Aotearoa
           </m.p>
           <h1 id="hero-heading" className="headline mt-5 text-display font-medium">

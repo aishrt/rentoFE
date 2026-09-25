@@ -31,7 +31,7 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
       className={cn(
         'flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-control px-3 text-sm text-ink outline-none',
         'transition-colors duration-120 data-[highlighted]:bg-ink/5 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        // The icon picks up the brand green as the item is highlighted, by pointer or keyboard.
+        // The icon picks up the brand blue as the item is highlighted, by pointer or keyboard.
         '[&_svg]:size-4 [&_svg]:text-muted [&_svg]:transition-colors [&_svg]:duration-120 data-[highlighted]:[&_svg]:text-primary',
         className,
       )}

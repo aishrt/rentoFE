@@ -7,20 +7,19 @@
  * (backend/src/emails/theme.ts) is a copy of these colours.
  */
 export const colors = {
-  primary: '#0E3B32',
-  'primary-hover': '#0A2C25',
-  gold: '#C8A96A',
-  'gold-hover': '#D6BC86',
-  'gold-text': '#8A6A2E',
-  ink: '#0B1210',
-  muted: '#5E6662',
-  canvas: '#FAF8F4',
+  primary: '#0254C2',
+  'primary-hover': '#0045A2',
+  accent: '#C1D9FE',
+  'accent-hover': '#DFEBFE',
+  ink: '#08101D',
+  muted: '#5D6470',
+  canvas: '#EEEEEE',
   surface: '#FFFFFF',
-  line: '#E7E2D9',
+  line: '#D8DBE0',
   success: '#1E8E5A',
   warning: '#C98A12',
-  danger: '#C8372D',
-  'danger-hover': '#B02F26',
+  danger: '#C4332A',
+  'danger-hover': '#AD2B23',
 } as const;
 
 export type ColorToken = keyof typeof colors;
@@ -28,20 +27,24 @@ export type ColorToken = keyof typeof colors;
 /** Text and background pairs the UI uses for body-size text; each must reach 4.5:1. */
 export const textContrastPairs: ReadonlyArray<[text: ColorToken, background: ColorToken]> = [
   ['surface', 'primary'],
+  ['canvas', 'primary'],
+  ['primary', 'canvas'],
+  ['primary', 'surface'],
   ['ink', 'canvas'],
   ['ink', 'surface'],
   ['muted', 'canvas'],
   ['muted', 'surface'],
-  ['gold-text', 'canvas'],
-  ['gold-text', 'surface'],
   ['canvas', 'ink'],
-  ['gold', 'ink'],
-  ['gold', 'primary'],
+  ['accent', 'ink'],
+  ['accent', 'primary'],
   ['danger', 'surface'],
   ['danger', 'canvas'],
-  // Button labels, including their hover states.
-  ['ink', 'gold'],
-  ['ink', 'gold-hover'],
+  // Button and badge labels, including their hover states.
+  ['surface', 'primary-hover'],
+  ['ink', 'accent'],
+  ['ink', 'accent-hover'],
+  ['primary', 'accent'],
+  ['surface', 'danger'],
   ['surface', 'danger-hover'],
 ];
 

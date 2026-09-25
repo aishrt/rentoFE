@@ -44,7 +44,7 @@ export function ComingSoonPage() {
         <EmptyState
           size="lg"
           visual={
-            <Badge variant="gold">
+            <Badge variant="accent">
               <Sparkles aria-hidden="true" />
               Coming soon
             </Badge>

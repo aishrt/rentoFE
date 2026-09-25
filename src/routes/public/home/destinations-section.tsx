@@ -43,7 +43,7 @@ export function DestinationsSection({ onChoose }: DestinationsSectionProps) {
                 index={index}
                 className={cn(featured && 'sm:col-span-2 lg:col-span-1 lg:row-span-2')}
               >
-                {/* A warm light follows the mouse across the tile as it lifts (spotlight). */}
+                {/* A pale blue light follows the mouse across the tile as it lifts (spotlight). */}
                 <button
                   type="button"
                   onClick={() => onChoose(destination.name)}
@@ -63,7 +63,7 @@ export function DestinationsSection({ onChoose }: DestinationsSectionProps) {
                     <RidgeLines className="parallax absolute inset-x-0 bottom-0 h-2/5 w-full origin-bottom text-black transition-transform duration-700 ease-out group-hover:scale-104 lg:-bottom-3" />
                   </span>
                   <span className="relative flex items-start justify-between gap-4">
-                    <span className="eyebrow text-gold">{destination.region}</span>
+                    <span className="eyebrow text-accent">{destination.region}</span>
                     <IconBadge
                       tone="on-dark"
                       className="transition-transform duration-320 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5"

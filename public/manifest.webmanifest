@@ -4,7 +4,7 @@
   "description": "Rent a car from local owners across New Zealand.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAF8F4",
-  "theme_color": "#0E3B32",
+  "background_color": "#EEEEEE",
+  "theme_color": "#0254C2",
   "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }

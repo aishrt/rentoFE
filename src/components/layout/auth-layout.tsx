@@ -69,7 +69,7 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
           className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/30 to-transparent"
         />
         <m.div className="relative mt-auto p-12 xl:p-16" {...fadeUp(motion.stagger * 2)}>
-          <p className="eyebrow shiny-text text-gold">{copy.eyebrow}</p>
+          <p className="eyebrow shiny-text text-accent">{copy.eyebrow}</p>
           <p className="headline mt-4 max-w-md text-title-2 font-medium">
             <BlurText text={copy.title} delay={motion.stagger * 3} />
           </p>

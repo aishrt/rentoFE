@@ -46,7 +46,7 @@ describe('Card spotlight', () => {
     expect(card.style.getPropertyValue('--spotlight-x')).toBe('');
   });
 
-  it('uses the warm light on tinted cards', () => {
+  it('uses the light for dark backgrounds on tinted cards', () => {
     render(
       <Card spotlight variant="tinted" data-testid="card">
         Content

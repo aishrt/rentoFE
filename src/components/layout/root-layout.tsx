@@ -1,7 +1,7 @@
 import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
 import { LogoMark } from '@/components/brand/logo';
 
-/** A thin gold bar while the next page's code loads. */
+/** A thin blue bar while the next page's code loads. */
 function NavigationProgress() {
   const navigation = useNavigation();
   if (navigation.state === 'idle') return null;
@@ -9,7 +9,7 @@ function NavigationProgress() {
     <div
       role="progressbar"
       aria-label="Loading page"
-      className="fixed inset-x-0 top-0 z-60 h-0.5 origin-left animate-progress bg-gold"
+      className="fixed inset-x-0 top-0 z-60 h-0.5 origin-left animate-progress bg-primary"
     />
   );
 }

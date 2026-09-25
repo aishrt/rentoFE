@@ -63,7 +63,7 @@ src/
 ## Design and motion
 
 - **[UI_SYSTEM.md](UI_SYSTEM.md)** documents the tokens, components and motion presets, with usage examples. Read it before building a new screen.
-- Tokens from plan §12.2: pounamu green, ivory, ink and champagne gold; Fraunces for headlines and Inter for text, self-hosted. `design-system.test.ts` rejects hardcoded colours, type sizes, radii and off-token durations in components.
+- Tokens from plan §12.2: primary blue `#0254C2` on a `#EEEEEE` canvas, with white cards, ink and a pale blue accent; Fraunces for headlines and Inter for text, self-hosted. `design-system.test.ts` rejects hardcoded colours, type sizes, radii and off-token durations in components.
 - Motion (`motion/react`) loads through `LazyMotion`, with its features in a separate chunk. Only `transform` and `opacity` are animated, and `prefers-reduced-motion` turns movement off. Page changes cross-fade with the View Transitions API.
 - A few effects are adapted from [React Bits](https://reactbits.dev) (spotlight cards, tilt, magnet, blur-in headline, shiny and gradient text, rolling counter, staggered menus). Only components built on Motion or CSS are used, because the plan allows no GSAP (§12.4). UI_SYSTEM.md lists each one and what changed.
 - The homepage's first load is about 186 KB of gzipped JavaScript. The plan's budget is 170 KB (§12.5), checked in CI once the pipelines are set up. The biggest single item that could go is tailwind-merge (8.6 KB).

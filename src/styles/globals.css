@@ -4,20 +4,19 @@
 
 /* Design tokens (plan §12.2). Keep in sync with src/styles/tokens.ts; tokens.test.ts checks it. */
 @theme {
-  --color-primary: #0e3b32;
-  --color-primary-hover: #0a2c25;
-  --color-gold: #c8a96a;
-  --color-gold-hover: #d6bc86;
-  --color-gold-text: #8a6a2e;
-  --color-ink: #0b1210;
-  --color-muted: #5e6662;
-  --color-canvas: #faf8f4;
+  --color-primary: #0254c2;
+  --color-primary-hover: #0045a2;
+  --color-accent: #c1d9fe;
+  --color-accent-hover: #dfebfe;
+  --color-ink: #08101d;
+  --color-muted: #5d6470;
+  --color-canvas: #eeeeee;
   --color-surface: #ffffff;
-  --color-line: #e7e2d9;
+  --color-line: #d8dbe0;
   --color-success: #1e8e5a;
   --color-warning: #c98a12;
-  --color-danger: #c8372d;
-  --color-danger-hover: #b02f26;
+  --color-danger: #c4332a;
+  --color-danger-hover: #ad2b23;
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
@@ -44,18 +43,21 @@
   --radius-card: 16px;
   --radius-sheet: 24px;
 
-  --shadow-input: 0 1px 0 rgb(11 18 16 / 0.02);
-  --shadow-card: 0 1px 2px rgb(11 18 16 / 0.04), 0 8px 24px rgb(11 18 16 / 0.06);
-  --shadow-lift: 0 2px 4px rgb(11 18 16 / 0.05), 0 16px 40px rgb(11 18 16 / 0.1);
+  --shadow-input: 0 1px 0 rgb(8 16 29 / 0.02);
+  --shadow-card: 0 1px 2px rgb(8 16 29 / 0.04), 0 8px 24px rgb(8 16 29 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(8 16 29 / 0.05), 0 16px 40px rgb(8 16 29 / 0.1);
   /* A 1px light edge along the top of raised, coloured surfaces (primary buttons, dark panels). */
   --inset-shadow-highlight: inset 0 1px 0 rgb(255 255 255 / 0.14);
 
-  /* Destination tile backgrounds, used as `tone-<name>`. */
-  --tone-queenstown: linear-gradient(to bottom right in oklab, #14493d, var(--color-primary), #08120f);
-  --tone-auckland: linear-gradient(to bottom right in oklab, #1c4a55, #0a1513);
-  --tone-christchurch: linear-gradient(to bottom right in oklab, #34473c, #0a1310);
-  --tone-wellington: linear-gradient(to bottom right in oklab, #243c4b, #0a1214);
-  --tone-rotorua: linear-gradient(to bottom right in oklab, #4b3b22, #110f0a);
+  /*
+   * Destination tile backgrounds, used as `tone-<name>`: blues a little either side of the primary's hue. Every
+   * stop keeps the tiles' light text above 4.5:1; the featured tile opens on the primary itself.
+   */
+  --tone-queenstown: linear-gradient(to bottom right in oklab, var(--color-primary), #15315e, #06101f);
+  --tone-auckland: linear-gradient(to bottom right in oklab, #01486b, #031420);
+  --tone-christchurch: linear-gradient(to bottom right in oklab, #2e445c, #001126);
+  --tone-wellington: linear-gradient(to bottom right in oklab, #29375c, #0a1020);
+  --tone-rotorua: linear-gradient(to bottom right in oklab, #333a65, #0b0e1e);
 
   /* Motion tokens (plan §12.4). Durations are used as duration-120 / 200 / 320 / 700. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -240,7 +242,7 @@
   }
 
   ::selection {
-    background-color: rgb(200 169 106 / 0.35);
+    background-color: color-mix(in oklab, var(--color-primary) 22%, transparent);
   }
 
   :focus-visible {
@@ -270,9 +272,9 @@
   text-transform: uppercase;
 }
 
-/* Frosted ivory: sticky header and sticky bars only, because blur is costly on budget phones. */
+/* Frosted canvas: sticky header and sticky bars only, because blur is costly on budget phones. */
 @utility glass {
-  background-color: rgb(250 248 244 / 0.8);
+  background-color: color-mix(in oklab, var(--color-canvas) 80%, transparent);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
@@ -328,7 +330,7 @@
 }
 
 /*
- * One soft band of light that sweeps across once on hover. Kept for the gold call to action, so gold
+ * One soft band of light that sweeps across once on hover. Kept for the accent call to action, so it
  * stays rare (plan §12.1). It sits behind the label and resets instantly when the pointer leaves.
  */
 @utility sheen {
@@ -385,7 +387,7 @@
 @utility skeleton {
   position: relative;
   overflow: hidden;
-  background-color: rgb(11 18 16 / 0.06);
+  background-color: color-mix(in oklab, var(--color-ink) 6%, transparent);
 
   &::after {
     content: '';
@@ -462,7 +464,7 @@
     border-radius: inherit;
     background-image: radial-gradient(
       24rem circle at var(--spotlight-x, 50%) var(--spotlight-y, 0%),
-      var(--spotlight-color, rgb(14 59 50 / 0.07)),
+      var(--spotlight-color, color-mix(in oklab, var(--color-primary) 7%, transparent)),
       transparent 70%
     );
     opacity: 0;
@@ -477,9 +479,9 @@
   }
 }
 
-/* A warm champagne light, for spotlight cards on dark or green backgrounds. */
+/* A pale blue light, for spotlight cards on dark or primary backgrounds. */
 @utility spotlight-on-dark {
-  --spotlight-color: rgb(200 169 106 / 0.18);
+  --spotlight-color: color-mix(in oklab, var(--color-accent) 18%, transparent);
 }
 
 /*
@@ -519,16 +521,16 @@
 }
 
 /*
- * A band of light that crosses gold text every few seconds (React Bits' ShinyText), for a short label on a
- * dark background. Keep `text-gold` on the element: it is the colour wherever the effect is unavailable.
+ * A band of light that crosses accent text every few seconds (React Bits' ShinyText), for a short label on a
+ * dark background. Keep `text-accent` on the element: it is the colour wherever the effect is unavailable.
  */
 @utility shiny-text {
   width: fit-content;
   background-image: linear-gradient(
     110deg,
-    var(--color-gold) 40%,
-    var(--color-canvas) 50%,
-    var(--color-gold) 60%
+    var(--color-accent) 40%,
+    var(--color-surface) 50%,
+    var(--color-accent) 60%
   );
   background-size: 250% 100%;
   background-position: 0% 0;
@@ -553,17 +555,12 @@
 }
 
 /*
- * Text filled with a slow green-to-bronze gradient (React Bits' GradientText), for one large figure such as
- * the 404. Both colours pass AA on ivory. Keep a text colour on the element as the fallback.
+ * Text filled with a slow blue-to-ink gradient (React Bits' GradientText), for one large figure such as
+ * the 404. Both colours pass AA on the canvas. Keep a text colour on the element as the fallback.
  */
 @utility gradient-text {
   width: fit-content;
-  background-image: linear-gradient(
-    90deg,
-    var(--color-primary),
-    var(--color-gold-text),
-    var(--color-primary)
-  );
+  background-image: linear-gradient(90deg, var(--color-primary), var(--color-ink), var(--color-primary));
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;

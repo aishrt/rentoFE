@@ -16,7 +16,7 @@ interface MagnetProps {
 /**
  * Lets a call to action drift a few pixels towards the pointer as it comes close (adapted from React Bits'
  * Magnet). The offset goes into CSS variables once per frame and the `magnet` utility eases it, so nothing
- * re-renders. Keep it to one element per page, usually the gold button.
+ * re-renders. Keep it to one element per page, usually the accent button.
  */
 export function Magnet({ children, className, reach = 48, pull = 8 }: MagnetProps) {
   const ref = useRef<HTMLSpanElement>(null);

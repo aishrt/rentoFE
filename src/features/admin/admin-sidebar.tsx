@@ -12,6 +12,8 @@ const tones = {
     group: 'text-canvas/40',
     link: 'hover:bg-canvas/8 hover:text-canvas',
     active: 'bg-canvas/10 text-canvas',
+    bar: 'before:bg-accent',
+    eyebrow: 'text-accent',
     soon: 'text-canvas/35',
     chip: 'bg-canvas/8 text-canvas/50',
   },
@@ -20,6 +22,8 @@ const tones = {
     group: 'text-muted/70',
     link: 'hover:bg-ink/5 hover:text-ink',
     active: 'bg-primary/8 text-primary',
+    bar: 'before:bg-primary',
+    eyebrow: 'text-primary',
     soon: 'text-muted/60',
     chip: 'bg-ink/5 text-muted',
   },
@@ -49,7 +53,7 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
           >
             <Logo tone={tone === 'dark' ? 'light' : 'dark'} />
           </Link>
-          <p className={cn('eyebrow mt-3', tone === 'dark' ? 'text-gold' : 'text-gold-text')}>Staff portal</p>
+          <p className={cn('eyebrow mt-3', t.eyebrow)}>Staff portal</p>
         </div>
       )}
 
@@ -93,9 +97,10 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
                           itemClasses,
                           'relative transition-colors duration-120',
                           isActive ? t.active : t.link,
-                          // The gold bar grows in from its centre when an item becomes active.
+                          // The accent bar grows in from its centre when an item becomes active.
                           isActive &&
-                            'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:animate-bar-in before:rounded-full before:bg-gold',
+                            'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:animate-bar-in before:rounded-full',
+                          isActive && t.bar,
                         )
                       }
                     >

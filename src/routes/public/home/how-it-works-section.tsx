@@ -60,7 +60,7 @@ export function HowItWorksSection() {
                   <li>
                     <div className="flex items-center justify-between">
                       <span
-                        className="headline text-5xl leading-none font-medium text-gold-text"
+                        className="headline text-5xl leading-none font-medium text-primary"
                         aria-hidden="true"
                       >
                         {String(index + 1).padStart(2, '0')}

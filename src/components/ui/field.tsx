@@ -39,7 +39,7 @@ export function Field({
     <FieldContext value={{ id: controlId, invalid: Boolean(error), describedBy }}>
       <div className={cn('group/field grid gap-1.5', className)}>
         <div className={cn('flex items-baseline justify-between gap-3', hideLabel && 'sr-only')}>
-          {/* The label turns green while its control has focus, so it's clear which field you're in. */}
+          {/* The label turns blue while its control has focus, so it's clear which field you're in. */}
           <label
             htmlFor={controlId}
             className="text-sm font-medium text-ink transition-colors duration-120 group-has-[input:focus-visible]/field:text-primary"

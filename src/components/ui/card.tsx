@@ -35,8 +35,8 @@ type CardProps = ComponentProps<'div'> &
   };
 
 /**
- * `spotlight` adds a soft light that follows the mouse across the card (React Bits' SpotlightCard): green on
- * light cards, champagne on `tinted` ones. Use it on feature and figure cards, not on forms.
+ * `spotlight` adds a soft light that follows the mouse across the card (React Bits' SpotlightCard): blue on
+ * light cards, pale blue on `tinted` ones. Use it on feature and figure cards, not on forms.
  */
 export function Card({ className, variant, spotlight, asChild = false, onPointerMove, ...props }: CardProps) {
   const Component = asChild ? Slot : 'div';
