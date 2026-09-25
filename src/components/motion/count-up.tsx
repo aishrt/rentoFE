@@ -12,7 +12,7 @@ interface CountUpProps {
  * Counts a number up from zero (dashboards, plan §12.4). Screen readers get the final value only,
  * never the changing digits.
  */
-export function CountUp({ value, format = String, duration = 1.1 }: CountUpProps) {
+export function CountUp({ value, format = String, duration = motion.duration.count }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
   // Keep the latest formatter without restarting the animation when a new function is passed.

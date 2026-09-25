@@ -327,10 +327,38 @@
   }
 }
 
+/*
+ * One soft band of light that sweeps across once on hover. Kept for the gold call to action, so gold
+ * stays rare (plan §12.1). It sits behind the label and resets instantly when the pointer leaves.
+ */
+@utility sheen {
+  isolation: isolate;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
+    translate: -100% 0;
+    pointer-events: none;
+  }
+  @media (hover: hover) {
+    &:hover::after {
+      translate: 100% 0;
+      transition: translate 700ms var(--ease-out);
+    }
+  }
+}
+
 /* Card that lifts on hover. The deeper shadow fades in on a pseudo-element (opacity, not box-shadow). */
 @utility lift-card {
   position: relative;
-  transition: transform 320ms var(--ease-out);
+  /* `scale` is for the press (active:scale-98), which should answer faster than the lift. */
+  transition:
+    transform 320ms var(--ease-out),
+    scale 120ms var(--ease-out);
 
   &::after {
     content: '';
@@ -369,11 +397,58 @@
   }
 }
 
-/* Page transitions through the View Transitions API (plan §12.4): a short cross-fade. */
-::view-transition-old(root),
-::view-transition-new(root) {
+/*
+ * Scroll parallax (plan §12.4), desktop only. It runs on CSS scroll timelines, so it costs no JavaScript.
+ * Browsers without scroll timelines, and visitors who prefer reduced motion, simply don't get it.
+ */
+@keyframes parallax-drift {
+  from {
+    translate: 0 var(--parallax-from);
+  }
+  to {
+    translate: 0 var(--parallax-to);
+  }
+}
+
+/* Drifts downwards while the element crosses the screen, so it seems further away than the content. */
+@utility parallax {
+  @media (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      --parallax-from: -6%;
+      --parallax-to: 6%;
+      animation-name: parallax-drift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+
+/* For a hero at the top of the page: still on arrival, then drifts down as the page scrolls past it. */
+@utility parallax-exit {
+  @media (min-width: 64rem) and (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      --parallax-from: 0%;
+      --parallax-to: 8%;
+      animation-name: parallax-drift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: exit;
+    }
+  }
+}
+
+/*
+ * Page transitions through the View Transitions API (plan §12.4): a short cross-fade. The site header and
+ * the staff portal frame have their own `view-transition-name`, so they hold still while the page changes.
+ */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
   animation-duration: 320ms;
-  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  animation-timing-function: var(--ease-in-out);
 }
 
 @media (prefers-reduced-motion: no-preference) {
