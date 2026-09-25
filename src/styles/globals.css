@@ -1,0 +1,299 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fraunces';
+
+/* Design tokens (plan §12.2). Keep in sync with src/styles/tokens.ts; tokens.test.ts checks it. */
+@theme {
+  --color-primary: #0e3b32;
+  --color-primary-hover: #0a2c25;
+  --color-gold: #c8a96a;
+  --color-gold-text: #8a6a2e;
+  --color-ink: #0b1210;
+  --color-muted: #5e6662;
+  --color-canvas: #faf8f4;
+  --color-surface: #ffffff;
+  --color-line: #e7e2d9;
+  --color-success: #1e8e5a;
+  --color-warning: #c98a12;
+  --color-danger: #c8372d;
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+
+  --shadow-card: 0 1px 2px rgb(11 18 16 / 0.04), 0 8px 24px rgb(11 18 16 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(11 18 16 / 0.05), 0 16px 40px rgb(11 18 16 / 0.1);
+
+  /* Motion tokens (plan §12.4). Durations are used as duration-120 / 200 / 320 / 700. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-fade-in: fade-in 200ms var(--ease-out) both;
+  --animate-fade-up: fade-up 320ms var(--ease-out) both;
+  --animate-overlay-in: fade-in 320ms var(--ease-out);
+  --animate-overlay-out: fade-out 200ms var(--ease-in-out);
+  --animate-sheet-in-left: sheet-in-left 320ms var(--ease-out);
+  --animate-sheet-out-left: sheet-out-left 200ms var(--ease-in-out);
+  --animate-sheet-in-right: sheet-in-right 320ms var(--ease-out);
+  --animate-sheet-out-right: sheet-out-right 200ms var(--ease-in-out);
+  --animate-pop-in: pop-in 200ms var(--ease-out);
+  --animate-pop-out: pop-out 120ms var(--ease-in-out);
+  --animate-progress: progress 2.4s var(--ease-out) both;
+  --animate-hero-drift: hero-drift 28s var(--ease-in-out) infinite alternate;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes sheet-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes sheet-out-left {
+    from {
+      transform: none;
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes sheet-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes sheet-out-right {
+    from {
+      transform: none;
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  @keyframes progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(0.85);
+    }
+  }
+  @keyframes hero-drift {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.06) translate3d(-1%, -1%, 0);
+    }
+  }
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: rgb(200 169 106 / 0.35);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+}
+
+/* Headlines in Fraunces with tight tracking (plan §12.2). */
+@utility headline {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+}
+
+/* Small uppercase labels. */
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Frosted ivory: sticky header and sticky bars only, because blur is costly on budget phones. */
+@utility glass {
+  background-color: rgb(250 248 244 / 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* Link underline that grows from left to right, using transform only. */
+@utility link-underline {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: -2px;
+    height: 1px;
+    background-color: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms var(--ease-out);
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  &[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+}
+
+/* Card that lifts on hover. The deeper shadow fades in on a pseudo-element (opacity, not box-shadow). */
+@utility lift-card {
+  position: relative;
+  transition: transform 320ms var(--ease-out);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--shadow-lift);
+    opacity: 0;
+    transition: opacity 320ms var(--ease-out);
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-4px);
+    }
+    &:hover::after {
+      opacity: 1;
+    }
+  }
+}
+
+/* Loading placeholder with a shimmer that moves by transform only. */
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(11 18 16 / 0.06);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: shimmer 1.6s var(--ease-in-out) infinite;
+  }
+}
+
+/* Page transitions through the View Transitions API (plan §12.4): a short cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Respect reduced motion everywhere: movement stops, content still appears (plan §12.4). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

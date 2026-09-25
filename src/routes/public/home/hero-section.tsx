@@ -1,0 +1,76 @@
+import { ArrowRight } from 'lucide-react';
+import { m } from 'motion/react';
+import { Fragment } from 'react';
+import { Link } from 'react-router';
+import { LandscapeArt } from '@/components/brand/landscape-art';
+import { Container } from '@/components/layout/container';
+import { Button } from '@/components/ui/button';
+import { HeroSearchForm, type SearchPrefill } from '@/features/search/hero-search-form';
+import { motion } from '@/styles/tokens';
+
+// Animated word by word so the headline wraps naturally (and balanced) at every screen width.
+const HEADLINE_WORDS = 'Rent a car from local owners across New Zealand.'.split(' ');
+
+const enter = (delay: number, distance: number = motion.travel) => ({
+  initial: { opacity: 0, y: distance },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: motion.duration.long, ease: motion.ease.out, delay },
+});
+
+/**
+ * The cinematic hero (plan §12.4): the landscape drifts slowly, the headline rises in one word after
+ * another, then the search panel glides up. The spec's proposition and Become a Host prompt sit here (spec §4).
+ */
+export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
+  return (
+    <section aria-labelledby="hero-heading" className="relative isolate overflow-hidden bg-ink text-canvas">
+      <div aria-hidden="true" className="absolute inset-0 -z-10">
+        <LandscapeArt idPrefix="hero-art" className="h-full w-full origin-[65%_60%] animate-hero-drift" />
+        <div className="absolute inset-0 bg-linear-to-b from-ink/75 via-ink/40 to-ink/85 lg:bg-linear-to-r lg:from-ink/90 lg:via-ink/45 lg:to-ink/5" />
+      </div>
+
+      <Container className="grid gap-10 pt-12 pb-14 sm:pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14 lg:pt-20 lg:pb-24 xl:gap-20">
+        <div>
+          <m.p className="eyebrow text-gold" {...enter(0, 12)}>
+            Car sharing across Aotearoa
+          </m.p>
+          <h1
+            id="hero-heading"
+            className="headline mt-5 text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.04] font-medium text-balance"
+          >
+            {HEADLINE_WORDS.map((word, index) => (
+              <Fragment key={index}>
+                <m.span className="inline-block" {...enter(0.1 + index * 0.05, 24)}>
+                  {word}
+                </m.span>{' '}
+              </Fragment>
+            ))}
+          </h1>
+          <m.p className="mt-6 max-w-lg text-lg leading-relaxed text-canvas/80" {...enter(0.55)}>
+            City runabouts, family SUVs and EVs for the long way round, booked in minutes from people who live
+            here.
+          </m.p>
+        </div>
+
+        <m.div id="search" className="scroll-mt-24" {...enter(0.6, 40)}>
+          <HeroSearchForm prefill={prefill} />
+
+          <div className="mt-4 flex flex-col gap-3 rounded-card border border-canvas/15 bg-ink/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:pl-5">
+            <p className="text-canvas/85">
+              <span className="font-semibold text-canvas">Have a car?</span> Earn money by sharing it.
+            </p>
+            <Button variant="outline-light" asChild className="group shrink-0">
+              <Link to="/#hosting">
+                Become a Host
+                <ArrowRight
+                  aria-hidden="true"
+                  className="transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                />
+              </Link>
+            </Button>
+          </div>
+        </m.div>
+      </Container>
+    </section>
+  );
+}
