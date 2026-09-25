@@ -3,16 +3,16 @@ import { useState } from 'react';
 import { Link, Outlet, useMatches, useNavigate } from 'react-router';
 import type { SessionUser } from '@/api/types';
 import { SkipLink } from '@/components/layout/root-layout';
+import { UserMenuLabel } from '@/components/layout/user-menu-label';
 import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { IconButton } from '@/components/ui/icon-button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initials, staffRoleLabel } from '@/features/auth/roles';
@@ -41,22 +41,20 @@ function StaffMenu({ user }: { user: SessionUser }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Account menu for ${user.firstName}`}
-        className="flex h-11 items-center gap-2.5 rounded-full py-1 pr-2 pl-1 transition-colors duration-120 hover:bg-ink/5 data-[state=open]:bg-ink/5 sm:pr-3"
+        className="flex h-11 items-center gap-2.5 rounded-full py-1 pr-2 pl-1 transition-[background-color,scale] duration-120 ease-out hover:bg-ink/5 active:scale-98 data-[state=open]:bg-ink/5 sm:pr-3"
       >
         <Avatar initials={initials(user)} tone="gold" />
         <span className="hidden text-left sm:block">
           <span className="block text-sm leading-tight font-medium text-ink">{user.firstName}</span>
           <span className="block text-xs leading-tight text-muted">{staffRoleLabel(user)}</span>
         </span>
-        <ChevronDown aria-hidden="true" className="hidden size-4 text-muted sm:block" />
+        <ChevronDown
+          aria-hidden="true"
+          className="hidden size-4 text-muted transition-transform duration-200 ease-out in-data-[state=open]:rotate-180 sm:block"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>
-          <p className="text-sm font-semibold text-ink">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="truncate text-xs text-muted">{user.email}</p>
-        </DropdownMenuLabel>
+        <UserMenuLabel user={user} />
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/">
@@ -88,7 +86,8 @@ export function AdminLayout({ user }: { user: SessionUser }) {
   return (
     <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
       <SkipLink />
-      <aside className="sticky top-0 hidden h-dvh lg:block">
+      {/* The sidebar and header are named for view transitions, so only the page content cross-fades. */}
+      <aside className="sticky top-0 hidden h-dvh [view-transition-name:staff-sidebar] lg:block">
         <AdminSidebar />
       </aside>
 
@@ -99,18 +98,16 @@ export function AdminLayout({ user }: { user: SessionUser }) {
       </Sheet>
 
       <div className="flex min-w-0 flex-col">
-        <header className="glass sticky top-0 z-30 border-b border-line/70">
+        <header className="glass sticky top-0 z-30 border-b border-line/70 [view-transition-name:staff-header]">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <div className="flex min-w-0 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-2 lg:hidden"
-                aria-label="Open staff menu"
+              <IconButton
+                label="Open staff menu"
+                className="-ml-2 lg:hidden [&_svg]:size-6"
                 onClick={() => setMenuOpen(true)}
               >
-                <Menu aria-hidden="true" className="size-6!" />
-              </Button>
+                <Menu aria-hidden="true" />
+              </IconButton>
               <p className="truncate text-sm text-muted">
                 <span className="hidden sm:inline">Staff portal / </span>
                 <span className="font-medium text-ink">{title}</span>

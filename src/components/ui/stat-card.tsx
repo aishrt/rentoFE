@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { CountUp } from '@/components/motion/count-up';
 import { cn } from '@/lib/cn';
 import { Card } from './card';
+import { IconBadge } from './icon-badge';
 import { Skeleton } from './skeleton';
 
 interface StatCardProps {
@@ -22,15 +23,9 @@ export function StatCard({ label, icon: Icon, value, format, hint, className }: 
     <Card className={cn('flex flex-col gap-4 p-5', className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-muted">{label}</p>
-        <span
-          aria-hidden="true"
-          className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-full',
-            pending ? 'bg-ink/5 text-muted' : 'bg-primary/8 text-primary',
-          )}
-        >
-          <Icon className="size-4.5" />
-        </span>
+        <IconBadge size="sm" tone={pending ? 'muted' : 'soft'}>
+          <Icon />
+        </IconBadge>
       </div>
       <div>
         <p className="headline text-stat font-medium text-ink">

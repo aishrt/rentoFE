@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import { Logo } from '@/components/brand/logo';
+import { Divider } from '@/components/ui/divider';
 import { cn } from '@/lib/cn';
 import { adminNav } from './admin-nav';
 
@@ -12,7 +13,6 @@ const tones = {
     active: 'bg-canvas/10 text-canvas',
     soon: 'text-canvas/35',
     chip: 'bg-canvas/8 text-canvas/50',
-    divider: 'border-canvas/10',
   },
   light: {
     root: 'bg-surface text-muted',
@@ -21,7 +21,6 @@ const tones = {
     active: 'bg-primary/8 text-primary',
     soon: 'text-muted/60',
     chip: 'bg-ink/5 text-muted',
-    divider: 'border-line',
   },
 } as const;
 
@@ -87,8 +86,9 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: Adm
                           itemClasses,
                           'relative transition-colors duration-120',
                           isActive ? t.active : t.link,
+                          // The gold bar grows in from its centre when an item becomes active.
                           isActive &&
-                            'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-full before:bg-gold',
+                            'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:animate-bar-in before:rounded-full before:bg-gold',
                         )
                       }
                     >
@@ -103,7 +103,8 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true }: Adm
         ))}
       </nav>
 
-      <div className={cn('mx-3 border-t pt-2 pb-4', t.divider)}>
+      <div className="mx-3 pb-4">
+        <Divider tone={tone} className="mb-2" />
         <Link
           to="/"
           onClick={onNavigate}

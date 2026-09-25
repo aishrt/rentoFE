@@ -5,6 +5,7 @@ import { Stagger, StaggerItem } from '@/components/motion/reveal';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
 import { StatCard, StatCardSkeleton } from '@/components/ui/stat-card';
 import { overviewMetrics } from '@/features/admin/overview-metrics';
 import { useAdminOverview } from '@/features/admin/use-admin-overview';
@@ -46,15 +47,13 @@ export function AdminOverviewPage() {
               <span aria-live="polite">
                 Updated {formatTimeNz(new Date(overview.data.generatedAt))} NZ time
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Refresh figures"
+              <IconButton
+                label="Refresh figures"
                 onClick={() => overview.refetch()}
                 disabled={overview.isFetching}
               >
                 <RefreshCw aria-hidden="true" className={overview.isFetching ? 'animate-spin' : undefined} />
-              </Button>
+              </IconButton>
             </div>
           )}
         </div>
