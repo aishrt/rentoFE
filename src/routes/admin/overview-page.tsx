@@ -1,5 +1,7 @@
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { ErrorBoundary } from '@/components/errors/error-boundary';
+import { SectionError } from '@/components/errors/section-error';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Stagger, StaggerItem } from '@/components/motion/reveal';
 import { Alert } from '@/components/ui/alert';
@@ -88,20 +90,24 @@ export function AdminOverviewPage() {
         )}
 
         {overview.data && (
-          <Stagger as="ul" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {overviewMetrics.map((metric, index) => (
-              <StaggerItem as="li" key={metric.key} index={index}>
-                <StatCard
-                  label={metric.label}
-                  icon={metric.icon}
-                  value={overview.data.metrics[metric.key]}
-                  format={metric.format}
-                  hint={metric.hint}
-                  className="h-full"
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <ErrorBoundary
+            fallback={({ reset }) => <SectionError title="We couldn't show the figures" onRetry={reset} />}
+          >
+            <Stagger as="ul" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {overviewMetrics.map((metric, index) => (
+                <StaggerItem as="li" key={metric.key} index={index}>
+                  <StatCard
+                    label={metric.label}
+                    icon={metric.icon}
+                    value={overview.data.metrics[metric.key]}
+                    format={metric.format}
+                    hint={metric.hint}
+                    className="h-full"
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </ErrorBoundary>
         )}
       </section>
 

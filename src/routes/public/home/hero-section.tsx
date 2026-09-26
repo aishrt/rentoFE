@@ -3,6 +3,8 @@ import { m } from 'motion/react';
 import { Link } from 'react-router';
 import { LandscapeArt } from '@/components/brand/landscape-art';
 import { Container } from '@/components/layout/container';
+import { ErrorBoundary } from '@/components/errors/error-boundary';
+import { SectionError } from '@/components/errors/section-error';
 import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp, heroTimeline } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
@@ -42,7 +44,16 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
         </div>
 
         <m.div id="search" className="scroll-mt-24" {...fadeUp(TIMELINE.panel, motion.travel.lg)}>
-          <HeroSearchForm prefill={prefill} />
+          <ErrorBoundary
+            fallback={({ reset }) => (
+              <Card variant="raised" className="p-5 text-ink sm:p-6">
+                <h2 className="headline text-2xl font-medium">Find your car</h2>
+                <SectionError className="mt-5" title="Search isn't available right now" onRetry={reset} />
+              </Card>
+            )}
+          >
+            <HeroSearchForm prefill={prefill} />
+          </ErrorBoundary>
 
           <Card
             variant="tinted"

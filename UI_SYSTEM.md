@@ -50,6 +50,7 @@ Fraunces (`headline` utility, with −0.02em tracking) for headings, Inter for e
 | `text-title-2` | 32 → 44 px               | Section headings                                |
 | `text-title-3` | 30 → 36 px               | Compact page titles: log-in, errors, dashboards |
 | `text-stat`    | 32 px                    | Dashboard figures                               |
+| `text-numeral` | 96 → 256 px, scene-fluid | The giant 404 in the not-found scene            |
 | `text-ui`      | 15 px                    | Navigation links, medium buttons                |
 | `eyebrow`      | 12 px, uppercase, 0.08em | Small labels above headings                     |
 
@@ -207,6 +208,26 @@ Use skeletons for content that is loading, and a `Spinner` only inside a busy bu
 
 Also: `Avatar`, `DropdownMenu` (action menus; for choosing a value use `Select`), `Sheet` (side panel), `SegmentedTabs` (sliding indicator), and in `components/layout` `SectionHeading`, `Container` and `UserMenuLabel`.
 
+### Errors
+
+Errors are caught at four levels, so a fault takes out as little of the site as possible:
+
+| Level      | Where                                                                                                            | What the visitor sees                                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| App        | `ErrorBoundary` around the providers and router in `main.tsx`                                                    | `AppCrashScreen`: logo, message, Reload, and a plain link home (it sits outside the router)           |
+| Root route | `errorElement: <RouteErrorPage />` in `router.tsx`                                                               | A standalone page, for a layout, the header or a page outside the layouts (log-in) that fails         |
+| Page       | Pathless routes with `errorElement` inside `PublicLayout` (`PageError`) and the staff portal (`AdminRouteError`) | The message in the page's place; the site header and footer, or the portal's sidebar and header, stay |
+| Section    | `ErrorBoundary` around parts of a page                                                                           | `SectionError` (an alert with Try again), or nothing at all for decorative sections                   |
+
+```tsx
+<ErrorBoundary fallback={({ reset }) => <SectionError title="We couldn't show the figures" onRetry={reset} />}>
+  <Figures />
+</ErrorBoundary>
+<ErrorBoundary fallback={null}>{/* hides quietly */}<TrustStrip /></ErrorBoundary>
+```
+
+Page-level messages come from `ErrorMessage`. When a page's code fails to download (`isChunkLoadError`), it says the connection may have dropped instead of "Something went wrong", and development builds show the error itself. Boundaries only catch errors thrown while rendering. Errors in event handlers and requests are shown by the form or query that made them, as they are today.
+
 ### Not built yet
 
 Plan §12.3 also lists Toast, a bottom sheet with drag-to-close, Chip, ListItem, Checkbox/Switch and Modal. They will be built with the first feature that needs them (search filters, checkout, saved cars), from the same tokens. The drag gesture needs Motion's `domMax` features, so load that only on the pages that use it.
@@ -236,38 +257,39 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 
 ### CSS utilities ([`src/styles/globals.css`](src/styles/globals.css))
 
-| Utility                                                                      | Effect                                                                                                                    |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `lift-card`                                                                  | Lifts 4 px with a deeper shadow on hover; pair with `active:scale-98`                                                     |
-| `link-underline`                                                             | Underline grows from the left on hover, focus and the current page                                                        |
-| `nudge-right` / `nudge-left`                                                 | Arrow moves 2 px on parent hover or focus                                                                                 |
-| `sheen`                                                                      | One band of light across on hover (accent button)                                                                         |
-| `parallax` / `parallax-exit`                                                 | Desktop scroll parallax on CSS scroll timelines, with no JavaScript. `parallax-exit` is for heroes at the top of the page |
-| `skeleton`, `glass`, `headline`, `eyebrow`                                   | Loading shimmer, sticky-bar blur, display font, small labels                                                              |
-| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-breathe`, `-bar-in`, … | Keyframe animations                                                                                                       |
-| `spotlight` / `spotlight-on-dark`                                            | A light that follows the mouse (driven by `trackSpotlight`; Cards use the `spotlight` prop)                               |
-| `shiny-text`                                                                 | A glint crosses accent text every few seconds. Short labels on dark backgrounds only; keep `text-accent` on the element   |
-| `gradient-text`                                                              | Slow blue-to-ink fill for one large figure (the 404); keep a text colour on the element                                   |
-| `stagger-in`                                                                 | Fade up in turn, with `style={staggerIndex(i)}`; first 6 items only                                                       |
-| `tilt`, `magnet`, `tooltip`                                                  | Used by `TiltedCard`, `Magnet` and `IconButton`; you don't need to add them yourself                                      |
+| Utility                                                                           | Effect                                                                                                                    |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `lift-card`                                                                       | Lifts 4 px with a deeper shadow on hover; pair with `active:scale-98`                                                     |
+| `link-underline`                                                                  | Underline grows from the left on hover, focus and the current page                                                        |
+| `nudge-right` / `nudge-left`                                                      | Arrow moves 2 px on parent hover or focus                                                                                 |
+| `sheen`                                                                           | One band of light across on hover (accent button)                                                                         |
+| `parallax` / `parallax-exit`                                                      | Desktop scroll parallax on CSS scroll timelines, with no JavaScript. `parallax-exit` is for heroes at the top of the page |
+| `skeleton`, `glass`, `headline`, `eyebrow`                                        | Loading shimmer, sticky-bar blur, display font, small labels                                                              |
+| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-breathe`, `-bar-in`, …      | Keyframe animations                                                                                                       |
+| `spotlight` / `spotlight-on-dark`                                                 | A light that follows the mouse (driven by `trackSpotlight`; Cards use the `spotlight` prop)                               |
+| `shiny-text`                                                                      | A glint crosses accent text every few seconds. Short labels on dark backgrounds only; keep `text-accent` on the element   |
+| `gradient-text`                                                                   | Slow blue-to-ink fill for one large figure; keep a text colour on the element                                             |
+| `stagger-in`                                                                      | Fade up in turn, with `style={staggerIndex(i)}`; first 6 items only                                                       |
+| `tilt`, `magnet`, `tooltip`                                                       | Used by `TiltedCard`, `Magnet` and `IconButton`; you don't need to add them yourself                                      |
+| `road-dashes`, `roadside-posts`, `animate-drive-in`, `-wheel-spin`, `-pan-far`, … | The 404's `RoadTripScene`. Ground-level motion runs at one speed (12rem/s); farther hills pan slower                      |
 
 ### Where motion is used
 
-| Where              | What                                                                                                                                                                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Page changes       | The old page fades out (200 ms) and the new one rises 8 px into place (320 ms), with View Transitions. The site header and staff frame have their own `view-transition-name`, so they stay still |
-| Home hero          | Landscape drifts; a glint crosses the eyebrow; headline rises and comes into focus word by word; search panel glides up; landscape falls behind on scroll (desktop)                              |
-| Sections           | Fade up once; lists stagger (first 6 items)                                                                                                                                                      |
-| Destination tiles  | Lift on hover with a pale blue spotlight, press in, ridges drift with the scroll (desktop)                                                                                                       |
-| How it works steps | Blue spotlight on hover                                                                                                                                                                          |
-| Host section       | Listing preview tilts towards the mouse with a spotlight; the accent button drifts towards it; checks draw in, the progress bar fills                                                            |
-| Forms              | Focus ring, label and icon turn blue on focus, shake on error, clear button fades in, password eye cross-fades. Pickers pop in from 96%, a new month fades in, a select's chevron turns          |
-| Menus and sheets   | Dropdowns pop in from 96% and highlighted icons turn blue; account chevron turns; sheet links fade up in turn; the close ✕ turns on hover; staff sidebar's accent bar grows in                   |
-| Icon buttons       | Tooltip after half a second of hover, or at once on keyboard focus                                                                                                                               |
-| Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                |
-| Log-in pages       | Form fades up; the side panel's headline comes into focus word by word                                                                                                                           |
-| 404                | The numeral's blue-to-ink gradient drifts slowly                                                                                                                                                 |
-| Loading            | Skeleton shimmer; brand mark breathes on first load; the account menu fades in over its placeholder                                                                                              |
+| Where              | What                                                                                                                                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page changes       | The old page fades out (200 ms) and the new one rises 8 px into place (320 ms), with View Transitions. The site header and staff frame have their own `view-transition-name`, so they stay still                                                                        |
+| Home hero          | Landscape drifts; a glint crosses the eyebrow; headline rises and comes into focus word by word; search panel glides up; landscape falls behind on scroll (desktop)                                                                                                     |
+| Sections           | Fade up once; lists stagger (first 6 items)                                                                                                                                                                                                                             |
+| Destination tiles  | Lift on hover with a pale blue spotlight, press in, ridges drift with the scroll (desktop)                                                                                                                                                                              |
+| How it works steps | Blue spotlight on hover                                                                                                                                                                                                                                                 |
+| Host section       | Listing preview tilts towards the mouse with a spotlight; the accent button drifts towards it; checks draw in, the progress bar fills                                                                                                                                   |
+| Forms              | Focus ring, label and icon turn blue on focus, shake on error, clear button fades in, password eye cross-fades. Pickers pop in from 96%, a new month fades in, a select's chevron turns                                                                                 |
+| Menus and sheets   | Dropdowns pop in from 96% and highlighted icons turn blue; account chevron turns; sheet links fade up in turn; the close ✕ turns on hover; staff sidebar's accent bar grows in                                                                                          |
+| Icon buttons       | Tooltip after half a second of hover, or at once on keyboard focus                                                                                                                                                                                                      |
+| Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                                                                                       |
+| Log-in pages       | Form fades up; the side panel's headline comes into focus word by word                                                                                                                                                                                                  |
+| 404                | A night drive: the car drives in, then cruises with turning wheels, a gentle suspension bob and puffs of exhaust; lane markings and marker posts stream past; two ranges of hills pan at their own speeds under a glowing 404; stars twinkle. Still with reduced motion |
+| Loading            | Skeleton shimmer; brand mark breathes on first load; the account menu fades in over its placeholder                                                                                                                                                                     |
 
 ### From React Bits
 

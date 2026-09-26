@@ -37,6 +37,9 @@
   --text-stat--line-height: 1;
   --text-ui: 0.9375rem;
   --text-ui--line-height: 1.5;
+  /* The giant 404 on the horizon of the not-found scene; it scales with the scene (a size container). */
+  --text-numeral: clamp(6rem, 34cqw, 16rem);
+  --text-numeral--line-height: 1;
 
   --radius-inner: 8px; /* Elements nested inside a control, e.g. a button inside an input */
   --radius-control: 10px;
@@ -78,6 +81,21 @@
   --animate-shake: shake 320ms var(--ease-out);
   --animate-breathe: breathe 1.2s var(--ease-in-out) infinite alternate;
   --animate-bar-in: bar-in 320ms var(--ease-out);
+
+  /*
+   * The road trip on the 404 page (RoadTripScene). Ground-level things (lane dashes, roadside posts) move at
+   * one speed, 12rem a second; the hills behind move slower the further away they are.
+   */
+  --animate-drive-in: drive-in 1.6s var(--ease-out) both;
+  --animate-car-bob: car-bob 0.45s var(--ease-in-out) infinite alternate;
+  --animate-wheel-spin: wheel-spin 0.5s linear infinite;
+  --animate-road-dashes: road-slide 0.5s linear infinite;
+  --animate-roadside: roadside-slide 1s linear infinite;
+  --animate-pan-near: pan 26s linear infinite;
+  --animate-pan-far: pan 70s linear infinite;
+  --animate-twinkle: twinkle 2.8s var(--ease-in-out) infinite alternate;
+  --animate-exhaust: exhaust 1.5s var(--ease-out) infinite;
+  --animate-beam: beam 1.8s var(--ease-in-out) infinite alternate;
 
   @keyframes fade-in {
     from {
@@ -215,10 +233,87 @@
       scale: 1 1;
     }
   }
+  /* Enters from beyond the scene's left edge (cqw: the scene is an inline-size container). */
+  @keyframes drive-in {
+    from {
+      transform: translateX(-80cqw);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes car-bob {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 -1.5px;
+    }
+  }
+  @keyframes wheel-spin {
+    to {
+      rotate: 360deg;
+    }
+  }
+  /* One period of the pattern each, so the loop is seamless: see the road-dashes and roadside utilities. */
+  @keyframes road-slide {
+    to {
+      translate: -6rem 0;
+    }
+  }
+  @keyframes roadside-slide {
+    to {
+      translate: -12rem 0;
+    }
+  }
+  /* For a strip twice the scene's width holding two copies of the same artwork. */
+  @keyframes pan {
+    to {
+      translate: -50% 0;
+    }
+  }
+  @keyframes twinkle {
+    from {
+      opacity: 0.2;
+    }
+    to {
+      opacity: 0.9;
+    }
+  }
+  @keyframes exhaust {
+    from {
+      opacity: 0.4;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-24px) scale(2.6);
+    }
+  }
+  @keyframes beam {
+    from {
+      opacity: 0.7;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 @utility tone-* {
   background-image: --value(--tone-*);
+}
+
+/*
+ * Lane markings (a 3rem dash every 6rem) and roadside marker posts (one every 12rem) for the 404 scene, in the
+ * current text colour. Their slide animations move exactly one period, so they loop without a seam.
+ */
+@utility road-dashes {
+  background-image: repeating-linear-gradient(90deg, currentColor 0 3rem, transparent 3rem 6rem);
+}
+
+@utility roadside-posts {
+  background-image: repeating-linear-gradient(90deg, currentColor 0 0.25rem, transparent 0.25rem 12rem);
 }
 
 @layer base {
