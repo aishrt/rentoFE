@@ -1,0 +1,78 @@
+# Deploys the website on every push to master (plan §13.3): lint and test, build with the production API
+# address, upload to S3 (hashed assets cached for a year, everything else no-cache, nothing deleted so open
+# pages keep working) and refresh CloudFront.
+#
+# AWS access uses GitHub's OIDC login and the IAM role rento-vroom-github-frontend, which trusts only
+# pushes to master of aishrt/rentoFE. No AWS keys are stored in GitHub.
+name: Deploy frontend
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# One deploy at a time; a newer push waits for the running one instead of cancelling it.
+concurrency:
+  group: deploy-frontend-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  AWS_ROLE_ARN: arn:aws:iam::935937182366:role/rento-vroom-github-frontend
+  S3_BUCKET: rento-vroom-web-prod-935937182366
+  CLOUDFRONT_DISTRIBUTION_ID: E19WXD8ZXT5ZQM
+  API_URL: https://api.rentovroom.com
+  SITE_URL: https://www.rentovroom.com
+
+jobs:
+  deploy:
+    name: Test, build and deploy to S3 + CloudFront
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+      # tsc -b (typecheck) then vite build. VITE_API_URL is set only here: the tests set their own.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ env.API_URL }}
+
+      - name: Check the API address is built in
+        run: |
+          if ! grep -lq "${API_URL#https://}" dist/assets/*.js; then
+            echo "::error::$API_URL is not in the built JavaScript; the site would call the wrong API."
+            exit 1
+          fi
+
+      - name: Sign in to AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync dist/assets "s3://$S3_BUCKET/assets" --cache-control "public,max-age=31536000,immutable"
+          aws s3 sync dist "s3://$S3_BUCKET" --exclude "assets/*" --cache-control "no-cache"
+
+      - name: Refresh CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*" \
+            --query Invalidation.Id --output text
+
+      - name: Smoke test
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors -o /dev/null "$SITE_URL/"
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors -o /dev/null "$SITE_URL/login"
