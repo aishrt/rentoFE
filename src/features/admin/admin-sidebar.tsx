@@ -57,7 +57,7 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
         </div>
       )}
 
-      <nav aria-label="Staff portal" className="flex-1 overflow-y-auto px-3 pb-6">
+      <nav aria-label="Staff portal" className="scrollbar-subtle flex-1 overflow-y-auto px-3 pb-6">
         {adminNav.map((group, groupIndex) => (
           <div
             key={group.title ?? groupIndex}

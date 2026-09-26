@@ -279,6 +279,45 @@
   backdrop-filter: blur(16px);
 }
 
+/*
+ * A thin scrollbar on a transparent track, for panels that scroll inside the page, such as the staff sidebar.
+ * The thumb is mixed from the panel's text colour, so it suits dark and light panels alike, and firms up
+ * while the pointer is over the panel.
+ */
+@utility scrollbar-subtle {
+  --scrollbar-thumb: color-mix(in oklab, currentColor 22%, transparent);
+  overscroll-behavior: contain;
+
+  @media (hover: hover) {
+    &:hover {
+      --scrollbar-thumb: color-mix(in oklab, currentColor 40%, transparent);
+    }
+  }
+
+  /*
+   * Chromium and Safari: the WebKit pseudo-elements give a rounded thumb with no arrow buttons. The
+   * transparent border insets the thumb from the panel's edge.
+   */
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-color: var(--scrollbar-thumb);
+    background-clip: padding-box;
+  }
+
+  /* Firefox has no WebKit pseudo-elements, so it takes the standard properties. */
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
 /* Link underline that grows from left to right, using transform only. */
 @utility link-underline {
   position: relative;
