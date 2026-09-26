@@ -139,7 +139,45 @@ Use `spotlight` on feature and figure cards (the How it works steps, dashboard f
 <Input leadingIcon={<MapPin />} trailing={<IconButton size="inset" label="Clear">…</IconButton>} />
 ```
 
-`Field` wires up the label, description, error and ARIA links, and the control shakes once when an error appears. While the input has focus, its label and leading icon turn green. Pass `trailing` on every render, even when hidden, so the input isn't remounted. Labels sit above inputs (no floating labels).
+`Field` wires up the label, description, error and ARIA links, and the control shakes once when an error appears. While the input has focus, its label and leading icon turn blue. Pass `trailing` on every render, even when hidden, so the input isn't remounted. Labels sit above inputs (no floating labels).
+
+#### Pickers and dropdowns
+
+Don't use `<input type="date">`, `<input type="time">`, `<select>` or `<datalist>`: the browser draws those in its own style. Use these instead. They look like `Input`, work inside `Field`, and take react-hook-form through `Controller`. Pass `field.ref` so `setFocus` reaches them.
+
+```tsx
+<Field label="Pick-up date" error={errors.pickupDate?.message}>
+  <Controller
+    control={control}
+    name="pickupDate"
+    render={({ field }) => (
+      <DatePicker
+        ref={field.ref}
+        value={field.value}           // "2026-10-12", as <input type="date">
+        onChange={field.onChange}
+        onBlur={field.onBlur}
+        min={today}
+        range={[pickupDate, returnDate]}   // optional: shows the trip as a band
+        calendarLabel="Choose a pick-up date"
+      />
+    )}
+  />
+</Field>
+
+<TimePicker value={time} onChange={setTime} step={30} align="end" />            // "10:00", listed as "10:00 am"
+<Select value={size} onChange={setSize} options={sizes} icon={<Car />} listLabel="Car sizes" />
+<Combobox value={where} onValueChange={setWhere} options={places} optionIcon={placeIcon} leadingIcon={<MapPin />} />
+```
+
+| Component    | Replaces                      | Behaviour                                                                                                                                                             |
+| ------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DatePicker` | `<input type="date">`         | Calendar with Monday first. Today has a dot and the chosen day is solid blue. Days outside `min`/`max` are faded. Arrows, Page Up/Down and Home/End move between days |
+| `TimePicker` | `<input type="time">`         | A list of times in `step` minutes (30 by default). Typing jumps to a time. Built on `Select`                                                                          |
+| `Select`     | `<select>`                    | Themed list with a check on the chosen option. Arrows, Home/End, Page keys, typeahead, and Enter or Space to choose                                                   |
+| `Combobox`   | `<input list>` + `<datalist>` | Suggestions filter as you type, ignoring accents ("taupo" finds Taupō). Focus stays in the input. Any text can still be entered                                       |
+| `Popover`    | (building block)              | The floating panel under all four. See below                                                                                                                          |
+
+`Popover` renders into the page body, so a parent with `overflow: hidden`, such as the home hero, can't clip it. It opens below its anchor, or above when there is more room there. If it fits neither way, it scrolls the page just enough to fit. It closes on Escape and on a press or focus outside. It is written by hand instead of using Radix Popover, because Radix's positioning engine would add about 10 KB to the homepage.
 
 ### Feedback and status
 
@@ -167,7 +205,7 @@ Use skeletons for content that is loading, and a `Spinner` only inside a busy bu
 <Divider tone="dark" />
 ```
 
-Also: `Avatar`, `DropdownMenu`, `Sheet` (side panel), `SegmentedTabs` (sliding indicator), and in `components/layout` `SectionHeading`, `Container` and `UserMenuLabel`.
+Also: `Avatar`, `DropdownMenu` (action menus; for choosing a value use `Select`), `Sheet` (side panel), `SegmentedTabs` (sliding indicator), and in `components/layout` `SectionHeading`, `Container` and `UserMenuLabel`.
 
 ### Not built yet
 
@@ -223,7 +261,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | Destination tiles  | Lift on hover with a pale blue spotlight, press in, ridges drift with the scroll (desktop)                                                                                                       |
 | How it works steps | Blue spotlight on hover                                                                                                                                                                          |
 | Host section       | Listing preview tilts towards the mouse with a spotlight; the accent button drifts towards it; checks draw in, the progress bar fills                                                            |
-| Forms              | Focus ring, label and icon turn blue on focus, shake on error, clear button fades in, password eye cross-fades                                                                                   |
+| Forms              | Focus ring, label and icon turn blue on focus, shake on error, clear button fades in, password eye cross-fades. Pickers pop in from 96%, a new month fades in, a select's chevron turns          |
 | Menus and sheets   | Dropdowns pop in from 96% and highlighted icons turn blue; account chevron turns; sheet links fade up in turn; the close ✕ turns on hover; staff sidebar's accent bar grows in                   |
 | Icon buttons       | Tooltip after half a second of hover, or at once on keyboard focus                                                                                                                               |
 | Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                |

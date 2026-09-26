@@ -1,14 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { controlClasses } from './control-styles';
 import { useFieldControl } from './field-context';
-
-const inputClasses = cn(
-  'h-12 w-full rounded-control border border-line bg-surface px-4 text-base text-ink shadow-input',
-  'placeholder:text-muted/75 transition-[border-color,box-shadow] duration-120 ease-out',
-  'hover:border-ink/25 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/12',
-  'aria-invalid:border-danger aria-invalid:focus-visible:ring-danger/12',
-  'disabled:cursor-not-allowed disabled:opacity-60',
-);
 
 type InputProps = ComponentProps<'input'> & {
   /** Icon shown inside the input on the left. */
@@ -27,7 +20,7 @@ export function Input({ className, id, leadingIcon, trailing, ...props }: InputP
       id={id ?? field?.id}
       aria-invalid={props['aria-invalid'] ?? (field?.invalid || undefined)}
       aria-describedby={props['aria-describedby'] ?? field?.describedBy}
-      className={cn(inputClasses, leadingIcon && 'pl-11', trailing && 'pr-13', className)}
+      className={cn(controlClasses, leadingIcon && 'pl-11', trailing && 'pr-13', className)}
       {...props}
     />
   );

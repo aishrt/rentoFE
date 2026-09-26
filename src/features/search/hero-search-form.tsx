@@ -1,12 +1,14 @@
-import { Clock, MapPin, Search, X } from 'lucide-react';
+import { Clock, MapPin, Plane, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Field } from '@/components/ui/field';
 import { IconButton } from '@/components/ui/icon-button';
-import { Input } from '@/components/ui/input';
+import { TimePicker } from '@/components/ui/time-picker';
 import { cn } from '@/lib/cn';
 import { toDateInputValue } from '@/lib/dates';
 import { NZ_PLACE_SUGGESTIONS } from './nz-places';
@@ -18,16 +20,19 @@ export interface SearchPrefill {
   nonce: number;
 }
 
-const dateInputClasses = 'min-w-0 appearance-none [&::-webkit-date-and-time-value]:text-left';
-// Time inputs carry a clock button and "AM"/"PM", so they get a little less padding to fit their column.
-const timeInputClasses = cn(dateInputClasses, 'px-3');
+const placeIcon = (place: string) => (place.includes('Airport') ? <Plane /> : <MapPin />);
+
+// The legend above each date-and-time pair turns blue while either of its pickers has focus or is open.
+const legendClasses = cn(
+  'mb-1.5 text-sm font-medium transition-colors duration-120',
+  'group-has-[button[aria-haspopup]:focus-visible]/pair:text-primary group-has-[[aria-expanded=true]]/pair:text-primary',
+);
 
 export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill; className?: string }) {
   const navigate = useNavigate();
   const [defaults] = useState(() => defaultSearchValues());
   const [today] = useState(() => toDateInputValue(new Date()));
   const {
-    register,
     handleSubmit,
     setValue,
     setFocus,
@@ -38,8 +43,8 @@ export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill
     defaultValues: defaults,
     mode: 'onTouched',
   });
-  const pickupDate = useWatch({ control, name: 'pickupDate' });
-  const where = useWatch({ control, name: 'where' });
+  const [where, pickupDate, returnDate] = useWatch({ control, name: ['where', 'pickupDate', 'returnDate'] });
+  const trip = [pickupDate, returnDate] as const;
 
   useEffect(() => {
     if (!prefill) return;
@@ -63,62 +68,121 @@ export function HeroSearchForm({ prefill, className }: { prefill?: SearchPrefill
 
         <div className="mt-5 grid gap-4">
           <Field label="Where are you going?" error={errors.where?.message}>
-            <Input
-              leadingIcon={<MapPin />}
-              trailing={
-                // Always rendered so the input never remounts; hidden (and out of the tab order) when empty.
-                <IconButton
-                  size="inset"
-                  label="Clear location"
-                  onClick={clearWhere}
-                  className={cn(
-                    'transition-[opacity,scale,visibility,background-color,color]',
-                    where ? 'visible opacity-100' : 'invisible scale-90 opacity-0',
-                  )}
-                >
-                  <X aria-hidden="true" />
-                </IconButton>
-              }
-              list="nz-place-suggestions"
-              placeholder="City, airport or destination"
-              autoComplete="off"
-              enterKeyHint="next"
-              {...register('where')}
+            <Controller
+              control={control}
+              name="where"
+              render={({ field }) => (
+                <Combobox
+                  ref={field.ref}
+                  name={field.name}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={NZ_PLACE_SUGGESTIONS}
+                  optionIcon={placeIcon}
+                  listLabel="Popular destinations"
+                  leadingIcon={<MapPin />}
+                  trailing={
+                    // Always rendered so the input never remounts; hidden (and out of the tab order) when empty.
+                    <IconButton
+                      size="inset"
+                      label="Clear location"
+                      onClick={clearWhere}
+                      className={cn(
+                        'transition-[opacity,scale,visibility,background-color,color]',
+                        where ? 'visible opacity-100' : 'invisible scale-90 opacity-0',
+                      )}
+                    >
+                      <X aria-hidden="true" />
+                    </IconButton>
+                  }
+                  placeholder="City, airport or destination"
+                  enterKeyHint="next"
+                />
+              )}
             />
           </Field>
-          <datalist id="nz-place-suggestions">
-            {NZ_PLACE_SUGGESTIONS.map((place) => (
-              <option key={place} value={place} />
-            ))}
-          </datalist>
 
           {/* Side by side on tablets; stacked beside the headline on desktop, so dates never get cut off. */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <fieldset className="grid min-w-0 gap-1.5">
-              <legend className="mb-1.5 text-sm font-medium">Pick-up</legend>
+            <fieldset className="group/pair grid min-w-0 gap-1.5">
+              <legend className={legendClasses}>Pick-up</legend>
               <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-start gap-2">
                 <Field label="Pick-up date" hideLabel error={errors.pickupDate?.message}>
-                  <Input type="date" min={today} className={dateInputClasses} {...register('pickupDate')} />
+                  <Controller
+                    control={control}
+                    name="pickupDate"
+                    render={({ field }) => (
+                      <DatePicker
+                        ref={field.ref}
+                        name={field.name}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        min={today}
+                        range={trip}
+                        calendarLabel="Choose a pick-up date"
+                      />
+                    )}
+                  />
                 </Field>
                 <Field label="Pick-up time" hideLabel error={errors.pickupTime?.message}>
-                  <Input type="time" step={900} className={timeInputClasses} {...register('pickupTime')} />
+                  <Controller
+                    control={control}
+                    name="pickupTime"
+                    render={({ field }) => (
+                      <TimePicker
+                        ref={field.ref}
+                        name={field.name}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        align="end"
+                        listLabel="Pick-up times"
+                      />
+                    )}
+                  />
                 </Field>
               </div>
             </fieldset>
 
-            <fieldset className="grid min-w-0 gap-1.5">
-              <legend className="mb-1.5 text-sm font-medium">Return</legend>
+            <fieldset className="group/pair grid min-w-0 gap-1.5">
+              <legend className={legendClasses}>Return</legend>
               <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-start gap-2">
                 <Field label="Return date" hideLabel error={errors.returnDate?.message}>
-                  <Input
-                    type="date"
-                    min={pickupDate || today}
-                    className={dateInputClasses}
-                    {...register('returnDate')}
+                  <Controller
+                    control={control}
+                    name="returnDate"
+                    render={({ field }) => (
+                      <DatePicker
+                        ref={field.ref}
+                        name={field.name}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        min={pickupDate || today}
+                        range={trip}
+                        calendarLabel="Choose a return date"
+                      />
+                    )}
                   />
                 </Field>
                 <Field label="Return time" hideLabel error={errors.returnTime?.message}>
-                  <Input type="time" step={900} className={timeInputClasses} {...register('returnTime')} />
+                  <Controller
+                    control={control}
+                    name="returnTime"
+                    render={({ field }) => (
+                      <TimePicker
+                        ref={field.ref}
+                        name={field.name}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        align="end"
+                        listLabel="Return times"
+                      />
+                    )}
+                  />
                 </Field>
               </div>
             </fieldset>

@@ -31,18 +31,26 @@ export function Field({
 }: FieldProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
+  const labelId = `${controlId}-label`;
   const descriptionId = description ? `${controlId}-description` : undefined;
   const errorId = error ? `${controlId}-error` : undefined;
   const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <FieldContext value={{ id: controlId, invalid: Boolean(error), describedBy }}>
+    <FieldContext value={{ id: controlId, labelId, invalid: Boolean(error), describedBy }}>
       <div className={cn('group/field grid gap-1.5', className)}>
         <div className={cn('flex items-baseline justify-between gap-3', hideLabel && 'sr-only')}>
-          {/* The label turns blue while its control has focus, so it's clear which field you're in. */}
+          {/*
+           * The label turns blue while its control has focus or its picker is open, so it's clear which field
+           * you're in.
+           */}
           <label
+            id={labelId}
             htmlFor={controlId}
-            className="text-sm font-medium text-ink transition-colors duration-120 group-has-[input:focus-visible]/field:text-primary"
+            className={cn(
+              'text-sm font-medium text-ink transition-colors duration-120',
+              'group-has-[input:focus-visible]/field:text-primary group-has-[button[aria-haspopup]:focus-visible]/field:text-primary group-has-[[aria-expanded=true]]/field:text-primary',
+            )}
           >
             {label}
           </label>

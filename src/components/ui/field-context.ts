@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react';
 
 export interface FieldControlProps {
   id: string;
+  /** The visible label's id, for controls that name themselves with aria-labelledby (picker buttons). */
+  labelId: string;
   invalid: boolean;
   describedBy?: string;
 }
