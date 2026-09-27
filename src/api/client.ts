@@ -53,7 +53,8 @@ async function toApiError(response: Response): Promise<ApiError> {
 // Several requests can hit an expired access token at once; they share one refresh call.
 let refreshInFlight: Promise<boolean> | null = null;
 
-function refreshSession(): Promise<boolean> {
+/** Renews the 15-minute access cookie with the refresh cookie. Resolves false once the session has ended. */
+export function refreshSession(): Promise<boolean> {
   refreshInFlight ??= fetch(apiUrl('/auth/refresh'), { method: 'POST', credentials: 'include' })
     .then((response) => response.ok)
     .catch(() => false)
