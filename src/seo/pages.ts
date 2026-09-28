@@ -133,7 +133,6 @@ export const seoPages: SeoPage[] = [
     path: '/signup',
     title: 'Create an account',
     description: 'Sign up to book cars from local hosts, or to list your own.',
-    comingSoon: true,
     robots: 'noindex, nofollow',
   },
   {

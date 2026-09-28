@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SessionUser } from '@/api/types';
-import { fetchSessionUser, loginRequest, logoutRequest } from './auth-api';
+import { fetchSessionUser, loginRequest, logoutRequest, signupRequest } from './auth-api';
 
 export const sessionQueryKey = ['session'] as const;
 
@@ -16,6 +16,15 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: loginRequest,
+    onSuccess: (user) => queryClient.setQueryData(sessionQueryKey, user),
+  });
+}
+
+/** Creates an account; the new user is signed in straight away. */
+export function useSignup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: signupRequest,
     onSuccess: (user) => queryClient.setQueryData(sessionQueryKey, user),
   });
 }
