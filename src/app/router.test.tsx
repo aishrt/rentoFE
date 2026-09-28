@@ -14,4 +14,11 @@ describe('routes', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
+
+  it('shows "coming soon" for vehicle and destination pages until they are built', async () => {
+    mockApi({ 'POST /auth/session': { status: 200, body: { user: null } } });
+    renderWithRouter(routes, '/cars/2021-toyota-corolla-auckland');
+
+    expect(await screen.findByText('Coming soon', { selector: 'h1, h2' })).toBeInTheDocument();
+  });
 });

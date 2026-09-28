@@ -143,6 +143,44 @@ export const seoPages: SeoPage[] = [
   },
 ];
 
+/**
+ * Pages whose tags come from the backend's /pages route (plan §1.4, item 2): vehicle pages, and city and
+ * destination landing pages. CloudFront sends their URLs to the backend (infra/web-router.js leaves them
+ * alone). Until they're built (plan §9, Phase 2) they show "coming soon", and the manifest below tells
+ * the backend to keep them out of search results.
+ */
+export interface BackendTaggedPage {
+  /** A React Router path. */
+  path: string;
+  kind: 'vehicle' | 'destination';
+  comingSoon?: boolean;
+}
+
+export const backendTaggedPages: BackendTaggedPage[] = [
+  { path: '/cars/:slug', kind: 'vehicle', comingSoon: true },
+  { path: '/rental/:city', kind: 'destination', comingSoon: true },
+];
+
+/**
+ * What the backend's page tags and sitemap.xml need to know about the website. The build writes it to
+ * dist/seo-manifest.json, and the backend reads it from the live site.
+ */
+export interface SeoManifest {
+  indexablePaths: string[];
+  vehiclePages: boolean;
+  destinationPages: boolean;
+}
+
+export function seoManifest(): SeoManifest {
+  const built = (kind: BackendTaggedPage['kind']) =>
+    backendTaggedPages.some((page) => page.kind === kind && !page.comingSoon);
+  return {
+    indexablePaths: seoPages.filter(isIndexable).map((page) => page.path),
+    vehiclePages: built('vehicle'),
+    destinationPages: built('destination'),
+  };
+}
+
 export function findSeoPage(path: string): SeoPage | undefined {
   return seoPages.find((page) => page.path === path);
 }

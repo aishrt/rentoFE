@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { renderSeoHead, replaceSeoBlock } from './head';
-import { findSeoPage, isIndexable, pageFile, robotsFor, seoPage, seoPages } from './pages';
+import { findSeoPage, isIndexable, pageFile, robotsFor, seoManifest, seoPage, seoPages } from './pages';
 
 const SITE = 'https://www.example.co.nz';
 
@@ -112,16 +112,37 @@ describe('CloudFront page router (infra/web-router.js)', () => {
 
   it('loads the app for every other page URL, and leaves files alone', () => {
     expect(route('/admin').uri).toBe('/index.html');
-    expect(route('/cars/toyota-aqua-2019').uri).toBe('/index.html');
     expect(route('/no-such-page').uri).toBe('/index.html');
     expect(route('/assets/index-abc123.js').uri).toBe('/assets/index-abc123.js');
     expect(route('/robots.txt').uri).toBe('/robots.txt');
+    expect(route('/sitemap.xml').uri).toBe('/sitemap.xml');
+    expect(route('/seo-manifest.json').uri).toBe('/seo-manifest.json');
+  });
+
+  it('leaves vehicle and destination pages for the backend, each with one URL', () => {
+    expect(route('/cars/2021-toyota-corolla-auckland').uri).toBe('/cars/2021-toyota-corolla-auckland');
+    expect(route('/rental/queenstown').uri).toBe('/rental/queenstown');
+
+    const trailing = route('/cars/2021-toyota-corolla-auckland/', 'www.rentovroom.com', {
+      utm_source: { value: 'x' },
+    });
+    expect(trailing.statusCode).toBe(301);
+    expect(trailing.headers?.location?.value).toBe('/cars/2021-toyota-corolla-auckland?utm_source=x');
+    expect(route('/cars/').headers?.location?.value).toBe('/cars');
+    // Browse cars is a page of the website itself.
+    expect(route('/cars').uri).toBe('/pages/cars.html');
   });
 
   it('moves the bare domain to www, keeping the path and query', () => {
     const response = route('/search', 'rentovroom.com', { where: { value: 'Queenstown' } });
     expect(response.statusCode).toBe(301);
     expect(response.headers?.location?.value).toBe('https://www.rentovroom.com/search?where=Queenstown');
+  });
+});
+
+describe('seoManifest', () => {
+  it('tells the backend which pages search engines may index, and that car and city pages are not built yet', () => {
+    expect(seoManifest()).toEqual({ indexablePaths: ['/'], vehiclePages: false, destinationPages: false });
   });
 });
 

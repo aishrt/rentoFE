@@ -8,6 +8,8 @@ type Schemas = components['schemas'];
 
 export type SessionUser = Schemas['PublicUser'];
 export type Role = SessionUser['roles'][number];
+/** A legal document a user accepts: TERMS, PRIVACY, GUEST or HOST (agreement). */
+export type AgreementType = SessionUser['pendingAgreements'][number];
 export type LoginRequest = paths['/auth/login']['post']['requestBody']['content']['application/json'];
 export type SignupRequest = paths['/auth/signup']['post']['requestBody']['content']['application/json'];
 export type AdminOverview = Schemas['AdminOverview'];

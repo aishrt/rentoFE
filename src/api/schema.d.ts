@@ -1048,6 +1048,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/agreements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept the current version of legal documents
+         * @description Records the acceptance with its time and IP. The website asks for this when the user has pendingAgreements, after a new version of the Terms, Privacy Policy or an agreement is published.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AcceptAgreementsRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/mfa/setup": {
         parameters: {
             query?: never;
@@ -1348,6 +1409,8 @@ export interface components {
             phoneVerified: boolean;
             /** @description Staff: whether the authenticator app is set up */
             mfaEnabled: boolean;
+            /** @description Legal documents with a new version the user must accept before carrying on (POST /me/agreements). Usually empty. */
+            pendingAgreements: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
         };
         ErrorResponse: {
             error: {
@@ -1384,6 +1447,9 @@ export interface components {
             phone: string;
             /** @description false when it is already the verified number */
             sent: boolean;
+        };
+        AcceptAgreementsRequest: {
+            types: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
         };
         MfaSetupResponse: {
             /** @description For typing into the app by hand */
