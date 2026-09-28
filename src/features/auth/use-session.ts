@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SessionUser } from '@/api/types';
-import { fetchSessionUser, loginRequest, logoutRequest, signupRequest } from './auth-api';
+import { fetchSessionUser, loginRequest, logoutRequest, mfaLoginRequest, signupRequest } from './auth-api';
 
 export const sessionQueryKey = ['session'] as const;
 
@@ -12,10 +12,22 @@ export function useSession() {
   });
 }
 
+/** The password step. Staff with an authenticator app aren't signed in yet: their code comes next. */
 export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: loginRequest,
+    onSuccess: (result) => {
+      if ('user' in result) queryClient.setQueryData(sessionQueryKey, result.user);
+    },
+  });
+}
+
+/** The authenticator code step of a staff sign-in. */
+export function useMfaLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: mfaLoginRequest,
     onSuccess: (user) => queryClient.setQueryData(sessionQueryKey, user),
   });
 }

@@ -7,6 +7,7 @@ import { PageMeta } from '@/components/layout/page-meta';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
+import { MfaSetupScreen } from './mfa-setup-screen';
 import { isStaff } from './roles';
 import { useLogout, useSession } from './use-session';
 
@@ -48,6 +49,9 @@ export function RequireStaff({ children, fallback }: RequireStaffProps) {
   }
 
   if (!isStaff(session.data)) return <StaffOnly />;
+
+  // Staff set up their authenticator app before the portal opens (plan §6.1); the API insists too.
+  if (!session.data.mfaEnabled) return <MfaSetupScreen user={session.data} />;
 
   return children(session.data);
 }

@@ -139,7 +139,6 @@ export const seoPages: SeoPage[] = [
     path: '/forgot-password',
     title: 'Reset your password',
     description: 'We will email you a link to choose a new password.',
-    comingSoon: true,
     robots: 'noindex, nofollow',
   },
 ];

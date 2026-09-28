@@ -87,6 +87,82 @@ describe('LoginForm', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({ credentials: 'include' });
   });
 
+  it('asks staff with an authenticator app for their code, then signs them in', async () => {
+    let sentMfa: unknown;
+    mockApi({
+      'POST /auth/login': {
+        status: 200,
+        body: { mfaRequired: true, challenge: 'challenge-token-1234567890' },
+      },
+      'POST /auth/login/mfa': (init) => {
+        sentMfa = JSON.parse(String(init?.body));
+        return { status: 200, body: { user: adminUser } };
+      },
+    });
+    const onSuccess = vi.fn();
+    renderWithProviders(
+      <LoginForm portal="admin" submitLabel="Log in to the staff portal" onSuccess={onSuccess} />,
+    );
+
+    await userEvent.type(await screen.findByLabelText('Email address'), 'aroha@example.co.nz');
+    await userEvent.type(screen.getByLabelText('Password'), 'correct horse');
+    await userEvent.click(screen.getByRole('button', { name: 'Log in to the staff portal' }));
+
+    const code = await screen.findByLabelText('Authentication code');
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(code).toHaveAttribute('autocomplete', 'one-time-code');
+    await userEvent.type(code, '123456');
+    await userEvent.click(screen.getByRole('button', { name: 'Verify and log in' }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(adminUser));
+    expect(sentMfa).toEqual({ challenge: 'challenge-token-1234567890', code: '123456' });
+  });
+
+  it('shows a wrong code next to the field, and starts over when the attempt expires', async () => {
+    let tries = 0;
+    mockApi({
+      'POST /auth/login': {
+        status: 200,
+        body: { mfaRequired: true, challenge: 'challenge-token-1234567890' },
+      },
+      'POST /auth/login/mfa': () => {
+        tries += 1;
+        return tries === 1
+          ? {
+              status: 400,
+              body: {
+                error: { code: 'CODE_INVALID', message: 'Wrong', fields: { code: "That code isn't right." } },
+              },
+            }
+          : {
+              status: 401,
+              body: {
+                error: {
+                  code: 'MFA_CHALLENGE_EXPIRED',
+                  message: 'Your sign-in timed out. Please enter your password again.',
+                },
+              },
+            };
+      },
+    });
+    renderWithProviders(<LoginForm portal="admin" onSuccess={vi.fn()} />);
+
+    await userEvent.type(await screen.findByLabelText('Email address'), 'aroha@example.co.nz');
+    await userEvent.type(screen.getByLabelText('Password'), 'correct horse');
+    await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
+
+    await userEvent.type(await screen.findByLabelText('Authentication code'), '000000');
+    await userEvent.click(screen.getByRole('button', { name: 'Verify and log in' }));
+    expect(await screen.findByText("That code isn't right.")).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByLabelText('Authentication code'));
+    await userEvent.type(screen.getByLabelText('Authentication code'), '111111');
+    await userEvent.click(screen.getByRole('button', { name: 'Verify and log in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please enter your password again');
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+  });
+
   it('lets the user reveal the password', async () => {
     mockApi({});
     renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
