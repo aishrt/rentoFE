@@ -39,5 +39,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^handler$' }],
     },
   },
+  {
+    // Node config files in CommonJS, such as lighthouse.config.cjs.
+    files: ['*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+  },
   prettier,
 );
