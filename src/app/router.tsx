@@ -30,6 +30,10 @@ export const routes: RouteObject[] = [
             errorElement: <PageError />,
             children: [
               { index: true, lazy: page(() => import('@/routes/public/home/home-page'), 'HomePage') },
+              {
+                path: 'account/settings',
+                lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),
+              },
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
               ...seoPages
                 .filter((planned) => planned.comingSoon)
@@ -44,6 +48,18 @@ export const routes: RouteObject[] = [
       {
         path: 'verify-email',
         lazy: page(() => import('@/routes/auth/verify-email-page'), 'VerifyEmailPage'),
+      },
+      {
+        path: 'forgot-password',
+        lazy: page(() => import('@/routes/auth/forgot-password-page'), 'ForgotPasswordPage'),
+      },
+      {
+        path: 'reset-password',
+        lazy: page(() => import('@/routes/auth/reset-password-page'), 'ResetPasswordPage'),
+      },
+      {
+        path: 'confirm-email-change',
+        lazy: page(() => import('@/routes/auth/confirm-email-change-page'), 'ConfirmEmailChangePage'),
       },
       { path: 'admin/login', lazy: page(() => import('@/routes/admin/admin-login-page'), 'AdminLoginPage') },
       {

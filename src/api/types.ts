@@ -11,3 +11,5 @@ export type Role = SessionUser['roles'][number];
 export type LoginRequest = paths['/auth/login']['post']['requestBody']['content']['application/json'];
 export type SignupRequest = paths['/auth/signup']['post']['requestBody']['content']['application/json'];
 export type AdminOverview = Schemas['AdminOverview'];
+/** A staff member's authenticator app setup: a QR code and the key to type by hand. */
+export type MfaSetup = Schemas['MfaSetupResponse'];

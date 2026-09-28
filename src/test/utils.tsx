@@ -63,6 +63,8 @@ export const adminUser = {
   lastName: 'Admin',
   roles: ['ADMIN'],
   emailVerified: true,
+  phoneVerified: false,
+  mfaEnabled: true,
 };
 
 export const guestUser = {
@@ -71,4 +73,5 @@ export const guestUser = {
   email: 'kiri@example.co.nz',
   firstName: 'Kiri',
   roles: ['GUEST'],
+  mfaEnabled: false,
 };

@@ -11,5 +11,6 @@ Disallow: /signup
 Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /verify-email
+Disallow: /confirm-email-change
 # The prerendered files behind the page URLs (infra/web-router.js); crawl the page URLs instead.
 Disallow: /pages/

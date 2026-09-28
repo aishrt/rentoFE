@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { SessionUser } from '@/api/types';
@@ -9,6 +9,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { resendVerificationRequest, verifyEmailRequest } from '@/features/auth/auth-api';
+import { useLinkToken } from '@/features/auth/use-link-token';
 import { sessionQueryKey, useSession } from '@/features/auth/use-session';
 import { safeRedirect } from '@/lib/safe-redirect';
 
@@ -184,17 +185,9 @@ function CheckInbox({ next }: { next: string }) {
 }
 
 export function VerifyEmailPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [token] = useState(() => searchParams.get('token'));
+  const [searchParams] = useSearchParams();
+  const token = useLinkToken();
   const next = safeRedirect(searchParams.get('next'));
-
-  // The token works once; take it out of the address bar and history as soon as it's read.
-  useEffect(() => {
-    if (!searchParams.has('token')) return;
-    const rest = new URLSearchParams(searchParams);
-    rest.delete('token');
-    setSearchParams(rest, { replace: true });
-  }, [searchParams, setSearchParams]);
 
   return (
     <AuthLayout>

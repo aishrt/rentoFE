@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminUser, guestUser, mockApi, renderWithRouter } from '@/test/utils';
 import { RequireStaff } from './require-staff';
@@ -44,6 +45,41 @@ describe('RequireStaff', () => {
     renderWithRouter(routes, '/admin');
 
     expect(await screen.findByText('Welcome, Aroha')).toBeInTheDocument();
+  });
+
+  it('has staff set up their authenticator app before the portal opens', async () => {
+    let sentCode: unknown;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: { ...adminUser, mfaEnabled: false } } },
+      'POST /me/mfa/setup': {
+        status: 200,
+        body: {
+          secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+          otpauthUrl: 'otpauth://totp/Rento%20Vroom:aroha',
+          qrCode: 'data:image/png;base64,iVBORw0KGgo=',
+        },
+      },
+      'POST /me/mfa/verify': (init) => {
+        sentCode = JSON.parse(String(init?.body)).code;
+        return { status: 200, body: { user: adminUser } };
+      },
+    });
+    renderWithRouter(routes, '/admin');
+
+    expect(await screen.findByRole('heading', { name: 'Set up two-factor sign-in' })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /QR code/ })).toHaveAttribute(
+      'src',
+      'data:image/png;base64,iVBORw0KGgo=',
+    );
+    // The key is shown in groups of four, for typing by hand.
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP')).toBeInTheDocument();
+    expect(screen.queryByText(/Welcome/)).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Authentication code'), '123 456');
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on and open the portal' }));
+
+    expect(await screen.findByText('Welcome, Aroha')).toBeInTheDocument();
+    expect(sentCode).toBe('123456');
   });
 
   it('offers a retry when the API is unreachable', async () => {

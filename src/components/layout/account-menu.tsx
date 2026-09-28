@@ -1,4 +1,4 @@
-import { ChevronDown, LayoutDashboard, LogOut } from 'lucide-react';
+import { ChevronDown, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { Link } from 'react-router';
 import type { SessionUser } from '@/api/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -41,6 +41,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             </Link>
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem asChild>
+          <Link to="/account/settings" viewTransition>
+            <Settings aria-hidden="true" />
+            Account settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => logout.mutate()}>
           <LogOut aria-hidden="true" />
           Log out
