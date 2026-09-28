@@ -83,7 +83,8 @@ describe('LoginForm', () => {
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(adminUser));
     expect(sentBody).toEqual({ email: 'aroha@example.co.nz', password: 'correct horse', portal: 'admin' });
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include' });
+    // The auth cookies go with every API call.
+    expect(fetchMock.mock.calls[0]?.[0]).toMatchObject({ credentials: 'include' });
   });
 
   it('lets the user reveal the password', async () => {

@@ -1,43 +1,12 @@
+import type { components, paths } from './schema';
+
 /**
- * API shapes used by the website, written by hand for now. They mirror the backend's responses
- * and will be replaced by types generated from backend/openapi.json (plan §2.3).
+ * Names for the API shapes the website uses. They all come from schema.d.ts, which
+ * `npm run api:types` generates from the backend's openapi.json (plan §2.3), so they can't drift.
  */
+type Schemas = components['schemas'];
 
-export type Role = 'GUEST' | 'HOST' | 'ADMIN' | 'SUPPORT';
-
-export interface SessionUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  roles: Role[];
-  emailVerified: boolean;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-  portal?: 'app' | 'admin';
-}
-
-export interface UserResponse {
-  user: SessionUser;
-}
-
-export interface SessionResponse {
-  user: SessionUser | null;
-}
-
-export interface AdminOverview {
-  metrics: {
-    totalUsers: number;
-    activeHosts: number;
-    staffMembers: number;
-    suspendedUsers: number;
-    activeVehicles: number | null;
-    upcomingBookings: number | null;
-    bookingRevenueCents: number | null;
-    pendingVerifications: number | null;
-  };
-  generatedAt: string;
-}
+export type SessionUser = Schemas['PublicUser'];
+export type Role = SessionUser['roles'][number];
+export type LoginRequest = paths['/auth/login']['post']['requestBody']['content']['application/json'];
+export type AdminOverview = Schemas['AdminOverview'];

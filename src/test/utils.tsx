@@ -18,11 +18,15 @@ type Handler = (init: RequestInit | undefined) => MockResponse;
  */
 export function mockApi(handlers: Record<string, Handler | MockResponse>) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(String(input));
-    const key = `${init?.method ?? 'GET'} ${url.pathname.replace(/^\/api\/v1/, '')}`;
+    // The typed API client passes a Request; plain fetch calls pass a URL and init.
+    const request = input instanceof Request ? input : undefined;
+    const method = request?.method ?? init?.method ?? 'GET';
+    const sent = request ? { ...init, method, body: (await request.text()) || undefined } : init;
+    const url = new URL(request?.url ?? String(input));
+    const key = `${method} ${url.pathname.replace(/^\/api\/v1/, '')}`;
     const handler = handlers[key];
     if (!handler) throw new Error(`Unexpected request: ${key}`);
-    const { status, body } = typeof handler === 'function' ? handler(init) : handler;
+    const { status, body } = typeof handler === 'function' ? handler(sent) : handler;
     return new Response(body === undefined ? null : JSON.stringify(body), {
       status,
       headers: { 'Content-Type': 'application/json' },

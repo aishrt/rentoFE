@@ -17,6 +17,8 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    // dist/.vite/manifest.json lists each chunk's imports, for the JavaScript budget check (plan §12.5).
+    manifest: true,
     rollupOptions: {
       onwarn(warning, defaultHandler) {
         // Zod's source has comments Rollup can't use as annotations; harmless noise in third-party code.
