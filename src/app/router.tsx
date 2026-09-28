@@ -40,6 +40,11 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: 'login', lazy: page(() => import('@/routes/auth/login-page'), 'LoginPage') },
+      { path: 'signup', lazy: page(() => import('@/routes/auth/signup-page'), 'SignupPage') },
+      {
+        path: 'verify-email',
+        lazy: page(() => import('@/routes/auth/verify-email-page'), 'VerifyEmailPage'),
+      },
       { path: 'admin/login', lazy: page(() => import('@/routes/admin/admin-login-page'), 'AdminLoginPage') },
       {
         path: 'admin',
