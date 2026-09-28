@@ -6,7 +6,8 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  // schema.d.ts is generated from the backend's openapi.json (npm run api:types).
+  { ignores: ['dist', 'node_modules', 'coverage', 'src/api/schema.d.ts'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   reactHooks.configs.flat['recommended-latest'],
@@ -37,6 +38,11 @@ export default tseslint.config(
       'no-unused-vars': ['error', { varsIgnorePattern: '^handler$' }],
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^handler$' }],
     },
+  },
+  {
+    // Node config files in CommonJS, such as lighthouse.config.cjs.
+    files: ['*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
   },
   prettier,
 );

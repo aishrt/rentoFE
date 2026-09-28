@@ -6,3 +6,7 @@ coverage
 !.env.example
 *.log
 *.tsbuildinfo
+
+# Lighthouse CI reports
+lighthouse-report
+.lighthouseci

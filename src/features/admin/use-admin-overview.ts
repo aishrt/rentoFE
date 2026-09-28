@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/api/client';
-import type { AdminOverview } from '@/api/types';
+import { client, unwrap } from '@/api/client';
 
 export const adminOverviewQueryKey = ['admin', 'overview'] as const;
 
 export function useAdminOverview() {
   return useQuery({
     queryKey: adminOverviewQueryKey,
-    queryFn: ({ signal }) => api.get<AdminOverview>('/admin/overview', { signal }),
+    queryFn: ({ signal }) => unwrap(client.GET('/admin/overview', { signal })),
     staleTime: 30_000,
   });
 }

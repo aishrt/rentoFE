@@ -1,10 +1,6 @@
+import createClient from 'openapi-fetch';
 import { env } from '@/lib/env';
-
-/**
- * Small typed fetch wrapper for the backend REST API (`/api/v1`).
- * Plan §2.3 replaces the hand-written types in `src/api/types.ts` with types generated from
- * backend/openapi.json (`npm run api:types`) once the backend publishes its OpenAPI file.
- */
+import type { paths } from './schema';
 
 export class ApiError extends Error {
   override name = 'ApiError';
@@ -19,43 +15,16 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-
-interface RequestOptions {
-  method?: Method;
-  body?: unknown;
-  signal?: AbortSignal;
-}
-
-const apiUrl = (path: string) => `${env.apiUrl}/api/v1${path}`;
+const baseUrl = `${env.apiUrl}/api/v1`;
 
 const NETWORK_MESSAGE = "We couldn't reach Rento Vroom. Check your connection and try again.";
-
-async function toApiError(response: Response): Promise<ApiError> {
-  try {
-    const body = (await response.json()) as {
-      error?: { code?: string; message?: string; fields?: Record<string, string> };
-    };
-    if (body.error?.code) {
-      return new ApiError(
-        response.status,
-        body.error.code,
-        body.error.message ?? 'Request failed',
-        body.error.fields,
-      );
-    }
-  } catch {
-    // Not JSON: fall through to a generic error.
-  }
-  return new ApiError(response.status, 'HTTP_ERROR', 'Something went wrong on our side. Please try again.');
-}
 
 // Several requests can hit an expired access token at once; they share one refresh call.
 let refreshInFlight: Promise<boolean> | null = null;
 
 /** Renews the 15-minute access cookie with the refresh cookie. Resolves false once the session has ended. */
 export function refreshSession(): Promise<boolean> {
-  refreshInFlight ??= fetch(apiUrl('/auth/refresh'), { method: 'POST', credentials: 'include' })
+  refreshInFlight ??= fetch(`${baseUrl}/auth/refresh`, { method: 'POST', credentials: 'include' })
     .then((response) => response.ok)
     .catch(() => false)
     .finally(() => {
@@ -64,39 +33,43 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestOptions = {},
-  allowRefresh = true,
-): Promise<T> {
-  const hasBody = options.body !== undefined;
-  let response: Response;
+async function send(request: Request): Promise<Response> {
   try {
-    response = await fetch(apiUrl(path), {
-      method: options.method ?? 'GET',
-      credentials: 'include',
-      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
-      body: hasBody ? JSON.stringify(options.body) : undefined,
-      signal: options.signal,
-    });
+    return await fetch(request);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ApiError(0, 'NETWORK_ERROR', NETWORK_MESSAGE);
   }
-
-  // The access token lasts 15 minutes; renew it once with the refresh cookie and retry (plan §6.1).
-  if (response.status === 401 && allowRefresh && !path.startsWith('/auth/')) {
-    if (await refreshSession()) return apiRequest<T>(path, options, false);
-  }
-
-  if (!response.ok) throw await toApiError(response);
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
 }
 
-export const api = {
-  get: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'GET' }),
-  post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(path, { ...options, method: 'POST', body }),
-};
+/** Every API call goes through here: it renews an expired access token once and retries (plan §6.1). */
+async function apiFetch(request: Request): Promise<Response> {
+  const retry = request.clone();
+  const response = await send(request);
+  const isAuthRoute = new URL(request.url).pathname.startsWith(new URL(`${baseUrl}/auth/`).pathname);
+  if (response.status === 401 && !isAuthRoute && (await refreshSession())) return send(retry);
+  return response;
+}
+
+/**
+ * The typed API client (plan §2.3). Its paths, request bodies and responses come from schema.d.ts,
+ * generated from the backend's openapi.json, so an API change that breaks the website fails the
+ * typecheck. Wrap each call in `unwrap()`.
+ */
+export const client = createClient<paths>({ baseUrl, credentials: 'include', fetch: apiFetch });
+
+function toApiError(status: number, body: unknown): ApiError {
+  const error = (body as { error?: { code?: string; message?: string; fields?: Record<string, string> } })
+    ?.error;
+  if (error?.code) return new ApiError(status, error.code, error.message ?? 'Request failed', error.fields);
+  return new ApiError(status, 'HTTP_ERROR', 'Something went wrong on our side. Please try again.');
+}
+
+/** The response's data, or an ApiError with the backend's code, message and field errors. */
+export async function unwrap<Data>(
+  call: Promise<{ data?: Data; error?: unknown; response: Response }>,
+): Promise<Data> {
+  const { data, error, response } = await call;
+  if (!response.ok) throw toApiError(response.status, error);
+  return data as Data;
+}

@@ -2,3 +2,5 @@ dist
 node_modules
 coverage
 package-lock.json
+# Generated from backend/openapi.json by npm run api:types
+src/api/schema.d.ts

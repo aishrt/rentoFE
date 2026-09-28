@@ -38,12 +38,14 @@ Pages linked from the header and footer that later milestones build (Browse cars
 
 ## Commands
 
-| Command                                           | What it does                                                                 |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `npm run dev`                                     | Dev server with hot reload                                                   |
-| `npm run build` / `npm run preview`               | Production build to `dist/`, including the SEO page files / serve it locally |
-| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)                                            |
-| `npm run format`                                  | Prettier                                                                     |
+| Command                                           | What it does                                                                                                                                                       |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                                     | Dev server with hot reload                                                                                                                                         |
+| `npm run build` / `npm run preview`               | Production build to `dist/`, including the SEO page files / serve it locally                                                                                       |
+| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)                                                                                                                                  |
+| `npm run api:types`                               | Regenerates `src/api/schema.d.ts` from `../backend/openapi.json` after an API change (plan §2.3). The pipeline fails while it doesn't match the backend on master. |
+| `npm run size`                                    | After a build: the homepage's first-load JavaScript against the 170 KB budget (plan §12.5)                                                                         |
+| `npm run format`                                  | Prettier                                                                                                                                                           |
 
 ## Folder map
 
@@ -61,12 +63,13 @@ src/
                         Magnet, trackSpotlight
     layout/             Site header and footer, auth and public layouts, Container, PageMeta
     brand/              Logo (placeholder until the client's logo arrives), landscape art
-  api/                  Typed fetch client (cookies, one shared token refresh) and API types
+  api/                  Typed client (openapi-fetch: cookies, one shared token refresh) and the API types
+                        generated from the backend's openapi.json (schema.d.ts)
   lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects, Socket.IO connection
   seo/                  SEO table (pages.ts) and the head tags the build writes (head.ts)
   styles/               tokens.ts + globals.css (Tailwind v4 theme); tokens.test.ts checks they match
                         and that text colours pass WCAG AA
-scripts/                prerender-meta.ts: the SEO build step
+scripts/                prerender-meta.ts (the SEO build step), check-bundle-size.ts (the JavaScript budget)
 infra/                  web-router.js: the CloudFront Function that routes page URLs
 ```
 
