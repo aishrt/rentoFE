@@ -29,5 +29,14 @@ export default tseslint.config(
     files: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/app/router.tsx'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
+  {
+    // CloudFront Function source: a plain script whose `handler` CloudFront calls (plan §1.4).
+    files: ['infra/**/*.js'],
+    languageOptions: { sourceType: 'script' },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^handler$' }],
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^handler$' }],
+    },
+  },
   prettier,
 );

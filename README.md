@@ -27,16 +27,23 @@ npm run dev                  # http://localhost:5173
 | Staff log-in                          | `/admin/login` |
 | Staff portal (admin and support only) | `/admin`       |
 
-Pages linked from the header and footer that later milestones build (Browse cars, How it works, legal pages and so on) show a "Coming soon" page. The list is in `src/routes/public/planned-pages.ts`; remove an entry when its real page is added.
+Pages linked from the header and footer that later milestones build (Browse cars, How it works, legal pages and so on) show a "Coming soon" page. They are the entries marked `comingSoon` in `src/seo/pages.ts`; remove the flag when the real page is added.
+
+## SEO (plan §1.4)
+
+- **One table:** `src/seo/pages.ts` holds each static public page's title, description and search rule (indexed, or `noindex` for sign-in pages, search results and pages still coming soon).
+- **Build step:** `npm run build` ends with `scripts/prerender-meta.ts`, which writes `dist/pages/<page>.html` for every page in the table. Each has its own title, description, link-preview tags (`public/og-image.png`) and, for indexed pages, a canonical URL and JSON-LD, so WhatsApp, Facebook and crawlers that don't run JavaScript see the right page. `VITE_SITE_URL` sets the site address (default `https://www.rentovroom.com`).
+- **Routing:** the CloudFront Function in `infra/web-router.js` serves each page's file for its URL, and `index.html` for every other app URL. It is published by hand (see DEPLOYING_UPDATES.md); a test fails if its page list and the table differ.
+- **While the app runs:** `PageMeta` sets the same tags from the table as the visitor navigates.
 
 ## Commands
 
-| Command                                           | What it does                                   |
-| ------------------------------------------------- | ---------------------------------------------- |
-| `npm run dev`                                     | Dev server with hot reload                     |
-| `npm run build` / `npm run preview`               | Production build to `dist/` / serve it locally |
-| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)              |
-| `npm run format`                                  | Prettier                                       |
+| Command                                           | What it does                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`                                     | Dev server with hot reload                                                   |
+| `npm run build` / `npm run preview`               | Production build to `dist/`, including the SEO page files / serve it locally |
+| `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)                                            |
+| `npm run format`                                  | Prettier                                                                     |
 
 ## Folder map
 
@@ -55,9 +62,12 @@ src/
     layout/             Site header and footer, auth and public layouts, Container, PageMeta
     brand/              Logo (placeholder until the client's logo arrives), landscape art
   api/                  Typed fetch client (cookies, one shared token refresh) and API types
-  lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects
+  lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects, Socket.IO connection
+  seo/                  SEO table (pages.ts) and the head tags the build writes (head.ts)
   styles/               tokens.ts + globals.css (Tailwind v4 theme); tokens.test.ts checks they match
                         and that text colours pass WCAG AA
+scripts/                prerender-meta.ts: the SEO build step
+infra/                  web-router.js: the CloudFront Function that routes page URLs
 ```
 
 ## Design and motion

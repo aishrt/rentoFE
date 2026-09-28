@@ -43,16 +43,25 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      # tsc -b (typecheck) then vite build. VITE_API_URL is set only here: the tests set their own.
+      # tsc -b (typecheck), vite build, then one HTML file per public page with its own SEO tags
+      # (plan §1.4). The VITE_ values are set only here: the tests set their own.
       - name: Build
         run: npm run build
         env:
           VITE_API_URL: ${{ env.API_URL }}
+          VITE_SITE_URL: ${{ env.SITE_URL }}
 
       - name: Check the API address is built in
         run: |
           if ! grep -lq "${API_URL#https://}" dist/assets/*.js; then
             echo "::error::$API_URL is not in the built JavaScript; the site would call the wrong API."
+            exit 1
+          fi
+
+      - name: Check the SEO page files are built
+        run: |
+          if ! grep -q "rel=\"canonical\" href=\"$SITE_URL/\"" dist/pages/home.html; then
+            echo "::error::dist/pages/home.html is missing or its canonical URL isn't $SITE_URL/."
             exit 1
           fi
 

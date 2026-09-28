@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { combineDateTime } from '@/lib/dates';
 import { formatShortDateTime } from '@/lib/format';
-import { plannedPages } from './planned-pages';
+import { findSeoPage } from '@/seo/pages';
 
 function SearchSummary() {
   const [params] = useSearchParams();
@@ -33,12 +33,12 @@ function SearchSummary() {
 
 export function ComingSoonPage() {
   const { pathname } = useLocation();
-  const page = plannedPages.find((candidate) => candidate.path === pathname);
+  const page = findSeoPage(pathname);
   const title = page?.title ?? 'Coming soon';
 
   return (
     <section className="relative isolate overflow-hidden">
-      <PageMeta title={title} description={page?.description} noindex />
+      {page ? <PageMeta page={page} /> : <PageMeta title={title} noindex />}
       <RidgeLines className="absolute inset-x-0 bottom-0 -z-10 h-40 w-full text-primary/15" />
       <Container className="flex min-h-[70vh] flex-col items-center justify-center py-20">
         <EmptyState

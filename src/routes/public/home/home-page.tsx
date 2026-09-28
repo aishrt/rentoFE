@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { ErrorBoundary } from '@/components/errors/error-boundary';
 import { PageMeta } from '@/components/layout/page-meta';
 import type { SearchPrefill } from '@/features/search/hero-search-form';
+import { seoPage } from '@/seo/pages';
 import { DestinationsSection } from './destinations-section';
 import { FaqSection } from './faq-section';
 import { HeroSection } from './hero-section';
@@ -32,7 +33,7 @@ export function HomePage() {
 
   return (
     <>
-      <PageMeta description="Rent a car from local owners across New Zealand, or earn money by sharing your own car. All prices in NZD." />
+      <PageMeta page={seoPage('/')} />
       {/* The hero guards its search form itself, with a message, since search is what visitors came for. */}
       <HeroSection prefill={prefill} />
       <Isolated>

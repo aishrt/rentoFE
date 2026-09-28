@@ -4,6 +4,7 @@ import { PageMeta } from '@/components/layout/page-meta';
 import { LoginForm } from '@/features/auth/login-form';
 import { useSession } from '@/features/auth/use-session';
 import { safeRedirect } from '@/lib/safe-redirect';
+import { seoPage } from '@/seo/pages';
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
@@ -15,11 +16,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <PageMeta
-        title="Log in"
-        description="Log in to Rento Vroom to manage your trips and bookings."
-        noindex
-      />
+      <PageMeta page={seoPage('/login')} />
       <h1 className="headline text-title-3 font-medium">Welcome back</h1>
       <p className="mt-2 mb-8 text-muted">Log in to manage your trips, bookings and saved cars.</p>
 

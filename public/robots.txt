@@ -1,3 +1,13 @@
+# Public pages are open to search engines; private areas stay out (plan §1.4, item 4).
+# Written so /host rules don't also block /host-agreement.
 User-agent: *
 Disallow: /admin
+Disallow: /account
+Disallow: /host/
+Disallow: /host$
+Disallow: /checkout
 Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+# The prerendered files behind the page URLs (infra/web-router.js); crawl the page URLs instead.
+Disallow: /pages/
