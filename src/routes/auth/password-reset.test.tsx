@@ -45,11 +45,30 @@ describe('ResetPasswordPage', () => {
 
     expect(router.state.location.search).toBe('');
     await userEvent.type(await screen.findByLabelText('New password'), 'kererū over the bush');
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'kererū over the bush');
     await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
 
     expect(await screen.findByRole('heading', { name: 'Password changed' })).toBeInTheDocument();
     expect(sent).toEqual({ token: 'abcdefghijklmnopqrstuvwxyz', password: 'kererū over the bush' });
     expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login');
+  });
+
+  it("says when the passwords don't match, without sending them", async () => {
+    let sent = false;
+    mockApi({
+      'POST /auth/reset-password': () => {
+        sent = true;
+        return { status: 200, body: { email: 'kiri@example.co.nz' } };
+      },
+    });
+    render('/reset-password?token=abcdefghijklmnopqrstuvwxyz');
+
+    await userEvent.type(await screen.findByLabelText('New password'), 'kererū over the bush');
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'kererū over the hill');
+    await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText("The passwords don't match")).toBeInTheDocument();
+    expect(sent).toBe(false);
   });
 
   it("shows the API's reason next to the password, and offers a new link when the old one has expired", async () => {
@@ -74,6 +93,7 @@ describe('ResetPasswordPage', () => {
     render('/reset-password?token=abcdefghijklmnopqrstuvwxyz');
 
     await userEvent.type(await screen.findByLabelText('New password'), 'password123456');
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'password123456');
     await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
     expect(await screen.findByText('That password is too common.')).toBeInTheDocument();
 
