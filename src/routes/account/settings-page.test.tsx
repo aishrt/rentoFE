@@ -42,6 +42,7 @@ describe('AccountSettingsPage', () => {
     const password = within(await section('Password'));
     await userEvent.type(password.getByLabelText('Current password'), 'old password here');
     await userEvent.type(password.getByLabelText('New password'), 'kererū over the bush');
+    await userEvent.type(password.getByLabelText('Confirm new password'), 'kererū over the bush');
     await userEvent.click(password.getByRole('button', { name: 'Change password' }));
 
     expect(await password.findByText(/signed out on your other devices/)).toBeInTheDocument();
@@ -67,9 +68,31 @@ describe('AccountSettingsPage', () => {
     const password = within(await section('Password'));
     await userEvent.type(password.getByLabelText('Current password'), 'not it');
     await userEvent.type(password.getByLabelText('New password'), 'kererū over the bush');
+    await userEvent.type(password.getByLabelText('Confirm new password'), 'kererū over the bush');
     await userEvent.click(password.getByRole('button', { name: 'Change password' }));
 
     expect(await password.findByText("That's not your current password.")).toBeInTheDocument();
+  });
+
+  it("says when the new passwords don't match, without sending them", async () => {
+    let sent = false;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: guestUser } },
+      'POST /me/password': () => {
+        sent = true;
+        return { status: 204 };
+      },
+    });
+    render();
+
+    const password = within(await section('Password'));
+    await userEvent.type(password.getByLabelText('Current password'), 'old password here');
+    await userEvent.type(password.getByLabelText('New password'), 'kererū over the bush');
+    await userEvent.type(password.getByLabelText('Confirm new password'), 'kererū over the hill');
+    await userEvent.click(password.getByRole('button', { name: 'Change password' }));
+
+    expect(await password.findByText("The passwords don't match")).toBeInTheDocument();
+    expect(sent).toBe(false);
   });
 
   it('verifies a mobile number with the texted code', async () => {
@@ -108,6 +131,9 @@ describe('AccountSettingsPage', () => {
 
     const email = within(await section('Email address'));
     expect(email.getByText('kiri@example.co.nz')).toBeInTheDocument();
+    // It's confirmed, so the form waits behind a button.
+    expect(email.queryByRole('button', { name: 'Send confirmation link' })).not.toBeInTheDocument();
+    await userEvent.click(email.getByRole('button', { name: 'Change email address' }));
     await userEvent.type(email.getByLabelText('New email address'), 'kiri.new@example.co.nz');
     await userEvent.type(email.getByLabelText('Current password'), 'my password');
     await userEvent.click(email.getByRole('button', { name: 'Send confirmation link' }));
@@ -117,5 +143,17 @@ describe('AccountSettingsPage', () => {
         /We've sent a link to kiri.new@example.co.nz. Open it to switch; until then, keep using kiri@example.co.nz/,
       ),
     ).toBeInTheDocument();
+  });
+
+  it('shows the change form straight away while the address is unconfirmed', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: { ...guestUser, emailVerified: false } } },
+    });
+    render();
+
+    const email = within(await section('Email address'));
+    expect(email.getByText('Not confirmed')).toBeInTheDocument();
+    expect(email.getByRole('button', { name: 'Send confirmation link' })).toBeInTheDocument();
+    expect(email.queryByRole('button', { name: 'Change email address' })).not.toBeInTheDocument();
   });
 });

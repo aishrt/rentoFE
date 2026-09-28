@@ -11,13 +11,19 @@ import { changePasswordRequest } from './account-api';
 import { applyFieldErrors, formErrorMessage } from './form-errors';
 import { SettingsSection } from './settings-section';
 
-const schema = z.object({
-  currentPassword: z.string().min(1, 'Enter your current password'),
-  newPassword: z
-    .string()
-    .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters`)
-    .max(200, 'That password is too long'),
-});
+const schema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    newPassword: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters`)
+      .max(200, 'That password is too long'),
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ['confirmPassword'],
+    error: "The passwords don't match",
+  });
 type Values = z.infer<typeof schema>;
 
 /** Change the password; every other device is signed out (plan §6.1). */
@@ -31,12 +37,12 @@ export function PasswordSection() {
     formState: { errors },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { currentPassword: '', newPassword: '' },
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async ({ currentPassword, newPassword }) => {
     try {
-      await change.mutateAsync(values);
+      await change.mutateAsync({ currentPassword, newPassword });
       reset();
     } catch (error) {
       applyFieldErrors(error, ['currentPassword', 'newPassword'] as const, setError);
@@ -68,7 +74,13 @@ export function PasswordSection() {
             error={errors.newPassword?.message}
             description={`At least ${MIN_PASSWORD_LENGTH} characters. A few unrelated words together work well.`}
           >
-            <PasswordInput autoComplete="new-password" {...register('newPassword')} />
+            <PasswordInput
+              autoComplete="new-password"
+              {...register('newPassword', { deps: 'confirmPassword' })}
+            />
+          </Field>
+          <Field label="Confirm new password" error={errors.confirmPassword?.message}>
+            <PasswordInput autoComplete="new-password" {...register('confirmPassword')} />
           </Field>
           <div>
             <Button type="submit" loading={change.isPending}>

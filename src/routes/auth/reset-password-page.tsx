@@ -14,12 +14,18 @@ import { resetPasswordRequest } from '@/features/auth/auth-api';
 import { MIN_PASSWORD_LENGTH } from '@/features/auth/signup-schema';
 import { useLinkToken } from '@/features/auth/use-link-token';
 
-const schema = z.object({
-  password: z
-    .string()
-    .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters`)
-    .max(200, 'That password is too long'),
-});
+const schema = z
+  .object({
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters`)
+      .max(200, 'That password is too long'),
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ['confirmPassword'],
+    error: "The passwords don't match",
+  });
 
 function RequestNewLink({ title, children }: { title: string; children: string }) {
   return (
@@ -42,7 +48,10 @@ export function ResetPasswordPage() {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { password: '' } });
+  } = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
 
   const onSubmit = handleSubmit(async ({ password }) => {
     try {
@@ -98,7 +107,14 @@ export function ResetPasswordPage() {
                 error={errors.password?.message}
                 description={`At least ${MIN_PASSWORD_LENGTH} characters. A few unrelated words together work well.`}
               >
-                <PasswordInput autoComplete="new-password" autoFocus {...register('password')} />
+                <PasswordInput
+                  autoComplete="new-password"
+                  autoFocus
+                  {...register('password', { deps: 'confirmPassword' })}
+                />
+              </Field>
+              <Field label="Confirm new password" error={errors.confirmPassword?.message}>
+                <PasswordInput autoComplete="new-password" {...register('confirmPassword')} />
               </Field>
               <Button type="submit" size="lg" block loading={reset.isPending}>
                 Change password
