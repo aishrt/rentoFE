@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportError } from '@/lib/monitoring';
 
 export interface ErrorFallbackProps {
   error: unknown;
@@ -10,7 +11,7 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   /** Shown in place of the children once they throw. `null` quietly hides the part that failed. */
   fallback: ReactNode | ((props: ErrorFallbackProps) => ReactNode);
-  /** Called once for each error caught, e.g. to report it. React already logs it to the console. */
+  /** Called once for each error caught. It is also sent to Sentry, and React logs it to the console. */
   onError?: (error: unknown, info: ErrorInfo) => void;
 }
 
@@ -33,6 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
+    reportError(error);
     this.props.onError?.(error, info);
   }
 

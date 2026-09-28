@@ -1,10 +1,12 @@
 import { Link, useRouteError } from 'react-router';
 import { ErrorMessage } from '@/components/errors/error-message';
 import { PageMeta } from '@/components/layout/page-meta';
+import { useReportError } from '@/lib/monitoring';
 
 /** For a staff page that fails: the message takes the page's place, inside the portal's sidebar and header. */
 export function AdminRouteError() {
   const error = useRouteError();
+  useReportError(error);
 
   return (
     <div className="flex justify-center py-16">

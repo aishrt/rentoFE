@@ -36,6 +36,10 @@ Pages linked from the header and footer that later milestones build (Browse cars
 - **Routing:** the CloudFront Function in `infra/web-router.js` serves each page's file for its URL, and `index.html` for every other app URL. It is published by hand (see DEPLOYING_UPDATES.md); a test fails if its page list and the table differ.
 - **While the app runs:** `PageMeta` sets the same tags from the table as the visitor navigates.
 
+## Error monitoring
+
+Sentry (`src/lib/monitoring.ts`) records errors and real-user Core Web Vitals on the live site. Its SDK downloads only after the page has loaded, so it doesn't count against the JavaScript budget, and errors from before then are sent once it's ready. It is off on `localhost` and without `VITE_SENTRY_DSN`; the pipeline sets the DSN, the environment and the release (the commit). No user details, cookies, headers or query strings are sent.
+
 ## Commands
 
 | Command                                           | What it does                                                                                                                                                       |
@@ -65,7 +69,7 @@ src/
     brand/              Logo (placeholder until the client's logo arrives), landscape art
   api/                  Typed client (openapi-fetch: cookies, one shared token refresh) and the API types
                         generated from the backend's openapi.json (schema.d.ts)
-  lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects, Socket.IO connection
+  lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects, Socket.IO connection, Sentry monitoring
   seo/                  SEO table (pages.ts) and the head tags the build writes (head.ts)
   styles/               tokens.ts + globals.css (Tailwind v4 theme); tokens.test.ts checks they match
                         and that text colours pass WCAG AA
