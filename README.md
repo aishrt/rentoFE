@@ -34,6 +34,8 @@ Pages linked from the header and footer that later milestones build (Browse cars
 - **One table:** `src/seo/pages.ts` holds each static public page's title, description and search rule (indexed, or `noindex` for sign-in pages, search results and pages still coming soon).
 - **Build step:** `npm run build` ends with `scripts/prerender-meta.ts`, which writes `dist/pages/<page>.html` for every page in the table. Each has its own title, description, link-preview tags (`public/og-image.png`) and, for indexed pages, a canonical URL and JSON-LD, so WhatsApp, Facebook and crawlers that don't run JavaScript see the right page. `VITE_SITE_URL` sets the site address (default `https://www.rentovroom.com`).
 - **Routing:** the CloudFront Function in `infra/web-router.js` serves each page's file for its URL, and `index.html` for every other app URL. It is published by hand (see DEPLOYING_UPDATES.md); a test fails if its page list and the table differ.
+- **Vehicle and destination pages** (`/cars/:slug`, `/rental/:city`) get their tags from the backend: CloudFront sends those URLs, and `/sitemap.xml`, to the backend's `/pages` route, which wraps the live `index.html` with the car's or destination's tags. They're listed in `backendTaggedPages` in `src/seo/pages.ts`, and show "Coming soon" until they're built.
+- **Manifest:** the build also writes `dist/seo-manifest.json`, which tells the backend which pages search engines may index. Until `backendTaggedPages` loses its `comingSoon` flags, the backend marks vehicle and destination pages `noindex` and leaves them out of the sitemap.
 - **While the app runs:** `PageMeta` sets the same tags from the table as the visitor navigates.
 
 ## Error monitoring

@@ -87,6 +87,11 @@ jobs:
             echo "::error::dist/pages/home.html is missing or its canonical URL isn't $SITE_URL/."
             exit 1
           fi
+          # The backend's page tags and sitemap.xml read this from the live site (plan §1.4).
+          if ! grep -q '"indexablePaths"' dist/seo-manifest.json; then
+            echo "::error::dist/seo-manifest.json is missing."
+            exit 1
+          fi
 
       # Speed budget (plan §12.5): homepage JavaScript, then Lighthouse on mobile (lighthouserc.json).
       - name: Check the JavaScript budget

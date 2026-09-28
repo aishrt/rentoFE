@@ -65,6 +65,7 @@ export const adminUser = {
   emailVerified: true,
   phoneVerified: false,
   mfaEnabled: true,
+  pendingAgreements: [] as string[],
 };
 
 export const guestUser = {

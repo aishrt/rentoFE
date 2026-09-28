@@ -5,7 +5,7 @@ import { PublicLayout } from '@/components/layout/public-layout';
 import type { AdminRouteHandle } from '@/features/admin/admin-layout';
 import { AdminRouteError } from '@/routes/admin/admin-route-error';
 import { PageError, RouteErrorPage } from '@/routes/errors/route-error-page';
-import { seoPages } from '@/seo/pages';
+import { backendTaggedPages, seoPages } from '@/seo/pages';
 
 /** Loads a page's code only when it is first visited (plan §12.5: route-level code splitting). */
 function page<Module, Name extends keyof Module>(load: () => Promise<Module>, name: Name) {
@@ -35,7 +35,7 @@ export const routes: RouteObject[] = [
                 lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),
               },
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
-              ...seoPages
+              ...[...seoPages, ...backendTaggedPages]
                 .filter((planned) => planned.comingSoon)
                 .map((planned) => ({ path: planned.path, lazy: loadComingSoon })),
               { path: '*', lazy: loadNotFound },
