@@ -32,6 +32,8 @@ env:
   CLOUDFRONT_DISTRIBUTION_ID: E19WXD8ZXT5ZQM
   API_URL: https://api.rentovroom.com
   SITE_URL: https://www.rentovroom.com
+  # The website's Sentry project (src/lib/monitoring.ts). Public by design: it ends up in the browser code.
+  SENTRY_DSN: https://e2eb932d84d1dd9745c2e79ed4ef90c9@o4512162398339072.ingest.us.sentry.io/4512162483339264
 
 jobs:
   deploy:
@@ -68,6 +70,9 @@ jobs:
         env:
           VITE_API_URL: ${{ env.API_URL }}
           VITE_SITE_URL: ${{ env.SITE_URL }}
+          VITE_SENTRY_DSN: ${{ env.SENTRY_DSN }}
+          VITE_SENTRY_ENVIRONMENT: production
+          VITE_RELEASE: rento-vroom-frontend@${{ github.sha }}
 
       - name: Check the API address is built in
         run: |

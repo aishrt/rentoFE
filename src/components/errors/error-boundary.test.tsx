@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { reportError } from '@/lib/monitoring';
 import { ErrorBoundary } from './error-boundary';
+
+vi.mock('@/lib/monitoring', () => ({ reportError: vi.fn() }));
 
 let broken = true;
 
@@ -17,6 +20,15 @@ describe('ErrorBoundary', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
   afterEach(() => vi.restoreAllMocks());
+
+  it('sends what it caught to error monitoring', () => {
+    render(
+      <ErrorBoundary fallback={<p>Fallback</p>}>
+        <Flaky />
+      </ErrorBoundary>,
+    );
+    expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Wheel fell off' }));
+  });
 
   it('renders its children while they work', () => {
     broken = false;

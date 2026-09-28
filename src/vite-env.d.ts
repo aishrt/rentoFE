@@ -5,6 +5,12 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   /** The site's own address for canonical URLs, e.g. https://www.<domain>. Defaults to the live site. */
   readonly VITE_SITE_URL?: string;
+  /** Sentry DSN of the website's project. Unset: no error monitoring. */
+  readonly VITE_SENTRY_DSN?: string;
+  /** "production" (default) or "staging". */
+  readonly VITE_SENTRY_ENVIRONMENT?: string;
+  /** The deployed version, e.g. rento-vroom-frontend@abc1234; the pipeline sets it. */
+  readonly VITE_RELEASE?: string;
 }
 
 interface ImportMeta {

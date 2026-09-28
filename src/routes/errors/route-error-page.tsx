@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/errors/error-boundary';
 import { ErrorMessage } from '@/components/errors/error-message';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
+import { useReportError } from '@/lib/monitoring';
 
 // The animated 404 is a chunk of its own, so these error pages, which every page loads, stay small.
 const NotFoundPage = lazy(() =>
@@ -30,6 +31,8 @@ function NotFoundResponse({ error }: { error: unknown }) {
  */
 export function RouteErrorPage() {
   const error = useRouteError();
+  // A 404 is a wrong link, not a fault in the site.
+  useReportError(isNotFound(error) ? null : error);
 
   if (isNotFound(error)) {
     return (
@@ -53,6 +56,7 @@ export function RouteErrorPage() {
 /** For a public page that fails: the message takes the page's place, and the header and footer stay. */
 export function PageError() {
   const error = useRouteError();
+  useReportError(isNotFound(error) ? null : error);
   if (isNotFound(error)) return <NotFoundResponse error={error} />;
 
   return (
