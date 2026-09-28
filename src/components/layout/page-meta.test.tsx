@@ -43,6 +43,16 @@ describe('PageMeta', () => {
     expect(headTag('meta[property="og:title"]')).toHaveLength(1);
   });
 
+  it('wins over a static <title> that was not prerendered, such as index.html in dev', () => {
+    const staticTitle = document.createElement('title');
+    staticTitle.textContent = 'Static title from index.html';
+    document.head.prepend(staticTitle);
+
+    render(<PageMeta title="Staff log-in" />);
+
+    expect(document.title).toBe('Staff log-in · Rento Vroom');
+  });
+
   it('still takes a plain title for private pages', () => {
     render(<PageMeta title="Overview · Staff portal" noindex />);
 

@@ -85,3 +85,16 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors -o /dev/null "$SITE_URL/"
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors -o /dev/null "$SITE_URL/login"
+
+      # Each public page must be served its own prerendered file by the CloudFront Function
+      # (plan §1.4). If this fails, publish infra/web-router.js (DEPLOYING_UPDATES.md, section 6).
+      - name: Check page routing
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error "$SITE_URL/how-it-works" | grep -q '<title data-prerendered>How it works'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::/how-it-works isn't serving its own page. Publish infra/web-router.js to the CloudFront Function."
+          exit 1
