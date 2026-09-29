@@ -41,7 +41,7 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
       { label: 'Support', icon: LifeBuoy },
     ],
   },
-  { title: 'Finance', items: [{ label: 'Payments & payouts', icon: Wallet }] },
+  { title: 'Finance', items: [{ label: 'Payments & payouts', icon: Wallet, to: '/admin/payments' }] },
   {
     title: 'Platform',
     items: [

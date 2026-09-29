@@ -73,6 +73,9 @@ jobs:
           VITE_SENTRY_DSN: ${{ env.SENTRY_DSN }}
           VITE_SENTRY_ENVIRONMENT: production
           VITE_RELEASE: rento-vroom-frontend@${{ github.sha }}
+          # Stripe's publishable key (public by design): the repository variable STRIPE_PUBLISHABLE_KEY,
+          # pk_test_… until launch, then pk_live_…. Unset, the payment pages say Stripe isn't set up.
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
 
       - name: Check the API address is built in
         run: |

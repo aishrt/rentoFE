@@ -1643,6 +1643,207 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/payments/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a NZ$1 test payment in the Stripe sandbox
+         * @description Admin only. Checks the Stripe keys, Apple Pay, Google Pay and the webhook before the booking flow exists. Refused (409 LIVE_MODE) with live keys, and 503 until the keys are set.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The payment, ready for Stripe.js to confirm */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TestPayment"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments/test/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How a test payment went
+         * @description Admin only. Its status, how it was paid (card, Apple Pay, Google Pay) and whether its webhook arrived.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The PaymentIntent id (pi_…) */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The test payment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TestPaymentStatus"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchange-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exchange rates for approximate prices in AUD, USD, EUR and CAD
+         * @description Public. Updated daily from the European Central Bank. For display only: every charge, refund and payout is in NZD, and the card issuer converts.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The latest rates, per NZ$1 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExchangeRates"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1742,6 +1943,52 @@ export interface components {
             };
             /** Format: date-time */
             generatedAt: string;
+        };
+        TestPayment: {
+            /** @description The Stripe PaymentIntent id (pi_…) */
+            id: string;
+            /** @description Lets Stripe.js on the page confirm this one payment. Never logged or stored. */
+            clientSecret: string;
+            amountCents: number;
+            /** @enum {string} */
+            currency: "nzd";
+        };
+        TestPaymentStatus: {
+            id: string;
+            /** @description The PaymentIntent status: succeeded, processing, requires_payment_method, requires_action, canceled, … */
+            status: string;
+            amountCents: number;
+            currency: string;
+            /** @description Null until the payment has been attempted */
+            paymentMethod: {
+                /** @description The payment method type, e.g. card or link */
+                type: string;
+                /** @description apple_pay or google_pay when a card was paid through a wallet */
+                wallet: string | null;
+                /** @description The card brand, e.g. visa */
+                brand: string | null;
+                last4: string | null;
+            } | null;
+            /** @description Whether Stripe’s payment_intent.succeeded event reached the webhook */
+            webhookReceived: boolean;
+        };
+        ExchangeRates: {
+            /** @enum {string} */
+            base: "NZD";
+            /**
+             * Format: date
+             * @description The day the rates are for; the ECB publishes on European working days
+             */
+            date: string;
+            /** @description Who published the rates */
+            source: string;
+            /** @description How much of each currency NZ$1 buys */
+            rates: {
+                AUD: number;
+                USD: number;
+                EUR: number;
+                CAD: number;
+            };
         };
     };
     responses: never;

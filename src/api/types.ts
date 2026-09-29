@@ -18,3 +18,8 @@ export type MfaSetup = Schemas['MfaSetupResponse'];
 /** A staff member's two-factor sign-in: whether it's on, and their authenticator apps (up to two). */
 export type MfaStatus = Schemas['MfaStatus'];
 export type MfaDevice = Schemas['MfaDevice'];
+/** The day's exchange rates per NZ$1, for estimates in other currencies. */
+export type ExchangeRates = Schemas['ExchangeRates'];
+/** A NZ$1 sandbox payment from the staff portal, and how it went. */
+export type TestPayment = Schemas['TestPayment'];
+export type TestPaymentStatus = Schemas['TestPaymentStatus'];
