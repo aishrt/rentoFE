@@ -155,7 +155,7 @@ export function TestPaymentSection() {
             You&rsquo;ll be charged <PriceWithEstimate cents={payment.amountCents} />. The card issuer
             converts it for cards in other currencies.
           </p>
-          <PaymentForm submitLabel="Pay NZ$1.00" onPaid={setPaidId} />
+          <PaymentForm submitLabel="Pay NZ$1.00" onPaid={setPaidId} showWalletDetails />
           <Button variant="ghost" onClick={reset} className="justify-self-start">
             Cancel
           </Button>
