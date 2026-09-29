@@ -76,6 +76,11 @@ export const routes: RouteObject[] = [
                 lazy: page(() => import('@/routes/admin/overview-page'), 'AdminOverviewPage'),
               },
               {
+                path: 'settings',
+                handle: { title: 'Settings' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/settings-page'), 'AdminSettingsPage'),
+              },
+              {
                 path: '*',
                 handle: { title: 'Not found' } satisfies AdminRouteHandle,
                 lazy: page(() => import('@/routes/admin/admin-not-found-page'), 'AdminNotFoundPage'),

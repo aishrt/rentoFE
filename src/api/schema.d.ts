@@ -1109,6 +1109,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: two-factor sign-in and its authenticator apps
+         * @description Two-factor sign-in is optional for staff, and each staff member can have up to two authenticator apps (a backup for a lost phone). Never includes the secrets.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Whether it is on, and the apps */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MfaStatus"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/mfa/setup": {
         parameters: {
             query?: never;
@@ -1119,8 +1176,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Staff: start setting up the authenticator app
-         * @description A new secret, shown once as a QR code. Required before the staff portal opens (403 MFA_SETUP_REQUIRED). Finish with POST /me/mfa/verify.
+         * Staff: start adding an authenticator app
+         * @description A new secret, shown once as a QR code, for the first app or a backup. Finish with POST /me/mfa/verify. 409 MFA_DEVICE_LIMIT when there are already two.
          */
         post: {
             parameters: {
@@ -1185,8 +1242,205 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Staff: finish setting up the authenticator app
-         * @description The first code from the app, which proves it has the secret.
+         * Staff: finish adding an authenticator app
+         * @description The first code from the new app, which proves it has the secret. The first app turns two-factor sign-in on and signs out every other device (this one stays signed in). A second app also needs `currentCode`, from the app already set up. Emails the staff member either way.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description From the app being added */
+                        code: string;
+                        /** @description What to call the app, e.g. "Work phone". A default is used when empty. */
+                        name?: string;
+                        /** @description Needed when two-factor sign-in is already on: a code from an app already set up */
+                        currentCode?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The app is added */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/devices/{id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: remove one of two authenticator apps
+         * @description Needs a code from either app. The last app can’t be removed (409 MFA_LAST_DEVICE): turn two-factor sign-in off instead. Emails the staff member.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The authenticator app’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The apps left */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MfaStatus"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: turn off two-factor sign-in
+         * @description Needs a code from any of their authenticator apps, and removes them all. Sign-in then needs only the password. Emails the staff member.
          */
         post: {
             parameters: {
@@ -1203,7 +1457,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Two-factor sign-in is on */
+                /** @description Two-factor sign-in is off */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1332,8 +1586,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reset a staff member's lost authenticator
-         * @description Admin only, and not for your own account. They are signed out everywhere and set up a new authenticator at their next sign-in. Written to the audit log.
+         * Reset a staff member's lost authenticator apps
+         * @description Admin only, and not for your own account. Removes all their authenticator apps and signs them out everywhere; they sign in with only their password and can set up a new app in Settings. Written to the audit log.
          */
         post: {
             parameters: {
@@ -1407,7 +1661,7 @@ export interface components {
             /** @description Verified mobile number, E.164 (+64211234567) */
             phone?: string;
             phoneVerified: boolean;
-            /** @description Staff: whether the authenticator app is set up */
+            /** @description Staff: whether two-factor sign-in is on */
             mfaEnabled: boolean;
             /** @description Legal documents with a new version the user must accept before carrying on (POST /me/agreements). Usually empty. */
             pendingAgreements: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
@@ -1450,6 +1704,23 @@ export interface components {
         };
         AcceptAgreementsRequest: {
             types: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
+        };
+        MfaStatus: {
+            enabled: boolean;
+            /** @description How many authenticator apps an account can have */
+            maxDevices: number;
+            devices: components["schemas"]["MfaDevice"][];
+        };
+        MfaDevice: {
+            id: string;
+            name: string;
+            /** Format: date-time */
+            addedAt: string;
+            /**
+             * Format: date-time
+             * @description The last time one of its codes was used
+             */
+            lastUsedAt?: string;
         };
         MfaSetupResponse: {
             /** @description For typing into the app by hand */

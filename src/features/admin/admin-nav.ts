@@ -46,7 +46,7 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
     title: 'Platform',
     items: [
       { label: 'Content', icon: FileText },
-      { label: 'Settings', icon: Settings },
+      { label: 'Settings', icon: Settings, to: '/admin/settings' },
       { label: 'Audit log', icon: ScrollText },
     ],
   },
