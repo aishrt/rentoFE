@@ -103,11 +103,12 @@ export function PaymentForm({ submitLabel, onPaid, showWalletDetails = false }: 
   return (
     <div className="grid gap-5">
       <ExpressCheckoutElement
+        // No `layout` option: `maxRows: 1` with `overflow: 'never'` makes the element hang without
+        // an error (Stripe.js dahlia, September 2026), so no wallet button ever showed.
         options={{
           paymentMethods: { applePay: 'always', googlePay: 'always' },
           buttonType: { applePay: 'book', googlePay: 'book' },
           buttonHeight: 48,
-          layout: { maxColumns: 2, maxRows: 1, overflow: 'never' },
         }}
         onReady={({ availablePaymentMethods }) => {
           const available = Object.entries(availablePaymentMethods ?? {})
