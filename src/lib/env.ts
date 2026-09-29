@@ -8,7 +8,5 @@ export const env = {
   sentryDsn: import.meta.env.VITE_SENTRY_DSN || undefined,
   sentryEnvironment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production',
   release: import.meta.env.VITE_RELEASE || undefined,
-  // Stripe's publishable key (pk_test_… in the sandbox, pk_live_… at launch). Public by design: it can
-  // only start payments the API has created (plan §8).
-  stripePublishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || undefined,
+  // The Stripe publishable key is read in features/payments/stripe.ts, so only payment pages carry it.
 } as const;
