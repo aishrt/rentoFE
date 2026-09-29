@@ -8,4 +8,5 @@ export const env = {
   sentryDsn: import.meta.env.VITE_SENTRY_DSN || undefined,
   sentryEnvironment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production',
   release: import.meta.env.VITE_RELEASE || undefined,
+  // The Stripe publishable key is read in features/payments/stripe.ts, so only payment pages carry it.
 } as const;
