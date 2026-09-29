@@ -15,3 +15,6 @@ export type SignupRequest = paths['/auth/signup']['post']['requestBody']['conten
 export type AdminOverview = Schemas['AdminOverview'];
 /** A staff member's authenticator app setup: a QR code and the key to type by hand. */
 export type MfaSetup = Schemas['MfaSetupResponse'];
+/** A staff member's two-factor sign-in: whether it's on, and their authenticator apps (up to two). */
+export type MfaStatus = Schemas['MfaStatus'];
+export type MfaDevice = Schemas['MfaDevice'];
