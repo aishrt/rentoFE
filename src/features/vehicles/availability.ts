@@ -32,6 +32,26 @@ export function busyDays(busy: VehicleAvailability['busy']): Set<string> {
   return days;
 }
 
+/**
+ * The NZ days a busy time covers from start to end, for the date pickers to rule out. The first and
+ * last days are left open: the car may be free for part of them (a return at 10 am, then a pick-up
+ * after the preparation time), and the quote has the final say.
+ */
+export function fullyBookedDays(busy: VehicleAvailability['busy']): Set<string> {
+  const days = new Set<string>();
+  for (const range of busy) {
+    const first = parseDateValue(nzDay.format(new Date(range.start)));
+    const last = nzDay.format(new Date(new Date(range.end).getTime() - 1));
+    if (!first) continue;
+    let day = addDays(first, 1);
+    for (let guard = 0; guard < 400 && toDateInputValue(day) < last; guard += 1) {
+      days.add(toDateInputValue(day));
+      day = addDays(day, 1);
+    }
+  }
+  return days;
+}
+
 /** "12 Oct – 15 Oct": the next few busy times, for the booking panel. */
 export function upcomingBusy(busy: VehicleAvailability['busy'], limit = 3): string[] {
   return busy.slice(0, limit).map((range) => {

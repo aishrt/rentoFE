@@ -66,3 +66,21 @@ describe('DatePicker', () => {
     expect(screen.getByRole('button', { name: 'Friday, 15 March 2030' })).toHaveFocus();
   });
 });
+
+describe('DatePicker with unavailable days', () => {
+  it('rules out the days it is told, and says why', async () => {
+    const user = userEvent.setup();
+    render(
+      <DatePicker
+        value="2030-10-12"
+        onChange={() => {}}
+        min="2030-10-01"
+        isDateDisabled={(day) => day === '2030-10-15'}
+        calendarLabel="Choose a date"
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /Sat, 12 Oct/ }));
+    expect(screen.getByRole('button', { name: 'Tuesday, 15 October 2030, unavailable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Wednesday, 16 October 2030' })).toBeEnabled();
+  });
+});

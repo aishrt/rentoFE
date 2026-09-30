@@ -1,5 +1,5 @@
 import { CalendarX, Clock, MapPin, Undo2 } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import type { VehicleDetail } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
@@ -13,7 +13,7 @@ import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
 import { toDateInputValue } from '@/lib/dates';
-import { upcomingBusy } from './availability';
+import { fullyBookedDays, upcomingBusy } from './availability';
 import type { Booking } from './use-booking';
 import { useVehicleAvailability } from './vehicle-api';
 import { formatNzdPrecise, optionFee } from './vehicle-format';
@@ -41,6 +41,7 @@ export function BookingPanel({ vehicle, booking, className }: BookingPanelProps)
   const pickupDateRef = useRef<HTMLButtonElement>(null);
   const availability = useVehicleAvailability(vehicle.id);
   const booked = upcomingBusy(availability.data?.busy ?? []);
+  const fullyBooked = useMemo(() => fullyBookedDays(availability.data?.busy ?? []), [availability.data]);
   const { dates, setDates, errors, quote, showErrors } = booking;
   const trip = [dates.pickupDate, dates.returnDate] as const;
   const options = vehicle.deliveryOptions;
@@ -70,6 +71,7 @@ export function BookingPanel({ vehicle, booking, className }: BookingPanelProps)
               onChange={(value) => setDates(pickup ? { pickupDate: value } : { returnDate: value })}
               min={pickup ? today : dates.pickupDate || today}
               range={trip}
+              isDateDisabled={(day) => fullyBooked.has(day)}
               placeholder="Add date"
               calendarLabel={pickup ? 'Choose a pick-up date' : 'Choose a return date'}
             />

@@ -15,6 +15,8 @@ interface DatePickerProps {
   max?: string;
   /** A trip to show in the calendar as a band, such as pick-up to return. */
   range?: readonly [start: string, end: string];
+  /** Days that can't be chosen besides those outside min and max, e.g. a car's fully booked days. */
+  isDateDisabled?: (day: string) => boolean;
   placeholder?: string;
   /** Names the calendar for screen readers, e.g. "Choose a pick-up date". */
   calendarLabel?: string;
@@ -38,6 +40,7 @@ export function DatePicker({
   min,
   max,
   range,
+  isDateDisabled,
   placeholder = 'Choose a date',
   calendarLabel = 'Choose a date',
   align,
@@ -80,7 +83,15 @@ export function DatePicker({
         aria-label={calendarLabel}
         className="w-[min(21rem,calc(100vw-1rem))] p-3"
       >
-        <Calendar value={value} onSelect={choose} min={min} max={max} range={range} autoFocus />
+        <Calendar
+          value={value}
+          onSelect={choose}
+          min={min}
+          max={max}
+          range={range}
+          isDateDisabled={isDateDisabled}
+          autoFocus
+        />
       </Popover>
     </>
   );
