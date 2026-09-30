@@ -15,9 +15,9 @@ describe('routes', () => {
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
-  it('shows "coming soon" for vehicle and destination pages until they are built', async () => {
+  it('shows "coming soon" for a linked page built in a later milestone (the help centre, Phase 3)', async () => {
     mockApi({ 'POST /auth/session': { status: 200, body: { user: null } } });
-    renderWithRouter(routes, '/cars/2021-toyota-corolla-auckland');
+    renderWithRouter(routes, '/help');
 
     expect(await screen.findByText('Coming soon', { selector: 'h1, h2' })).toBeInTheDocument();
   });
