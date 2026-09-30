@@ -49,16 +49,20 @@ export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) 
   const prepare = usePreparePayment();
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [failed, setFailed] = useState(false);
+  // Ticked from the moment it's pressed: the mutation's own state arrives a moment later.
+  const [agreed, setAgreed] = useState(false);
   const request = session ? session.captureMethod === 'manual' : !booking.instantBook;
   const hostName = booking.host.firstName;
 
   if (stripeKeyMode() === 'missing') return <PaymentsNotSetUp />;
 
   const agree = (checked: boolean) => {
-    if (!checked || session || prepare.isPending) return;
+    if (!checked || agreed) return;
+    setAgreed(true);
     prepare.mutate(booking.ref, {
       onSuccess: setSession,
       onError: (error) => {
+        setAgreed(false);
         if (error instanceof ApiError && error.code === 'HOLD_EXPIRED') onHoldExpired();
         if (error instanceof ApiError && error.code === 'ALREADY_PAID') onPaid(booking);
       },
@@ -88,8 +92,8 @@ export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) 
   return (
     <div className="grid gap-6">
       <Checkbox
-        checked={Boolean(session) || prepare.isPending}
-        disabled={Boolean(session) || prepare.isPending}
+        checked={agreed}
+        disabled={agreed}
         onChange={(event) => agree(event.target.checked)}
         label={
           <>
