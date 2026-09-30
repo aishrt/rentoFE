@@ -7438,6 +7438,8 @@ export interface components {
                 id: string;
                 name: string;
                 email: string;
+                /** @description The verified mobile, to reach the Host about the listing */
+                phone?: string;
                 /** @enum {string|null} */
                 status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
                 emailVerified: boolean;

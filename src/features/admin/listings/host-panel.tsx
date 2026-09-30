@@ -43,7 +43,13 @@ export function HostPanel({ host }: { host: AdminVehicle['host'] }) {
             {host.phoneVerified ? (
               <span className="inline-flex items-center gap-1.5 text-ink">
                 <BadgeCheck aria-hidden="true" className="size-4 text-success" />
-                Verified
+                {host.phone ? (
+                  <a href={`tel:${host.phone}`} className="link-underline text-primary">
+                    {host.phone}
+                  </a>
+                ) : (
+                  'Verified'
+                )}
               </span>
             ) : (
               <VerifiedMark verified={false} />
