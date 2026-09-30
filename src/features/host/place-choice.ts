@@ -11,7 +11,7 @@ export interface PlaceChoice {
   secondary?: string;
   /** Airports: the IATA code. */
   code?: string;
-  /** The town or city and region, from the suggestion (older saved choices only have ). */
+  /** The town or city and region, from the suggestion; without them, `secondary` is read instead. */
   city?: string;
   region?: NzRegion;
   lat?: number;
@@ -58,6 +58,8 @@ export function placeFromAddress(address: {
         type: 'SUBURB',
         name: address.suburb,
         secondary: `${address.city}, ${address.region}`,
+        city: address.city,
+        region: address.region,
         lat: address.lat,
         lng: address.lng,
       }
