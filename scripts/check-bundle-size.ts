@@ -17,7 +17,9 @@ const PLAN_BUDGET_KB = 170;
 // Lowered from 186.5 on 30 September 2026 (185.1 KB): the hero search form no longer uses react-hook-form
 // (about 11 KB), which paid for its API-backed location search, the lazy featured-cars and reviews sections'
 // placeholders, and the Phase 2 routes that grew the entry chunk by 2.7 KB the same day.
-const LIMIT_KB = 185.5;
+// Lowered from 185.5 later that day (182.5 KB): the first load's icons now share one file instead of about
+// thirty (vite.config.ts), and the toasts load with the first toast.
+const LIMIT_KB = 183;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {
