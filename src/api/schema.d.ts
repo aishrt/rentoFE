@@ -1519,6 +1519,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/favourites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saved cars
+         * @description The ids of the cars the user saved with the heart, most recent first.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Saved cars */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Favourites"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/favourites/{vehicleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save a car */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    vehicleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Saved */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove a saved car */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    vehicleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/last-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Remember the last search
+         * @description The place and dates Saved cars will price each saved car for.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LastSearch"];
+                };
+            };
+            responses: {
+                /** @description Saved */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/overview": {
         parameters: {
             query?: never;
@@ -1844,6 +2036,807 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Results and Browse Cars
+         * @description Public. Live cars matching every filter in spec §5, with their distance from the place. With dates, cars that are taken, need more notice, or whose documents expire are left out, and each card has an estimated total. With no place, the search covers all of NZ.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Typed place, matched to our best place without coordinates */
+                    where?: string;
+                    /** @description A suggestion id from GET /places/suggest */
+                    placeId?: string;
+                    lat?: number;
+                    lng?: number;
+                    /** @description IATA code: also finds cars that deliver to that airport */
+                    airport?: string;
+                    /** @description Kept within the range in settings (GET /policies) */
+                    radiusKm?: number;
+                    /** @description Pick-up: "2026-10-12T10:00" in NZ time, or ISO 8601 with an offset */
+                    start?: string;
+                    /** @description Return, in the same format. Without dates: Browse Cars */
+                    end?: string;
+                    minDailyCents?: number;
+                    maxDailyCents?: number;
+                    /** @description Repeat, or separate with commas */
+                    types?: ("HATCHBACK" | "SEDAN" | "WAGON" | "SUV" | "UTE" | "VAN" | "PEOPLE_MOVER" | "COUPE" | "CONVERTIBLE")[];
+                    make?: string;
+                    model?: string;
+                    minYear?: number;
+                    maxYear?: number;
+                    transmission?: "AUTOMATIC" | "MANUAL";
+                    minSeats?: number;
+                    fuel?: ("PETROL" | "DIESEL" | "HYBRID" | "PHEV" | "EV")[];
+                    /** @description Hybrid, plug-in hybrid or electric */
+                    electrified?: boolean;
+                    airportDelivery?: boolean;
+                    /** @description Delivers to an address */
+                    delivery?: boolean;
+                    instantBook?: boolean;
+                    /** @description 1–5; leaves out cars without reviews */
+                    minRating?: number;
+                    unlimitedKm?: boolean;
+                    petFriendly?: boolean;
+                    childSeat?: boolean;
+                    sort?: "recommended" | "price_asc" | "price_desc" | "rating" | "distance" | "newest";
+                    page?: number;
+                    /** @description Up to 48; 24 by default */
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One page of results */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SearchResults"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/makes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Makes and models of live cars, for the filter */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Makes and their models */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleMakes"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Location autocomplete (NZ only)
+         * @description Public. Our cities, suburbs, airports and destinations first ("taupo" finds Taupō, "akl" the airport), then street addresses from Google Places once it is set up. An empty `q` lists popular places.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    /** @description One per search, passed again to GET /places/{id}, so Google bills it once */
+                    sessionToken?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Suggestions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlaceSuggestions"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coordinates and address of a suggestion */
+        get: {
+            parameters: {
+                query?: {
+                    sessionToken?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description A suggestion id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The place */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlaceResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/featured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The homepage’s featured cars
+         * @description Public. The cars admins picked, or else the best-rated live cars.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Up to 8 cars */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FeaturedVehicles"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A live listing
+         * @description Public. Approved photos, specs, rego and WOF status, policies, delivery options and the Host. Never the plate or the exact address. 404 for anything not live.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The listing */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * When the car is taken
+         * @description Public. Busy times between `from` and `to` (6 months by default), merged, never why.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description YYYY-MM-DD or a date and time; now by default */
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Busy times */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleAvailability"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Published guest reviews of the car */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 10 reviews a page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleReviews"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Price a trip
+         * @description Public. The price breakdown in NZD for the dates, pick-up and return options and protection plan, and every problem in the way (dates taken, notice, trip length, documents, delivery area). Holds nothing.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuoteRequest"];
+                };
+            };
+            responses: {
+                /** @description The quote */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuoteResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * City and destination landing pages
+         * @description Public. Featured ones first: they are the homepage tiles.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Destinations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Destinations"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/destinations/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One destination, for /rental/{slug} */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The destination */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DestinationResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cms/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A legal page in Markdown
+         * @description Public. The legal pages are placeholders until the client’s legal adviser supplies them.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: "legal.terms" | "legal.privacy" | "legal.cancellation-policy" | "legal.host-agreement" | "legal.guest-agreement";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LegalPageResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/faqs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Frequently asked questions */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Also includes questions for everyone */
+                    audience?: "GUEST" | "HOST";
+                    /** @description Only the homepage’s questions */
+                    home?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Questions in order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Faqs"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fees, cancellation tiers, protection plans and listing rules
+         * @description Public. The settings in force that the website shows: the Cancellation Policy and Insurance pages, the Become a Host estimator, checkout and Host onboarding.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The policies */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicPolicies"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/featured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Customer reviews for the homepage
+         * @description Public. Real published reviews only, and `show: false` until there are enough (settings).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reviews */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FeaturedReviews"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Contact Us
+         * @description Works signed out. Creates a support ticket and emails its reference to the sender. Rate-limited per IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ContactRequest"];
+                };
+            };
+            responses: {
+                /** @description The ticket */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1930,6 +2923,18 @@ export interface components {
             /** @description The otpauth URL as a PNG data: URL */
             qrCode: string;
         };
+        Favourites: {
+            /** @description Saved cars, most recent first */
+            vehicleIds: string[];
+        };
+        LastSearch: {
+            place?: string;
+            lat?: number;
+            lng?: number;
+            /** @description "2026-10-12T10:00" in NZ time */
+            start?: string;
+            end?: string;
+        };
         AdminOverview: {
             metrics: {
                 totalUsers: number;
@@ -1989,6 +2994,566 @@ export interface components {
                 EUR: number;
                 CAD: number;
             };
+        };
+        SearchResults: {
+            results: components["schemas"]["VehicleCard"][];
+            total: number;
+            page: number;
+            pageSize: number;
+            /** @description The place searched; null for all of NZ */
+            place: {
+                label: string;
+                type: string;
+                lat: number;
+                lng: number;
+                airportCode?: string;
+            } | null;
+            radiusKm: number;
+            dates: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+                days: number;
+            } | null;
+            /** @description The typed place matched nothing, so the results cover all of NZ */
+            placeNotFound: boolean;
+        };
+        VehicleCard: {
+            id: string;
+            slug: string;
+            /** @description e.g. "2022 Toyota RAV4" */
+            title: string;
+            make: string;
+            model: string;
+            year: number;
+            variant?: string;
+            photo: {
+                url: string;
+                alt: string;
+            } | null;
+            suburb?: string;
+            city?: string;
+            /** @description From the searched place; null without one */
+            distanceKm: number | null;
+            rating: components["schemas"]["Rating"];
+            tripCount: number;
+            dailyCents: number;
+            /** @description Only when the search has dates */
+            estimate: {
+                days: number;
+                /** @description Every mandatory charge for the dates (rental, service fee, mandatory protection, GST), plus airport delivery for an airport search */
+                totalCents: number;
+                includesAirportDelivery: boolean;
+            } | null;
+            instantBook: boolean;
+            /** @description Delivers to an address */
+            delivery: boolean;
+            airportDelivery: boolean;
+            /** @enum {string} */
+            bodyType: "HATCHBACK" | "SEDAN" | "WAGON" | "SUV" | "UTE" | "VAN" | "PEOPLE_MOVER" | "COUPE" | "CONVERTIBLE";
+            /** @enum {string} */
+            fuelType: "PETROL" | "DIESEL" | "HYBRID" | "PHEV" | "EV";
+            /** @enum {string} */
+            transmission: "AUTOMATIC" | "MANUAL";
+            seats: number;
+            unlimitedKm: boolean;
+            petFriendly: boolean;
+            childSeat: boolean;
+            /** @description Up to three key features */
+            features: string[];
+        };
+        /** @description Average stars and how many reviews; count 0 shows as "New" */
+        Rating: {
+            avg: number;
+            count: number;
+        };
+        VehicleMakes: {
+            makes: {
+                make: string;
+                models: string[];
+            }[];
+        };
+        PlaceSuggestions: {
+            suggestions: components["schemas"]["PlaceSuggestion"][];
+        };
+        PlaceSuggestion: {
+            /** @description `place:<id>` for our places, `google:<placeId>` for a street address */
+            id: string;
+            /** @enum {string} */
+            type: "CITY" | "SUBURB" | "AIRPORT" | "DESTINATION" | "ADDRESS";
+            name: string;
+            /** @description What to show and put in the field, e.g. "Auckland Airport (AKL)" */
+            label: string;
+            /** @description The city or region under the name */
+            secondary?: string;
+            /** @description Airports: the IATA code */
+            code?: string;
+            /** @description Our places include coordinates; addresses need GET /places/{id} */
+            lat?: number;
+            lng?: number;
+        };
+        PlaceResponse: {
+            place: components["schemas"]["PlaceDetails"];
+        };
+        PlaceDetails: {
+            /** @description `place:<id>` for our places, `google:<placeId>` for a street address */
+            id: string;
+            /** @enum {string} */
+            type: "CITY" | "SUBURB" | "AIRPORT" | "DESTINATION" | "ADDRESS";
+            name: string;
+            /** @description What to show and put in the field, e.g. "Auckland Airport (AKL)" */
+            label: string;
+            /** @description The city or region under the name */
+            secondary?: string;
+            /** @description Airports: the IATA code */
+            code?: string;
+            lat: number;
+            lng: number;
+            /** @description A street address in the structured NZ format, when every part is known */
+            address?: {
+                unit?: string;
+                streetNumber?: string;
+                street: string;
+                suburb?: string;
+                city: string;
+                /** @enum {string} */
+                region: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+                postcode: string;
+            };
+        };
+        FeaturedVehicles: {
+            vehicles: components["schemas"]["VehicleCard"][];
+        };
+        VehicleResponse: {
+            vehicle: components["schemas"]["VehicleDetail"];
+        };
+        VehicleDetail: {
+            id: string;
+            slug: string;
+            title: string;
+            make: string;
+            model: string;
+            year: number;
+            variant?: string;
+            /** @enum {string} */
+            bodyType: "HATCHBACK" | "SEDAN" | "WAGON" | "SUV" | "UTE" | "VAN" | "PEOPLE_MOVER" | "COUPE" | "CONVERTIBLE";
+            /** @enum {string} */
+            fuelType: "PETROL" | "DIESEL" | "HYBRID" | "PHEV" | "EV";
+            /** @enum {string} */
+            transmission: "AUTOMATIC" | "MANUAL";
+            seats: number;
+            doors: number;
+            features: string[];
+            powertrain: {
+                engineCc?: number;
+                cylinders?: number;
+                description?: string;
+                evRangeKm?: number;
+                batteryKwh?: number;
+            } | null;
+            /** @enum {string} */
+            fuelPolicy: "SAME_LEVEL" | "FULL";
+            kmAllowancePerDay: number | null;
+            unlimitedKm: boolean;
+            extraKmCents: number;
+            petFriendly: boolean;
+            childSeat: boolean;
+            pricing: {
+                dailyCents: number;
+                weeklyDiscountPct: number;
+                monthlyDiscountPct: number;
+            };
+            rules: {
+                minDays: number;
+                maxDays: number;
+                minNoticeHours: number;
+                bufferHours: number;
+                instantBook: boolean;
+            };
+            cancellationTier: {
+                code: string;
+                name: string;
+                summary: string;
+                refunds: {
+                    minHoursBefore: number;
+                    refundPct: number;
+                }[];
+            };
+            photos: {
+                id: string;
+                /** @enum {string} */
+                type: "FRONT" | "REAR" | "DRIVER" | "PASSENGER" | "INTERIOR" | "DASH" | "BOOT" | "TYRES" | "DAMAGE";
+                url: string;
+                alt: string;
+            }[];
+            compliance: components["schemas"]["VehicleCompliance"];
+            location: {
+                suburb?: string;
+                city?: string;
+                region?: string;
+                /** @description A circle that contains the car, for the map; never its address */
+                approx: {
+                    lat: number;
+                    lng: number;
+                    radiusM: number;
+                } | null;
+            };
+            deliveryOptions: components["schemas"]["DeliveryOptionSummary"][];
+            protectionPlans: components["schemas"]["ProtectionPlanSummary"][];
+            rating: components["schemas"]["Rating"];
+            tripCount: number;
+            host: components["schemas"]["PublicHost"];
+        };
+        VehicleCompliance: {
+            rego: {
+                /** @enum {string} */
+                status: "CURRENT" | "EXPIRED" | "NOT_RECORDED";
+                /** @description YYYY-MM */
+                expiresMonth?: string;
+            };
+            inspection: {
+                /** @enum {string} */
+                status: "CURRENT" | "EXPIRED" | "NOT_RECORDED";
+                /** @description YYYY-MM */
+                expiresMonth?: string;
+                /**
+                 * @description A Warrant of Fitness, or a Certificate of Fitness
+                 * @enum {string}
+                 */
+                kind: "WOF" | "COF";
+            };
+            ruc: {
+                /** @description Diesel, EV and plug-in hybrid cars pay Road User Charges */
+                required: boolean;
+                recorded: boolean;
+            };
+        };
+        DeliveryOptionSummary: {
+            id: string;
+            /** @enum {string} */
+            type: "PICKUP" | "DELIVERY" | "AIRPORT" | "CUSTOM";
+            label: string;
+            feeCents: number;
+            airportCode?: string;
+            /** @description DELIVERY: how far from the car it delivers */
+            radiusKm?: number;
+            /** @description PICKUP and CUSTOM: the suburb and city only */
+            area?: string;
+        };
+        ProtectionPlanSummary: {
+            code: string;
+            name: string;
+            dailyPriceCents: number;
+            excessCents: number;
+            coverSummary: string;
+            mandatory: boolean;
+        };
+        PublicHost: {
+            id: string;
+            firstName: string;
+            avatarUrl?: string;
+            rating: components["schemas"]["Rating"];
+            tripCount: number;
+            /** @description Share of booking requests answered, 0–100 */
+            responseRate?: number;
+            /** @description Identity verified */
+            verified: boolean;
+            joinedYear: number;
+            bio?: string;
+        };
+        VehicleAvailability: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** @description When the car is taken, merged; never why */
+            busy: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+            }[];
+            minNoticeHours: number;
+            bufferHours: number;
+            minDays: number;
+            maxDays: number;
+        };
+        VehicleReviews: {
+            reviews: components["schemas"]["VehicleReview"][];
+            total: number;
+            page: number;
+            pageSize: number;
+            rating: components["schemas"]["Rating"];
+            /** @description Average stars in each category */
+            categories: {
+                cleanliness: number | null;
+                communication: number | null;
+                pickupReturn: number | null;
+            };
+        };
+        VehicleReview: {
+            id: string;
+            author: {
+                firstName: string;
+                avatarUrl?: string;
+            };
+            overall: number;
+            body?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        QuoteResponse: {
+            quote: components["schemas"]["Quote"];
+        };
+        Quote: {
+            /** @description False when there are problems; the price is still shown */
+            available: boolean;
+            problems: components["schemas"]["TripProblem"][];
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            days: number;
+            lineItems: components["schemas"]["LineItem"][];
+            price: components["schemas"]["GuestPrice"];
+            protectionPlan: components["schemas"]["ProtectionPlanSummary"] & (Record<string, never> | null);
+            pickup: components["schemas"]["DeliveryOptionSummary"];
+            dropoff: components["schemas"]["DeliveryOptionSummary"];
+            instantBook: boolean;
+            cancellationTier: {
+                code: string;
+                name: string;
+                summary: string;
+                refunds: {
+                    minHoursBefore: number;
+                    refundPct: number;
+                }[];
+            };
+        };
+        TripProblem: {
+            /** @enum {string} */
+            code: "DATES_UNAVAILABLE" | "NOTICE_TOO_SHORT" | "TRIP_TOO_SHORT" | "TRIP_TOO_LONG" | "DOCUMENTS_EXPIRE" | "OPTION_NOT_FOUND" | "ADDRESS_NEEDED" | "OUTSIDE_DELIVERY_AREA" | "PLAN_NOT_FOUND";
+            message: string;
+            field?: string;
+        };
+        LineItem: {
+            code: string;
+            label: string;
+            /** @description Negative for a discount */
+            amountCents: number;
+            gstCents: number;
+            mandatory: boolean;
+        };
+        GuestPrice: {
+            /** @description Rental, after any discount */
+            subtotalCents: number;
+            deliveryCents: number;
+            serviceFeeCents: number;
+            protectionCents: number;
+            /** @description GST included in the total */
+            gstCents: number;
+            totalCents: number;
+            mandatoryCents: number;
+            optionalCents: number;
+        };
+        QuoteRequest: {
+            /** @description "2026-10-12T10:00" in NZ time, or ISO 8601 with an offset */
+            start: string;
+            end: string;
+            /** @description Left out: collect from the Host */
+            pickupOptionId?: string;
+            /** @description Left out: the same as pick-up */
+            returnOptionId?: string;
+            /** @description Needed for a DELIVERY option */
+            deliveryAddress?: {
+                unit?: string;
+                streetNumber?: string;
+                street: string;
+                suburb?: string;
+                city: string;
+                /** @enum {string} */
+                region: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+                postcode: string;
+                lat: number;
+                lng: number;
+            };
+            /** @description Left out: the mandatory plan */
+            protectionPlanCode?: string;
+        };
+        Destinations: {
+            destinations: components["schemas"]["DestinationSummary"][];
+        };
+        DestinationSummary: {
+            slug: string;
+            city: string;
+            maoriName?: string;
+            region: string;
+            tagline?: string;
+            heroImage?: string;
+            lat: number;
+            lng: number;
+            /** @description IATA codes of the airports that serve it */
+            airports: string[];
+        };
+        DestinationResponse: {
+            destination: components["schemas"]["DestinationDetail"];
+        };
+        DestinationDetail: {
+            slug: string;
+            city: string;
+            maoriName?: string;
+            region: string;
+            tagline?: string;
+            heroImage?: string;
+            lat: number;
+            lng: number;
+            /** @description IATA codes of the airports that serve it */
+            airports: string[];
+            intro: string;
+        };
+        LegalPageResponse: {
+            page: components["schemas"]["LegalPage"];
+        };
+        LegalPage: {
+            /** @enum {string} */
+            key: "legal.terms" | "legal.privacy" | "legal.cancellation-policy" | "legal.host-agreement" | "legal.guest-agreement";
+            /** @description The document version users accept */
+            version: string;
+            title: string;
+            /** @description The document in Markdown */
+            markdown: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        Faqs: {
+            faqs: components["schemas"]["Faq"][];
+        };
+        Faq: {
+            id: string;
+            question: string;
+            answer: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+        };
+        PublicPolicies: {
+            fees: {
+                guestServiceFeePct: number;
+                hostCommissionPct: number;
+                gstRatePct: number;
+            };
+            cancellation: {
+                tiers: {
+                    code: string;
+                    name: string;
+                    summary: string;
+                    refunds: {
+                        minHoursBefore: number;
+                        refundPct: number;
+                    }[];
+                }[];
+                hostSelectableTiers: string[];
+                defaultTier: string;
+                hostCancellationFeeCents: number;
+            };
+            protectionPlans: {
+                code: string;
+                name: string;
+                dailyPriceCents: number;
+                excessCents: number;
+                coverSummary: string;
+                mandatory: boolean;
+            }[];
+            eligibility: {
+                minAge: number;
+                minYearsLicensed: number;
+                acceptedLicenceClasses: ("NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS")[];
+                overseasNeedsEnglishProof: boolean;
+            };
+            vehicles: {
+                requiredDocuments: ("REGO" | "WOF" | "COF" | "RUC" | "INSURANCE" | "OWNER_CONSENT" | "OTHER")[];
+                requiredPhotoAngles: ("FRONT" | "REAR" | "DRIVER" | "PASSENGER" | "INTERIOR" | "DASH" | "BOOT" | "TYRES" | "DAMAGE")[];
+                vinOrChassisRequired: boolean;
+                minPhotoWidthPx: number;
+                minPhotoHeightPx: number;
+                seats: {
+                    min: number;
+                    max: number;
+                };
+                doors: {
+                    min: number;
+                    max: number;
+                };
+                dailyPriceCents: {
+                    min: number;
+                    max: number;
+                };
+                maxDiscountPct: number;
+            };
+            search: {
+                maxTripDays: number;
+                radiusKm: {
+                    min: number;
+                    default: number;
+                    max: number;
+                };
+            };
+            hostEstimator: {
+                bookedDaysPerMonth: number;
+                dailyCentsByBodyType: {
+                    HATCHBACK?: number;
+                    SEDAN?: number;
+                    WAGON?: number;
+                    SUV?: number;
+                    UTE?: number;
+                    VAN?: number;
+                    PEOPLE_MOVER?: number;
+                    COUPE?: number;
+                    CONVERTIBLE?: number;
+                };
+            };
+            reviews: {
+                windowDays: number;
+            };
+            trips: {
+                lateReturnGraceMinutes: number;
+            };
+        };
+        FeaturedReviews: {
+            /** @description False until the published reviews reach the homepage threshold in settings: hide the section */
+            show: boolean;
+            reviews: components["schemas"]["FeaturedReview"][];
+        };
+        FeaturedReview: {
+            id: string;
+            author: {
+                firstName: string;
+                avatarUrl?: string;
+            };
+            overall: number;
+            body: string;
+            vehicleTitle: string;
+            city?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ContactResponse: {
+            /** @description The support ticket reference, e.g. ST-4HX8PA */
+            ref: string;
+        };
+        ContactRequest: {
+            name: string;
+            /** Format: email */
+            email: string;
+            /**
+             * @default OTHER
+             * @enum {string}
+             */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            subject: string;
+            message: string;
+            bookingRef?: string | "";
         };
     };
     responses: never;

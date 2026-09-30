@@ -23,3 +23,45 @@ export type ExchangeRates = Schemas['ExchangeRates'];
 /** A NZ$1 sandbox payment from the staff portal, and how it went. */
 export type TestPayment = Schemas['TestPayment'];
 export type TestPaymentStatus = Schemas['TestPaymentStatus'];
+
+// Search and listings (Phase 2).
+/** One suggestion for the "Where are you going?" field: one of our places, or a street address. */
+export type PlaceSuggestion = Schemas['PlaceSuggestion'];
+export type PlaceDetails = Schemas['PlaceDetails'];
+export type SearchParams = NonNullable<paths['/search']['get']['parameters']['query']>;
+export type SearchResults = Schemas['SearchResults'];
+/** A car in search results, Browse Cars, featured cars and destination pages. */
+export type VehicleCard = Schemas['VehicleCard'];
+export type VehicleMakes = Schemas['VehicleMakes'];
+export type Rating = Schemas['Rating'];
+export type VehicleDetail = Schemas['VehicleDetail'];
+export type PublicHost = Schemas['PublicHost'];
+export type VehicleCompliance = Schemas['VehicleCompliance'];
+export type DeliveryOptionSummary = Schemas['DeliveryOptionSummary'];
+export type ProtectionPlanSummary = Schemas['ProtectionPlanSummary'];
+export type VehicleAvailability = Schemas['VehicleAvailability'];
+export type VehicleReviews = Schemas['VehicleReviews'];
+export type VehicleReview = Schemas['VehicleReview'];
+export type QuoteRequest = Schemas['QuoteRequest'];
+/** The price breakdown for chosen dates and options, and anything in the way. */
+export type Quote = Schemas['Quote'];
+export type LineItem = Schemas['LineItem'];
+export type TripProblem = Schemas['TripProblem'];
+/** Where to deliver the car: a structured NZ address with its coordinates. */
+export type DeliveryAddress = NonNullable<QuoteRequest['deliveryAddress']>;
+/** A structured NZ address (plan §3): unit, street number and name, suburb, city, region, postcode. */
+export type NzAddressInput = NonNullable<PlaceDetails['address']>;
+
+// Public content (Phase 2).
+export type DestinationSummary = Schemas['DestinationSummary'];
+export type DestinationDetail = Schemas['DestinationDetail'];
+export type LegalPage = Schemas['LegalPage'];
+export type Faq = Schemas['Faq'];
+/** Fees, cancellation tiers, protection plans and listing rules in force. */
+export type PublicPolicies = Schemas['PublicPolicies'];
+export type CancellationTier = PublicPolicies['cancellation']['tiers'][number];
+export type FeaturedReviews = Schemas['FeaturedReviews'];
+export type ContactRequest = Schemas['ContactRequest'];
+/** The ids of the cars the user saved with the heart. */
+export type Favourites = Schemas['Favourites'];
+export type LastSearch = Schemas['LastSearch'];

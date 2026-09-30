@@ -30,6 +30,49 @@ export const routes: RouteObject[] = [
             errorElement: <PageError />,
             children: [
               { index: true, lazy: page(() => import('@/routes/public/home/home-page'), 'HomePage') },
+              // Search and listings (plan §9, Days 6–10).
+              { path: 'cars', lazy: page(() => import('@/routes/public/search/browse-page'), 'BrowsePage') },
+              {
+                path: 'search',
+                lazy: page(() => import('@/routes/public/search/search-page'), 'SearchPage'),
+              },
+              {
+                path: 'cars/:slug',
+                lazy: page(() => import('@/routes/public/vehicle/vehicle-page'), 'VehiclePage'),
+              },
+              {
+                path: 'rental/:city',
+                lazy: page(() => import('@/routes/public/rental/destination-page'), 'DestinationPage'),
+              },
+              // Public pages (plan §9, Days 12–14).
+              {
+                path: 'how-it-works',
+                lazy: page(() => import('@/routes/public/content/how-it-works-page'), 'HowItWorksPage'),
+              },
+              {
+                path: 'become-a-host',
+                lazy: page(() => import('@/routes/public/content/become-a-host-page'), 'BecomeAHostPage'),
+              },
+              {
+                path: 'safety',
+                lazy: page(() => import('@/routes/public/content/safety-page'), 'SafetyPage'),
+              },
+              {
+                path: 'insurance',
+                lazy: page(() => import('@/routes/public/content/insurance-page'), 'InsurancePage'),
+              },
+              { path: 'faq', lazy: page(() => import('@/routes/public/content/faq-page'), 'FaqPage') },
+              { path: 'about', lazy: page(() => import('@/routes/public/content/about-page'), 'AboutPage') },
+              {
+                path: 'contact',
+                lazy: page(() => import('@/routes/public/content/contact-page'), 'ContactPage'),
+              },
+              ...['terms', 'privacy', 'cancellation-policy', 'host-agreement', 'guest-agreement'].map(
+                (path) => ({
+                  path,
+                  lazy: page(() => import('@/routes/legal/legal-page'), 'LegalPage'),
+                }),
+              ),
               {
                 path: 'account/settings',
                 lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),

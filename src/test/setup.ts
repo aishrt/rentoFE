@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/react';
+
+// The full suite runs many files at once; give findBy… queries more than the default second.
+configure({ asyncUtilTimeout: 4_000 });
 
 // jsdom lacks these browser APIs, which Motion and media queries rely on.
 class MockIntersectionObserver implements IntersectionObserver {

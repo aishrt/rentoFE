@@ -15,7 +15,8 @@ describe('SEO table', () => {
 
   it('keeps pages that are not built yet, sign-in pages and search results out of search engines', () => {
     expect(isIndexable(seoPage('/'))).toBe(true);
-    expect(robotsFor(seoPage('/how-it-works'))).toBe('noindex, follow');
+    expect(isIndexable(seoPage('/how-it-works'))).toBe(true);
+    expect(robotsFor(seoPage('/help'))).toBe('noindex, follow');
     expect(robotsFor(seoPage('/search'))).toBe('noindex, follow');
     expect(robotsFor(seoPage('/login'))).toBe('noindex, nofollow');
     expect(robotsFor(seoPage('/signup'))).toBe('noindex, nofollow');
@@ -49,11 +50,11 @@ describe('renderSeoHead', () => {
   });
 
   it('marks a page that is not built yet noindex, with no canonical URL or structured data', () => {
-    const head = renderSeoHead(seoPage('/how-it-works'), SITE);
+    const head = renderSeoHead(seoPage('/help'), SITE);
 
-    expect(head).toContain('<title data-prerendered>How it works · Rento Vroom</title>');
+    expect(head).toContain('<title data-prerendered>Help centre · Rento Vroom</title>');
     expect(head).toContain('<meta data-prerendered name="robots" content="noindex, follow" />');
-    expect(head).toContain(`<meta property="og:url" content="${SITE}/how-it-works" />`);
+    expect(head).toContain(`<meta property="og:url" content="${SITE}/help" />`);
     expect(head).not.toContain('rel="canonical"');
     expect(head).not.toContain('application/ld+json');
   });
@@ -141,8 +142,15 @@ describe('CloudFront page router (infra/web-router.js)', () => {
 });
 
 describe('seoManifest', () => {
-  it('tells the backend which pages search engines may index, and that car and city pages are not built yet', () => {
-    expect(seoManifest()).toEqual({ indexablePaths: ['/'], vehiclePages: false, destinationPages: false });
+  it('tells the backend which pages search engines may index, and that car and city pages are built', () => {
+    const manifest = seoManifest();
+    expect(manifest).toMatchObject({ vehiclePages: true, destinationPages: true });
+    expect(manifest.indexablePaths).toContain('/');
+    expect(manifest.indexablePaths).toContain('/cars');
+    expect(manifest.indexablePaths).toContain('/terms');
+    for (const path of ['/search', '/help', '/login', '/signup', '/forgot-password']) {
+      expect(manifest.indexablePaths).not.toContain(path);
+    }
   });
 });
 
