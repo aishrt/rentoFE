@@ -19,6 +19,7 @@ describe('routes', () => {
     mockApi({ 'POST /auth/session': { status: 200, body: { user: null } } });
     renderWithRouter(routes, '/help');
 
-    expect(await screen.findByText('Coming soon', { selector: 'h1, h2' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Help centre' })).toBeInTheDocument();
+    expect(screen.getByText('Coming soon')).toBeInTheDocument();
   });
 });
