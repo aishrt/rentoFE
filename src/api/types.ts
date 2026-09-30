@@ -92,3 +92,14 @@ export type Notifications = Schemas['Notifications'];
 export type HostApplication = Schemas['HostApplication'];
 export type ReviewQueueItem = Schemas['ReviewQueueItem'];
 export type AdminVehicle = Schemas['AdminVehicle'];
+
+// Booking flow (Phase 2).
+export type CreateBookingRequest = Schemas['CreateBookingRequest'];
+/** A booking as the signed-in user sees it: as the Guest, the Host or staff. */
+export type Booking = Schemas['Booking'];
+export type BookingSummary = Schemas['BookingSummary'];
+export type PaymentSession = Schemas['PaymentSession'];
+export type CancellationPreview = Schemas['CancellationPreview'];
+/** What checkout's verification step still needs: mobile, licence details and eligibility. */
+export type CheckoutReadiness = Schemas['CheckoutReadiness'];
+export type DriverLicenceInput = Schemas['DriverLicenceInput'];

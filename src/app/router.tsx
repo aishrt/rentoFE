@@ -95,6 +95,21 @@ export const routes: RouteObject[] = [
                 path: 'host/vehicles/:id/:step?',
                 lazy: page(() => import('@/routes/host/vehicle-editor-page'), 'VehicleEditorPage'),
               },
+              // The booking flow, trips and the Host's bookings (plan §9, Days 11–14).
+              {
+                path: 'book/:slug',
+                lazy: page(() => import('@/routes/checkout/checkout-page'), 'CheckoutPage'),
+              },
+              { path: 'trips', lazy: page(() => import('@/routes/account/trips-page'), 'TripsPage') },
+              { path: 'trips/:ref', lazy: page(() => import('@/routes/account/trip-page'), 'TripPage') },
+              {
+                path: 'host/bookings',
+                lazy: page(() => import('@/routes/bookings/host-bookings-page'), 'HostBookingsPage'),
+              },
+              {
+                path: 'host/bookings/:ref',
+                lazy: page(() => import('@/routes/bookings/host-booking-page'), 'HostBookingPage'),
+              },
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
               ...[...seoPages, ...backendTaggedPages]
                 .filter((planned) => planned.comingSoon)

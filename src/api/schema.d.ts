@@ -5365,6 +5365,895 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What checkout’s verification step still needs
+         * @description Mobile, licence details and the eligibility rules in settings. With `end`, the licence is checked against that trip end.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    end?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Readiness */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckoutReadiness"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/driver-licence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save driver licence details
+         * @description The number is encrypted, and a keyed hash finds the same licence on another account (a risk flag, not an error). Support staff check licences until the identity check arrives.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DriverLicenceInput"];
+                };
+            };
+            responses: {
+                /** @description Readiness */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckoutReadiness"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My trips, or my bookings as a Host
+         * @description Groups (plan §8.2): upcoming (confirmed, and requests), current, completed, cancelled (cancelled, declined, expired), and requests (Hosts: waiting for an answer). Unpaid checkouts are left out.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    role?: "guest" | "host";
+                    group?: "upcoming" | "current" | "completed" | "cancelled" | "requests";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bookings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Bookings"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Book a car
+         * @description Checks the Guest (409 VERIFICATION_REQUIRED, with the missing items in `fields.verification`) and the trip (as the quote does; 409 DATES_UNAVAILABLE), then creates a PAYMENT_PENDING booking and holds the dates for 30 minutes. The same request again returns the same booking.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateBookingRequest"];
+                };
+            };
+            responses: {
+                /** @description The booking */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One booking, as the Guest, the Host or staff see it */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start paying
+         * @description Records the Guest Agreement and returns the PaymentIntent’s client secret (charged now for Instant Book, authorised only for a request) and a customer session for saved cards. 409 HOLD_EXPIRED after 30 minutes.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PreparePaymentRequest"];
+                };
+            };
+            responses: {
+                /** @description The payment session */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaymentSession"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/payment/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the payment result now
+         * @description Called after Stripe.js confirms, so the booking updates without waiting for the webhook.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What cancelling would refund and cost
+         * @description Shown before the user confirms (plan §5): the refund, the fee under the booking’s tier, and a sentence to show.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CancellationPreview"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a booking, or withdraw a request
+         * @description The Guest: an unpaid checkout is released, a request withdrawn (nothing charged), a confirmed booking refunded under its tier. The Host: a confirmed booking is refunded in full and any Host cancellation fee applies; a request is declined instead (409 USE_DECLINE).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CancelBookingRequest"];
+                };
+            };
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Host: accept a request
+         * @description Captures the authorised payment and confirms the booking. 409 when it has expired or was answered.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Host: decline a request
+         * @description Releases the Guest’s authorisation. No fee.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeclineBookingRequest"];
+                };
+            };
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: cancel for a no-show, or as a platform cancellation
+         * @description Admins, and support staff with the REFUNDS permission. A Guest no-show is a Guest cancellation at the start time; a Host no-show a Host cancellation; a platform cancellation a full refund.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminCancelRequest"];
+                };
+            };
+            responses: {
+                /** @description The booking */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6562,6 +7451,289 @@ export interface components {
         DocumentDecision: {
             /** @enum {string} */
             decision: "VERIFY" | "REJECT";
+        };
+        CheckoutReadiness: {
+            emailVerified: boolean;
+            phoneVerified: boolean;
+            phone?: string;
+            licence: {
+                /** @enum {string} */
+                class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
+                country: string;
+                /** @description The last 3 characters, to recognise it */
+                numberEnding: string;
+                expiry: string;
+                /** @enum {string} */
+                status: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+                /** @enum {string} */
+                englishProof?: "IDP" | "APPROVED_TRANSLATION";
+            } | null;
+            hasDateOfBirth: boolean;
+            /** @enum {string} */
+            identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Anything that stops this person booking; with `end`, checked against that trip end */
+            problems: {
+                /** @enum {string} */
+                code: "PHONE_REQUIRED" | "LICENCE_REQUIRED" | "TOO_YOUNG" | "CLASS_NOT_ACCEPTED" | "NOT_LICENSED_LONG_ENOUGH" | "LICENCE_EXPIRES" | "ENGLISH_PROOF_REQUIRED" | "LICENCE_REJECTED";
+                message: string;
+            }[];
+        };
+        DriverLicenceInput: {
+            number: string;
+            version?: string;
+            /** @default New Zealand */
+            country: string;
+            /** @enum {string} */
+            class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
+            /**
+             * @description For an overseas licence that isn’t in English: an IDP or an approved translation
+             * @enum {string}
+             */
+            englishProof?: "IDP" | "APPROVED_TRANSLATION";
+            /** @default false */
+            notInEnglish: boolean;
+            /** @description When the licence was first issued */
+            issuedAt: string;
+            expiry: string;
+            /** @description Date of birth, for the minimum age */
+            dob: string;
+        };
+        BookingResponse: {
+            booking: components["schemas"]["Booking"];
+        };
+        Booking: {
+            id: string;
+            ref: string;
+            /** @enum {string} */
+            status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            /**
+             * @description How the signed-in user sees this booking
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST" | "STAFF";
+            instantBook: boolean;
+            vehicle: {
+                id: string;
+                slug: string;
+                title: string;
+                photoUrl?: string;
+                /** @description The Guest sees it once confirmed, to find the car */
+                regoPlate?: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            days: number;
+            pickup: {
+                id: string;
+                /** @enum {string} */
+                type: "PICKUP" | "DELIVERY" | "AIRPORT" | "CUSTOM";
+                label: string;
+                feeCents: number;
+                airportCode?: string;
+                /** @description DELIVERY: how far from the car it delivers */
+                radiusKm?: number;
+                /** @description PICKUP and CUSTOM: the suburb and city only */
+                area?: string;
+                /** @description The exact address: the Guest’s own delivery address, or the Host’s once the booking is confirmed */
+                address?: string;
+                /** @description Once the booking is confirmed */
+                instructions?: string;
+            };
+            dropoff: {
+                id: string;
+                /** @enum {string} */
+                type: "PICKUP" | "DELIVERY" | "AIRPORT" | "CUSTOM";
+                label: string;
+                feeCents: number;
+                airportCode?: string;
+                /** @description DELIVERY: how far from the car it delivers */
+                radiusKm?: number;
+                /** @description PICKUP and CUSTOM: the suburb and city only */
+                area?: string;
+                /** @description The exact address: the Guest’s own delivery address, or the Host’s once the booking is confirmed */
+                address?: string;
+                /** @description Once the booking is confirmed */
+                instructions?: string;
+            };
+            protectionPlan: {
+                code: string;
+                name: string;
+                excessCents: number;
+                coverSummary: string;
+                mandatory: boolean;
+                priceCents: number;
+            } | null;
+            cancellationTier: {
+                code: string;
+                name: string;
+                summary: string;
+                refunds: {
+                    minHoursBefore: number;
+                    refundPct: number;
+                }[];
+            } | null;
+            lineItems: components["schemas"]["LineItem"][];
+            price: components["schemas"]["GuestPrice"];
+            /** @description The Host’s view: what they earn */
+            payout?: {
+                hostPayoutCents: number;
+                platformFeeCents: number;
+            };
+            /**
+             * Format: date-time
+             * @description PAYMENT_PENDING: when the dates are released
+             */
+            holdExpiresAt?: string;
+            /**
+             * Format: date-time
+             * @description PENDING: when the request expires
+             */
+            requestExpiresAt?: string;
+            guest: {
+                firstName: string;
+                avatarUrl?: string;
+                /** @description Identity verified */
+                verified: boolean;
+                rating: components["schemas"]["Rating"];
+                tripCount: number;
+                /** @description Only on a confirmed booking (plan §6.2) */
+                phone?: string;
+            };
+            host: {
+                firstName: string;
+                avatarUrl?: string;
+                /** @description Identity verified */
+                verified: boolean;
+                rating: components["schemas"]["Rating"];
+                tripCount: number;
+                /** @description Only on a confirmed booking (plan §6.2) */
+                phone?: string;
+                responseRate?: number;
+            };
+            payment: {
+                /** @enum {string} */
+                status: "PENDING" | "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
+                failureReason?: string;
+            } | null;
+            cancellation: {
+                /** Format: date-time */
+                at: string;
+                /** @enum {string} */
+                by: "GUEST" | "HOST" | "SUPPORT";
+                /** @enum {string} */
+                reason?: "GUEST_CANCELLED" | "HOST_CANCELLED" | "REQUEST_WITHDRAWN" | "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+                refundCents?: number;
+                feeCents?: number;
+                hostShareCents?: number;
+                hostFeeCents?: number;
+            } | null;
+            actions: {
+                pay: boolean;
+                cancel: boolean;
+                withdraw: boolean;
+                accept: boolean;
+                decline: boolean;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateBookingRequest: {
+            vehicleId: string;
+            /** @description "2026-10-12T10:00" in NZ time, or ISO 8601 with an offset */
+            start: string;
+            end: string;
+            pickupOptionId?: string;
+            returnOptionId?: string;
+            deliveryAddress?: components["schemas"]["DeliveryAddress"];
+            protectionPlanCode?: string;
+        };
+        /** @description Where to deliver the car, with its coordinates */
+        DeliveryAddress: {
+            unit?: string;
+            streetNumber?: string;
+            street: string;
+            suburb?: string;
+            city: string;
+            /** @enum {string} */
+            region: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+            postcode: string;
+            lat: number;
+            lng: number;
+        };
+        Bookings: {
+            bookings: components["schemas"]["BookingSummary"][];
+        };
+        BookingSummary: {
+            id: string;
+            ref: string;
+            /** @enum {string} */
+            status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            instantBook: boolean;
+            vehicle: {
+                slug: string;
+                title: string;
+                photoUrl?: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            otherParty: {
+                firstName: string;
+                avatarUrl?: string;
+            };
+            /** @description The Guest’s total, or the Host’s payout */
+            amountCents: number;
+            /** Format: date-time */
+            requestExpiresAt?: string;
+        };
+        PaymentSession: {
+            /** @description For Stripe.js to confirm this payment. Never logged or stored. */
+            clientSecret: string;
+            /** @description Lets the Payment Element show the Guest’s saved cards */
+            customerSessionClientSecret?: string;
+            amountCents: number;
+            /** @enum {string} */
+            currency: "nzd";
+            /**
+             * @description manual: a request to book, authorised now and charged when the Host accepts
+             * @enum {string}
+             */
+            captureMethod: "automatic" | "manual";
+            /** Format: date-time */
+            holdExpiresAt: string;
+        };
+        PreparePaymentRequest: {
+            /** @enum {boolean} */
+            acceptGuestAgreement: true;
+        };
+        CancellationPreview: {
+            allowed: boolean;
+            /** @enum {string|null} */
+            kind: "ABANDON_CHECKOUT" | "WITHDRAW_REQUEST" | "GUEST_CANCELLATION" | "HOST_CANCELLATION" | null;
+            refundCents: number;
+            feeCents: number;
+            /** @description Host’s view: their share of a kept fee */
+            hostShareCents: number;
+            /** @description Host’s view: a Host cancellation fee */
+            hostFeeCents: number;
+            refundPct: number;
+            hoursBeforeStart: number;
+            /** @description A sentence to show before the user confirms */
+            message: string;
+        };
+        CancelBookingRequest: {
+            reason?: string;
+        };
+        DeclineBookingRequest: {
+            reason?: string;
+        };
+        AdminCancelRequest: {
+            /** @enum {string} */
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+            note: string;
         };
     };
     responses: never;
