@@ -1,43 +1,66 @@
 import { Link } from 'react-router';
+import type { SessionUser } from '@/api/types';
 import { staggerIndex } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Divider } from '@/components/ui/divider';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { primaryNav } from './site-nav';
+import { primaryNav, type NavLinkItem } from './site-nav';
 
 interface MobileMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  signedIn: boolean;
+  user: SessionUser | null;
 }
+
+const linkClasses =
+  'flex min-h-12 items-center rounded-control px-3 text-lg font-medium text-ink transition-colors duration-120 hover:bg-ink/5';
 
 /**
  * The ☰ menu on phones and tablets (plan §12.6). Loaded on first use to keep the homepage light. The links
- * fade up one after another as the sheet slides in.
+ * fade up one after another as the sheet slides in. Signed in, it adds Trips and, for anyone who has applied
+ * to host, Hosting in place of Become a host.
  */
-export function MobileMenu({ open, onOpenChange, signedIn }: MobileMenuProps) {
+export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const close = () => onOpenChange(false);
+  const hosting = Boolean(user?.hostStatus);
+  const main = hosting ? primaryNav.filter((item) => item.to !== '/become-a-host') : primaryNav;
+  const account: NavLinkItem[] = user
+    ? [
+        { label: 'Trips', to: '/trips' },
+        ...(hosting ? [{ label: 'Hosting', to: '/host' }] : []),
+        { label: 'Account settings', to: '/account/settings' },
+      ]
+    : [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent title="Menu" side="right">
         <nav aria-label="Main">
           <ul className="grid gap-1">
-            {primaryNav.map((item, index) => (
+            {main.map((item, index) => (
               <li key={item.to} className="stagger-in" style={staggerIndex(index)}>
-                <Link
-                  to={item.to}
-                  onClick={close}
-                  className="flex min-h-12 items-center rounded-control px-3 text-lg font-medium text-ink transition-colors duration-120 hover:bg-ink/5"
-                >
+                <Link to={item.to} onClick={close} className={linkClasses}>
                   {item.label}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        {!signedIn && (
-          <div className="stagger-in" style={staggerIndex(primaryNav.length)}>
+        {user ? (
+          <nav aria-label="Your account" className="stagger-in" style={staggerIndex(main.length)}>
+            <Divider className="my-6" />
+            <ul className="grid gap-1">
+              {account.map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} onClick={close} className={linkClasses}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : (
+          <div className="stagger-in" style={staggerIndex(main.length)}>
             <Divider className="my-6" />
             <div className="grid gap-3">
               <Button asChild size="lg" block>
