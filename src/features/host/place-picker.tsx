@@ -96,7 +96,7 @@ export function PlacePicker({
   }, [expanded, active, listId]);
 
   const choose = (place: PlaceSuggestion) => {
-    const city = place.type === 'SUBURB' ? place.secondary?.split(',')[0]?.trim() : undefined;
+    const city = place.type === 'SUBURB' ? (place.city ?? place.secondary?.split(',')[0]?.trim()) : undefined;
     onValueChange({
       // "Ponsonby, Auckland": a suburb with its city, as saved addresses show it.
       label: city ? `${place.label}, ${city}` : place.label,
@@ -105,6 +105,8 @@ export function PlacePicker({
       name: place.name,
       secondary: place.secondary,
       code: place.code,
+      city: place.city,
+      region: place.region,
       lat: place.lat,
       lng: place.lng,
     });

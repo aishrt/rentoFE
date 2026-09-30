@@ -6511,6 +6511,13 @@ export interface components {
             secondary?: string;
             /** @description Airports: the IATA code */
             code?: string;
+            /** @description The town or city it is in (itself for a city), for addresses */
+            city?: string;
+            /**
+             * @description The NZ region, for addresses
+             * @enum {string}
+             */
+            region?: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
             /** @description Our places include coordinates; addresses need GET /places/{id} */
             lat?: number;
             lng?: number;
@@ -6530,6 +6537,13 @@ export interface components {
             secondary?: string;
             /** @description Airports: the IATA code */
             code?: string;
+            /** @description The town or city it is in (itself for a city), for addresses */
+            city?: string;
+            /**
+             * @description The NZ region, for addresses
+             * @enum {string}
+             */
+            region?: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
             lat: number;
             lng: number;
             /** @description A street address in the structured NZ format, when every part is known */

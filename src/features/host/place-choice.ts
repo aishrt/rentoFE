@@ -11,6 +11,9 @@ export interface PlaceChoice {
   secondary?: string;
   /** Airports: the IATA code. */
   code?: string;
+  /** The town or city and region, from the suggestion (older saved choices only have ). */
+  city?: string;
+  region?: NzRegion;
   lat?: number;
   lng?: number;
 }
@@ -31,10 +34,14 @@ const asRegion = (text?: string): NzRegion | undefined =>
 export function addressPartsOf(place: PlaceChoice): { suburb?: string; city?: string; region?: NzRegion } {
   const parts = place.secondary?.split(',').map((part) => part.trim()) ?? [];
   if (place.type === 'SUBURB') {
-    return { suburb: place.name ?? place.label, city: parts[0], region: asRegion(parts.at(-1)) };
+    return {
+      suburb: place.name ?? place.label,
+      city: place.city ?? parts[0],
+      region: place.region ?? asRegion(parts.at(-1)),
+    };
   }
   const name = place.name ?? place.label;
-  return { city: name, region: asRegion(parts.at(-1)) ?? asRegion(name) };
+  return { city: place.city ?? name, region: place.region ?? asRegion(parts.at(-1)) ?? asRegion(name) };
 }
 
 /** The picker's text for a saved address: "Ponsonby, Auckland", or the city alone. */
@@ -59,6 +66,8 @@ export function placeFromAddress(address: {
         type: 'CITY',
         name: address.city,
         secondary: address.region,
+        city: address.city,
+        region: address.region,
         lat: address.lat,
         lng: address.lng,
       };
