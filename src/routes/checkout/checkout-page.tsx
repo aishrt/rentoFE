@@ -137,10 +137,19 @@ interface PaymentStepProps {
   onExpired: () => void;
   onRetry: () => void;
   onPaid: (booking: PaidBooking) => void;
+  verificationInReview: boolean;
 }
 
 /** Step 6: the dates held for 30 minutes, then the Guest Agreement and the payment. */
-function PaymentStep({ booking, expired, error, onExpired, onRetry, onPaid }: PaymentStepProps) {
+function PaymentStep({
+  booking,
+  expired,
+  error,
+  onExpired,
+  onRetry,
+  onPaid,
+  verificationInReview,
+}: PaymentStepProps) {
   if (expired) {
     return (
       <Alert
@@ -182,7 +191,12 @@ function PaymentStep({ booking, expired, error, onExpired, onRetry, onPaid }: Pa
   return (
     <div className="grid gap-6">
       <HoldNotice expiresAt={booking.holdExpiresAt} onExpired={onExpired} />
-      <PayBooking booking={booking} onPaid={onPaid} onHoldExpired={onExpired} />
+      <PayBooking
+        booking={booking}
+        onPaid={onPaid}
+        onHoldExpired={onExpired}
+        verificationInReview={verificationInReview}
+      />
     </div>
   );
 }
@@ -237,6 +251,8 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
 
   const readiness = useCheckoutReadiness(resolved.end || undefined, user !== null);
   const readinessOk = readiness.data ? readiness.data.problems.length === 0 : null;
+  // The identity check is with support: the Guest can still book, and the card is only authorised (plan §8.2).
+  const verificationInReview = readiness.data?.identityStatus === 'PENDING';
   const isOwnCar = ownCar || (user !== null && vehicle.host.id === user.id);
 
   // The step on screen: never past what's still missing, and skipping what's already done.
@@ -364,6 +380,10 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
     void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
     if (booking.status === 'CONFIRMED') {
       toast('You’re booked', { description: `Your trip in the ${vehicle.title} is confirmed.` });
+    } else if (booking.verificationReview === 'PENDING') {
+      toast('Your booking is held', {
+        description: 'We’re finishing your identity check. You’re only charged once it’s approved.',
+      });
     } else if (booking.status === 'PENDING') {
       toast('Request sent', {
         description: `${vehicle.host.firstName} has 24 hours to answer. You’re only charged if they accept.`,
@@ -395,6 +415,7 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
     priced,
     current: current || holdBooking !== null,
     pricing,
+    verificationInReview,
   };
   const instant = priced?.instantBook ?? vehicle.rules.instantBook;
   const back = new URLSearchParams();
@@ -542,6 +563,7 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
               onExpired={() => setHoldExpired(true)}
               onRetry={holdAgain}
               onPaid={finished}
+              verificationInReview={verificationInReview}
             />
           </CheckoutSection>
 

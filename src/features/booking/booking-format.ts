@@ -137,22 +137,43 @@ export interface StatusLabel {
   tone: StatusTone;
 }
 
+type PendingFacts = Pick<BookingSummary, 'status' | 'instantBook' | 'verificationReview' | 'hostAccepted'>;
+
+/** A pending booking still waits for support to approve the Guest's identity check (plan §8.2). */
+export const awaitsVerification = (booking: Pick<PendingFacts, 'status' | 'verificationReview'>) =>
+  booking.status === 'PENDING' && booking.verificationReview === 'PENDING';
+
+/**
+ * A pending booking is the Host's to answer: not an Instant Book waiting for the Guest's identity check, nor a
+ * request the Host has already accepted.
+ */
+export const hostAnswers = (booking: Pick<PendingFacts, 'status' | 'instantBook' | 'hostAccepted'>) =>
+  booking.status === 'PENDING' && !booking.instantBook && !booking.hostAccepted;
+
 /**
  * A booking's status in plain words for the person looking at it (plan §8.2): a Guest waits for their Host
- * by name; a Host sees a request to answer.
+ * by name, or for their identity check; a Host sees a request to answer.
  */
 export function statusLabel(
-  booking: Pick<BookingSummary, 'status' | 'start'> & { otherPartyName: string },
+  booking: Pick<BookingSummary, 'status' | 'start'> &
+    Partial<Pick<PendingFacts, 'instantBook' | 'verificationReview' | 'hostAccepted'>> & {
+      otherPartyName: string;
+    },
   viewer: 'GUEST' | 'HOST',
   now = Date.now(),
 ): StatusLabel {
   const started = new Date(booking.start).getTime() <= now;
+  const toAnswer = hostAnswers({ instantBook: false, ...booking });
   const labels: Record<Status, StatusLabel> = {
     PAYMENT_PENDING: { label: 'Waiting for payment', tone: 'waiting' },
     PENDING:
       viewer === 'GUEST'
-        ? { label: `Waiting for ${booking.otherPartyName}`, tone: 'waiting' }
-        : { label: 'Request to answer', tone: 'waiting' },
+        ? awaitsVerification(booking)
+          ? { label: 'Verification in review', tone: 'waiting' }
+          : { label: `Waiting for ${booking.otherPartyName}`, tone: 'waiting' }
+        : toAnswer
+          ? { label: 'Request to answer', tone: 'waiting' }
+          : { label: 'Guest being verified', tone: 'waiting' },
     CONFIRMED: started
       ? { label: 'Check-in due', tone: 'positive' }
       : { label: 'Confirmed', tone: 'positive' },

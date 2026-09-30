@@ -109,6 +109,68 @@ describe('TripPage', () => {
     expect(await screen.findByRole('dialog', { name: 'Withdraw your request?' })).toBeInTheDocument();
   });
 
+  it('says a booking is waiting for the identity check, not for the host', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'PENDING',
+        verificationReview: 'PENDING',
+        holdExpiresAt: undefined,
+        requestExpiresAt: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+        payment: { status: 'AUTHORISED' },
+        actions: { pay: false, cancel: false, withdraw: true, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    const banner = (await screen.findByText('We’re checking your details')).closest('[role="status"]');
+    expect(banner).toHaveTextContent(
+      /confirm your booking as soon as it’s approved\. Your card is authorised for NZ\$1,050\.80 and charged only then\./,
+    );
+    expect(banner).toHaveTextContent(/If it isn’t decided by .* \(NZ time\), the booking expires/);
+    // An Instant Book: the Host isn't part of it.
+    expect(banner).not.toHaveTextContent('Liam');
+    expect(screen.getByText('Verification in review')).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for Liam')).not.toBeInTheDocument();
+  });
+
+  it('says both are needed for a request, and when the host has already accepted', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'PENDING',
+        instantBook: false,
+        verificationReview: 'PENDING',
+        hostAccepted: true,
+        holdExpiresAt: undefined,
+        payment: { status: 'AUTHORISED' },
+        actions: { pay: false, cancel: false, withdraw: true, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    const banner = (await screen.findByText('We’re checking your details')).closest('[role="status"]');
+    expect(banner).toHaveTextContent(/as soon as it’s approved\. Liam has already accepted\. Your card/);
+  });
+
+  it('explains a booking that ended because the identity check was rejected', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        verificationReview: 'REJECTED',
+        holdExpiresAt: undefined,
+        payment: { status: 'CANCELLED' },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(await screen.findByText(/We weren’t able to verify your identity/)).toBeInTheDocument();
+    const status = screen.getByText('This booking expired').closest('[role="status"]') as HTMLElement;
+    expect(within(status).getByRole('link', { name: 'Contact support' })).toHaveAttribute(
+      'href',
+      `/contact?category=ACCOUNT&booking=${REF}`,
+    );
+  });
+
   it('shows the refund before cancelling, then cancels with the reason', async () => {
     const cancelled = confirmedBooking({
       status: 'CANCELLED',

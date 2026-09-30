@@ -25,11 +25,14 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useAcceptBooking, useBookingDetail } from '@/features/booking/booking-api';
+import { acceptedToast } from '@/features/booking/accepted-toast';
 import {
+  awaitsVerification,
   formatNzDateTime,
   formatNzd,
   formatTimeLeft,
   formatTripSpan,
+  hostAnswers,
   statusLabel,
 } from '@/features/booking/booking-format';
 import {
@@ -64,6 +67,8 @@ function RequestAnswer({ booking }: { booking: Booking }) {
               ? `You have ${formatTimeLeft(left)} to answer (until ${formatNzDateTime(booking.requestExpiresAt)}, NZ time). After that the request expires.`
               : 'This request has expired.'}{' '}
             {guest}’s card is authorised, and charged only when you accept.
+            {awaitsVerification(booking) &&
+              ` We’re still checking ${guest}’s identity, so if you accept, the booking is confirmed once that’s approved.`}
           </p>
         </div>
       </div>
@@ -78,10 +83,7 @@ function RequestAnswer({ booking }: { booking: Booking }) {
             loading={accept.isPending}
             onClick={() =>
               accept.mutate(undefined, {
-                onSuccess: () =>
-                  toast('Booking accepted', {
-                    description: `${guest}’s trip is confirmed, and they’ve been sent your pick-up details.`,
-                  }),
+                onSuccess: (accepted) => toast(...acceptedToast(accepted, guest)),
               })
             }
           >
@@ -128,8 +130,24 @@ function HostStatus({ booking }: { booking: Booking }) {
   };
 
   switch (booking.status) {
-    case 'PENDING':
-      return <RequestAnswer booking={booking} />;
+    case 'PENDING': {
+      if (hostAnswers(booking)) return <RequestAnswer booking={booking} />;
+      // Nothing for the Host to answer: support is checking the Guest's identity (plan §8.2).
+      const held = booking.requestExpiresAt
+        ? ` The dates are held until ${formatNzDateTime(booking.requestExpiresAt)} (NZ time); if the check isn’t approved by then, they open again.`
+        : '';
+      return booking.hostAccepted
+        ? banner(
+            'You accepted this request',
+            `It’s confirmed as soon as we’ve finished checking ${guest}’s identity.${held}`,
+            Hourglass,
+          )
+        : banner(
+            `We’re verifying ${guest}`,
+            `${guest} booked your car, and we’re finishing their identity check. There’s nothing for you to do: the booking is confirmed as soon as the check is approved.${held}`,
+            Hourglass,
+          );
+    }
     case 'CONFIRMED':
       return banner(
         'Confirmed',
@@ -142,11 +160,18 @@ function HostStatus({ booking }: { booking: Booking }) {
     case 'DECLINED':
       return banner('You declined this request', `${guest}’s card authorisation was released.`, Undo2);
     case 'EXPIRED':
-      return banner(
-        'This request expired',
-        `It wasn’t answered within 24 hours, so ${guest}’s card authorisation was released.`,
-        Hourglass,
-      );
+      // Ended by the Guest's identity check: always for an Instant Book, otherwise unless it was approved.
+      return booking.verificationReview && (booking.instantBook || booking.verificationReview !== 'APPROVED')
+        ? banner(
+            'This booking didn’t go ahead',
+            `We couldn’t verify ${guest} in time, so their card authorisation was released and the dates are free again. It doesn’t count against your response rate.`,
+            Hourglass,
+          )
+        : banner(
+            'This request expired',
+            `It wasn’t answered within 24 hours, so ${guest}’s card authorisation was released.`,
+            Hourglass,
+          );
     case 'CANCELLED': {
       const cancellation = booking.cancellation;
       const byGuest = cancellation?.by === 'GUEST';

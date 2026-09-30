@@ -121,6 +121,7 @@ export function paymentSession(overrides: Partial<PaymentSession> = {}): Payment
     amountCents: 105_080,
     currency: 'nzd',
     captureMethod: 'automatic',
+    verificationInReview: false,
     holdExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
     ...overrides,
   };

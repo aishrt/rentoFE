@@ -21,25 +21,32 @@ import type { ResolvedChoices } from './checkout-state';
 
 /**
  * "You'll be charged NZ$506.50. Your card issuer converts it." (plan §12.7): every charge is in NZD. A request
- * is authorised now and charged only when the Host accepts (plan §8.1).
+ * is authorised now and charged only when the Host accepts (plan §8.1), and a booking made while the Guest's
+ * identity check is in review only once the check is approved (plan §8.2).
  */
 export function ChargeNote({
   totalCents,
   request,
+  verificationInReview = false,
   hostName,
   className,
 }: {
   totalCents: number;
   request: boolean;
+  verificationInReview?: boolean;
   hostName: string;
   className?: string;
 }) {
+  const condition = verificationInReview
+    ? request
+      ? `once your identity check is approved and ${hostName} accepts`
+      : 'once your identity check is approved'
+    : `if ${hostName} accepts`;
   return (
     <p className={cn('text-sm text-muted', className)}>
-      {request ? (
+      {request || verificationInReview ? (
         <>
-          Your card is authorised for {formatNzdCharge(totalCents)} now and charged only if {hostName}{' '}
-          accepts.
+          Your card is authorised for {formatNzdCharge(totalCents)} now and charged only {condition}.
         </>
       ) : (
         <>You’ll be charged {formatNzdCharge(totalCents)}.</>
@@ -88,9 +95,11 @@ export interface SummaryProps {
   priced: PricedTrip | undefined;
   current: boolean;
   pricing: boolean;
+  /** The Guest's identity check is with support, so the card is only authorised for now (plan §8.2). */
+  verificationInReview?: boolean;
 }
 
-function PriceBody({ vehicle, resolved, priced, current, pricing }: SummaryProps) {
+function PriceBody({ vehicle, resolved, priced, current, pricing, verificationInReview }: SummaryProps) {
   if (!resolved.start || !resolved.end) {
     return (
       <p className="text-sm text-muted">
@@ -119,6 +128,7 @@ function PriceBody({ vehicle, resolved, priced, current, pricing }: SummaryProps
       <ChargeNote
         totalCents={priced.price.totalCents}
         request={!priced.instantBook}
+        verificationInReview={verificationInReview}
         hostName={vehicle.host.firstName}
       />
     </div>

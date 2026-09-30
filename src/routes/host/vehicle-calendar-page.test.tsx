@@ -24,7 +24,7 @@ const blocks: CalendarBlock[] = [
     reason: 'BOOKED',
     start: '2026-10-13T11:00:00.000Z',
     end: '2026-10-15T11:00:00.000Z',
-    booking: { id: 'k1', ref: 'RV-4HX8PA', status: 'CONFIRMED', guestFirstName: 'Kiri' },
+    booking: { id: 'k1', ref: 'RV-4HX8PA', status: 'CONFIRMED', guestFirstName: 'Kiri', toAnswer: false },
   },
   { id: 'b2', reason: 'BUFFER', start: '2026-10-15T11:00:00.000Z', end: '2026-10-15T13:00:00.000Z' },
   {
@@ -33,7 +33,7 @@ const blocks: CalendarBlock[] = [
     start: '2026-10-19T21:00:00.000Z',
     end: '2026-10-20T05:00:00.000Z',
     holdExpiresAt: '2026-10-02T20:00:00.000Z',
-    booking: { id: 'k2', ref: 'RV-7QM2ZD', status: 'PENDING', guestFirstName: 'Mere' },
+    booking: { id: 'k2', ref: 'RV-7QM2ZD', status: 'PENDING', guestFirstName: 'Mere', toAnswer: true },
   },
   {
     id: 'b4',

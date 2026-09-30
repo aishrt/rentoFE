@@ -138,7 +138,7 @@ const trip: CalendarBlock = {
   start: '2026-10-20T21:00:00.000Z',
   end: '2026-10-23T21:00:00.000Z',
   reason: 'BOOKED',
-  booking: { id: 'bk1', ref: 'RV-7K2P9Q', status: 'CONFIRMED', guestFirstName: 'Sam' },
+  booking: { id: 'bk1', ref: 'RV-7K2P9Q', status: 'CONFIRMED', guestFirstName: 'Sam', toAnswer: false },
 };
 const hostBlock: CalendarBlock = {
   id: 'b3',

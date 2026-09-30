@@ -6254,6 +6254,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{id}/identity-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: decide an identity check that needed a manual review
+         * @description Approving confirms the Guest’s bookings that waited for the check (capturing their card authorisations), except requests their Host still has to accept. Rejecting ends those bookings and releases the authorisations (plan §8.2).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The user’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IdentityReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description The decision, and what it did to their bookings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IdentityReviewResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7317,6 +7408,8 @@ export interface components {
                 ref: string;
                 status: string;
                 guestFirstName: string;
+                /** @description A request the Host still has to accept or decline. False while it only waits for the Guest’s verification */
+                toAnswer: boolean;
             };
         };
         BlockResponse: {
@@ -7490,7 +7583,7 @@ export interface components {
             /** @description Anything that stops this person booking; with `end`, checked against that trip end */
             problems: {
                 /** @enum {string} */
-                code: "PHONE_REQUIRED" | "LICENCE_REQUIRED" | "TOO_YOUNG" | "CLASS_NOT_ACCEPTED" | "NOT_LICENSED_LONG_ENOUGH" | "LICENCE_EXPIRES" | "ENGLISH_PROOF_REQUIRED" | "LICENCE_REJECTED";
+                code: "PHONE_REQUIRED" | "LICENCE_REQUIRED" | "TOO_YOUNG" | "CLASS_NOT_ACCEPTED" | "NOT_LICENSED_LONG_ENOUGH" | "LICENCE_EXPIRES" | "ENGLISH_PROOF_REQUIRED" | "LICENCE_REJECTED" | "IDENTITY_REJECTED";
                 message: string;
             }[];
         };
@@ -7607,6 +7700,13 @@ export interface components {
              * @description PENDING: when the request expires
              */
             requestExpiresAt?: string;
+            /**
+             * @description Set when the Guest paid while their verification was in review. PENDING: the booking waits for support to approve the check (plan §8.2)
+             * @enum {string}
+             */
+            verificationReview?: "PENDING" | "APPROVED" | "REJECTED";
+            /** @description PENDING: the Host has accepted, and the booking now waits only for the Guest’s verification */
+            hostAccepted?: boolean;
             guest: {
                 firstName: string;
                 avatarUrl?: string;
@@ -7704,6 +7804,13 @@ export interface components {
             amountCents: number;
             /** Format: date-time */
             requestExpiresAt?: string;
+            /**
+             * @description Set when the Guest paid while their verification was in review. PENDING: the booking waits for support to approve the check (plan §8.2)
+             * @enum {string}
+             */
+            verificationReview?: "PENDING" | "APPROVED" | "REJECTED";
+            /** @description PENDING: the Host has accepted, and the booking now waits only for the Guest’s verification */
+            hostAccepted?: boolean;
         };
         PaymentSession: {
             /** @description For Stripe.js to confirm this payment. Never logged or stored. */
@@ -7714,10 +7821,12 @@ export interface components {
             /** @enum {string} */
             currency: "nzd";
             /**
-             * @description manual: a request to book, authorised now and charged when the Host accepts
+             * @description manual: authorised now, and charged when the Host accepts or the Guest’s verification is approved
              * @enum {string}
              */
             captureMethod: "automatic" | "manual";
+            /** @description The Guest’s identity check is with support, so the booking waits for it (plan §8.2) */
+            verificationInReview: boolean;
             /** Format: date-time */
             holdExpiresAt: string;
         };
@@ -7750,6 +7859,21 @@ export interface components {
             /** @enum {string} */
             reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
             note: string;
+        };
+        IdentityReviewResponse: {
+            /** @enum {string} */
+            identityStatus: "APPROVED" | "REJECTED";
+            /** @description References of the bookings this confirmed */
+            confirmed: string[];
+            /** @description Requests the Host still has to answer */
+            waitingForHost: string[];
+            /** @description Bookings ended, with the card authorisation released */
+            released: string[];
+        };
+        IdentityReviewRequest: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT";
+            note?: string;
         };
     };
     responses: never;

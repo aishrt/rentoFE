@@ -32,6 +32,13 @@ export const LEGEND_ORDER: readonly BlockReason[] = [
 export const isCheckout = (block: CalendarBlock) =>
   block.reason === 'HOLD' && block.booking?.status === 'PAYMENT_PENDING';
 
+/**
+ * Dates held while support checks the Guest's identity (plan §8.2): an Instant Book, or a request the Host has
+ * already accepted. Nothing for the Host to answer.
+ */
+export const isVerifying = (block: CalendarBlock) =>
+  block.reason === 'HOLD' && block.booking?.status === 'PENDING' && !block.booking.toAnswer;
+
 /** The short label on a block: the guest and booking for trips, or what it is. */
 export function blockLabel(block: CalendarBlock): string {
   switch (block.reason) {
@@ -39,6 +46,7 @@ export function blockLabel(block: CalendarBlock): string {
       return block.booking ? `${block.booking.guestFirstName} · ${block.booking.ref}` : 'Booked';
     case 'HOLD':
       if (isCheckout(block)) return 'Guest checking out';
+      if (isVerifying(block)) return `Verifying ${block.booking?.guestFirstName ?? 'the guest'}`;
       return block.booking ? `Request pending · ${block.booking.guestFirstName}` : 'Request pending';
     case 'HOST_BLOCK':
       return block.note ? `Blocked · ${block.note}` : 'Blocked by you';

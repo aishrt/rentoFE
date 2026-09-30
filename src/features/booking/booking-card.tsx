@@ -4,7 +4,15 @@ import { Link } from 'react-router';
 import type { BookingSummary } from '@/api/types';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatNzDateTime, formatNzd, formatTimeLeft, formatTripSpan, statusLabel } from './booking-format';
+import {
+  awaitsVerification,
+  formatNzDateTime,
+  formatNzd,
+  formatTimeLeft,
+  formatTripSpan,
+  hostAnswers,
+  statusLabel,
+} from './booking-format';
 import { StatusBadge } from './booking-parts';
 import { useNow } from './use-time-left';
 
@@ -26,6 +34,17 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
   const waiting = booking.status === 'PENDING' && booking.requestExpiresAt;
   const left = waiting ? new Date(booking.requestExpiresAt!).getTime() - now : 0;
   const ended = ['CANCELLED', 'DECLINED', 'EXPIRED'].includes(booking.status);
+  // Who the booking waits for, and for how long (plan §8.2).
+  const other = booking.otherParty.firstName;
+  const time = formatTimeLeft(left);
+  const waitingFor =
+    viewer === 'HOST'
+      ? hostAnswers(booking)
+        ? `${time} left to answer`
+        : `We’re verifying ${other}: up to ${time}`
+      : awaitsVerification(booking)
+        ? `We’re checking your details: up to ${time}`
+        : `${other} has ${time} to answer`;
 
   return (
     <Card className="lift-card has-[a:active]:scale-98">
@@ -66,9 +85,7 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
           {waiting && left > 0 && (
             <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
               <Hourglass aria-hidden="true" className="size-3.5" />
-              {viewer === 'HOST'
-                ? `${formatTimeLeft(left)} left to answer`
-                : `${booking.otherParty.firstName} has ${formatTimeLeft(left)} to answer`}
+              {waitingFor}
             </p>
           )}
           {/* A booking that ended without a trip earns and costs nothing; its page has any refund or fee. */}

@@ -131,6 +131,29 @@ describe('HostBookingsPage', () => {
       reason: 'The car is in for a service',
     });
   });
+
+  it('lists a booking that waits for the Guest’s identity check under Upcoming, with nothing to answer', async () => {
+    mockHost((sentRequest) =>
+      sentRequest.path === '/bookings'
+        ? {
+            status: 200,
+            body: {
+              bookings:
+                sentRequest.query.get('group') === 'upcoming'
+                  ? [{ ...request, instantBook: true, verificationReview: 'PENDING' }]
+                  : [],
+            },
+          }
+        : undefined,
+    );
+    renderWithRouter(routes, '/host/bookings?tab=upcoming');
+
+    const item = within(await screen.findByRole('listitem'));
+    expect(item.getByText('Guest being verified')).toBeInTheDocument();
+    expect(item.getByText('We’re verifying Kiri: up to 23 h')).toBeInTheDocument();
+    expect(item.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+    expect(item.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+  });
 });
 
 describe('HostBookingPage', () => {
@@ -237,6 +260,63 @@ describe('HostBookingPage', () => {
     expect(
       screen.getByText('Mobile numbers are shared only while a booking is confirmed.'),
     ).toBeInTheDocument();
+  });
+
+  it('records an acceptance while the Guest’s identity check is still in review', async () => {
+    const waiting = hostRequest({ verificationReview: 'PENDING' });
+    const accepted = hostRequest({
+      verificationReview: 'PENDING',
+      hostAccepted: true,
+      actions: NO_ACTIONS,
+    });
+    mockHost((sentRequest) => {
+      switch (`${sentRequest.method} ${sentRequest.path}`) {
+        case `GET /bookings/${REF}`:
+          return { status: 200, body: { booking: waiting } };
+        case `POST /bookings/${REF}/accept`:
+          return { status: 200, body: { booking: accepted } };
+        case 'GET /bookings':
+          return { status: 200, body: { bookings: [] } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    expect(
+      await screen.findByText(
+        /We’re still checking Kiri’s identity, so if you accept, the booking is confirmed once/,
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Accept request' }));
+
+    // Still pending, with nothing left for the Host to do.
+    expect(await screen.findByText('You accepted this request')).toBeInTheDocument();
+    expect(
+      screen.getByText(/confirmed as soon as we’ve finished checking Kiri’s identity/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Guest being verified')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+  });
+
+  it('shows an Instant Book that waits for the Guest’s identity check, with nothing to answer', async () => {
+    mockHost((sentRequest) =>
+      sentRequest.path === `/bookings/${REF}`
+        ? {
+            status: 200,
+            body: {
+              booking: hostRequest({ instantBook: true, verificationReview: 'PENDING', actions: NO_ACTIONS }),
+            },
+          }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    expect(await screen.findByText('We’re verifying Kiri')).toBeInTheDocument();
+    expect(screen.getByText(/There’s nothing for you to do/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'What you’d earn' })).toBeInTheDocument();
   });
 
   it('sends the Guest of a booking to their trip page', async () => {

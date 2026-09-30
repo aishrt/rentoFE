@@ -32,9 +32,11 @@ import {
   useBookingDetail,
 } from '@/features/booking/booking-api';
 import {
+  awaitsVerification,
   formatNzDateTime,
   formatNzd,
   formatTripSpan,
+  hostAnswers,
   refundSentence,
   statusLabel,
 } from '@/features/booking/booking-format';
@@ -139,6 +141,27 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
         </Banner>
       );
     case 'PENDING':
+      if (awaitsVerification(booking)) {
+        // An Instant Book waits only for the check; a request also needs its Host, unless they've accepted.
+        const alsoHost = hostAnswers(booking);
+        return (
+          <Banner tone="info" icon={ShieldCheck} title="We’re checking your details">
+            <p>
+              Your identity check needs a closer look from our team. The dates are held for you, and we’ll
+              confirm your booking as soon as it’s approved
+              {alsoHost ? ` and ${host} accepts` : ''}.
+              {booking.hostAccepted ? ` ${host} has already accepted.` : ''} Your card is authorised for NZ
+              {formatNzd(booking.price.totalCents)} and charged only then.
+            </p>
+            {booking.requestExpiresAt && (
+              <p>
+                If it isn’t decided by {formatNzDateTime(booking.requestExpiresAt)} (NZ time), the booking
+                expires and nothing is charged.
+              </p>
+            )}
+          </Banner>
+        );
+      }
       return (
         <Banner tone="info" icon={Hourglass} title={`Waiting for ${host}`}>
           <p>
@@ -187,13 +210,21 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
       return (
         <Banner tone="danger" icon={Hourglass} title="This booking expired">
           <p>
-            {booking.payment?.status === 'CANCELLED'
-              ? `${host} didn’t answer within 24 hours, so your card authorisation was released. Nothing was charged.`
-              : 'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.'}
+            {booking.verificationReview === 'REJECTED'
+              ? 'We weren’t able to verify your identity, so your card authorisation was released. Nothing was charged.'
+              : booking.verificationReview === 'PENDING'
+                ? 'We couldn’t finish your identity check within 24 hours, so your card authorisation was released. Nothing was charged.'
+                : booking.payment?.status === 'CANCELLED'
+                  ? `${host} didn’t answer within 24 hours, so your card authorisation was released. Nothing was charged.`
+                  : 'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.'}
           </p>
           <div>
             <Button asChild variant="secondary" size="sm">
-              <Link to="/cars">Find another car</Link>
+              {booking.verificationReview === 'REJECTED' ? (
+                <Link to={`/contact?category=ACCOUNT&booking=${booking.ref}`}>Contact support</Link>
+              ) : (
+                <Link to="/cars">Find another car</Link>
+              )}
             </Button>
           </div>
         </Banner>
@@ -291,9 +322,11 @@ function Trip({ tripRef }: { tripRef: string }) {
   const paid = (updated: PaidBooking) => {
     void queryClient.invalidateQueries({ queryKey: bookingQueryKey(booking.ref) });
     void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
-    toast(updated.status === 'PENDING' ? 'Request sent' : 'You’re booked', {
-      description:
-        updated.status === 'PENDING'
+    const held = updated.verificationReview === 'PENDING';
+    toast(held ? 'Your booking is held' : updated.status === 'PENDING' ? 'Request sent' : 'You’re booked', {
+      description: held
+        ? 'We’re finishing your identity check. You’re only charged once it’s approved.'
+        : updated.status === 'PENDING'
           ? `${booking.host.firstName} has 24 hours to answer.`
           : `Your trip in the ${booking.vehicle.title} is confirmed.`,
     });

@@ -82,7 +82,7 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
   const { problems, licence } = readiness.data;
   const phoneNeeded = problems.some((problem) => problem.code === 'PHONE_REQUIRED');
   const licenceProblems = problems.filter((problem) => problem.code !== 'PHONE_REQUIRED');
-  const needsForm = licenceProblems.length > 0 || editing;
+  const needsForm = licenceProblems.some((problem) => problem.code !== 'IDENTITY_REJECTED') || editing;
   const firstTime = licenceProblems.some((problem) => problem.code === 'LICENCE_REQUIRED');
   const points = policies.data ? eligibilityPoints(policies.data.eligibility) : [];
 
@@ -123,7 +123,7 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
               {licenceProblems.map((problem) => (
                 <li key={problem.code}>
                   {problem.message} {HINTS[problem.code]}
-                  {problem.code === 'LICENCE_REJECTED' && (
+                  {(problem.code === 'LICENCE_REJECTED' || problem.code === 'IDENTITY_REJECTED') && (
                     <>
                       {' '}
                       <Link

@@ -17,6 +17,8 @@ import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useAcceptBooking, useBookings } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
+import { hostAnswers } from '@/features/booking/booking-format';
+import { acceptedToast } from '@/features/booking/accepted-toast';
 import { DeclineDialogContent } from '@/features/booking/decline-dialog';
 import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
 
@@ -53,10 +55,7 @@ function RequestActions({ booking }: { booking: BookingSummary }) {
         loading={accept.isPending}
         onClick={() =>
           accept.mutate(undefined, {
-            onSuccess: () =>
-              toast('Booking accepted', {
-                description: `${guest}’s trip is confirmed, and they’ve been sent your pick-up details.`,
-              }),
+            onSuccess: (accepted) => toast(...acceptedToast(accepted, guest)),
             onError: (error) =>
               toast('We couldn’t accept this request', { description: error.message, tone: 'danger' }),
           })
@@ -129,7 +128,7 @@ function BookingList({ group }: { group: Tab }) {
             booking={booking}
             viewer="HOST"
             to={`/host/bookings/${booking.ref}`}
-            actions={booking.status === 'PENDING' ? <RequestActions booking={booking} /> : undefined}
+            actions={hostAnswers(booking) ? <RequestActions booking={booking} /> : undefined}
           />
         </li>
       ))}

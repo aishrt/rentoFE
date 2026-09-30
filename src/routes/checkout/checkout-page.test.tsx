@@ -360,6 +360,48 @@ describe('CheckoutPage: payment', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('holds an Instant Book while the Guest’s identity check is in review: authorised, charged once approved', async () => {
+    const held = bookingFixture({
+      status: 'PENDING',
+      verificationReview: 'PENDING',
+      holdExpiresAt: undefined,
+      payment: { status: 'AUTHORISED' },
+    });
+    mockCheckoutApi({
+      readiness: () => readiness({ identityStatus: 'PENDING' }),
+      payment: () => ({
+        status: 200,
+        body: paymentSession({ captureMethod: 'manual', verificationInReview: true }),
+      }),
+      sync: () => ({ status: 200, body: { booking: held } }),
+    });
+    stripe.confirmPayment.mockResolvedValue({ paymentIntent: { id: 'pi_123', status: 'requires_capture' } });
+    const { router } = renderCheckout();
+    // Still an Instant Book car, and the Guest isn't sent back to the verification step.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Confirm and pay' })).toBeInTheDocument();
+    await continueToVerification();
+
+    // Said before anything is agreed to.
+    const notice = await screen.findByText('We’re still checking your identity');
+    expect(notice.closest('[role="status"]')).toHaveTextContent(
+      /Your card is authorised, not charged.*confirm the booking as soon as the check is approved, usually within 24 hours/,
+    );
+    expect(
+      screen.getAllByText(
+        /Your card is authorised for NZ\$1,050\.80 now and charged only once your identity check is approved\./,
+      ).length,
+    ).toBeGreaterThan(0);
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /I agree to the Guest Agreement/ }));
+    const confirm = await screen.findByRole('button', { name: 'Confirm booking' });
+    expect(screen.queryByRole('button', { name: 'Confirm and pay' })).not.toBeInTheDocument();
+
+    await userEvent.click(confirm);
+    expect(await screen.findByText('Booking held')).toBeInTheDocument();
+    expect(await screen.findByText('Trip page')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/trips/RV-7K2Q9M');
+  });
+
   it('shows why a payment failed and keeps the dates held', async () => {
     const sent = mockCheckoutApi({
       sync: () => ({ status: 200, body: { booking: bookingFixture() } }),

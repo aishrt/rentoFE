@@ -16,7 +16,7 @@ import { ChargeNote } from './price-summary';
 /** How long the tick shows before moving on to the trip, in ms: long enough to see it drawn. */
 export const TICK_PAUSE_MS = 900;
 
-export type PaidBooking = Pick<Booking, 'ref' | 'status'>;
+export type PaidBooking = Pick<Booking, 'ref' | 'status' | 'verificationReview'>;
 
 interface PayBookingProps {
   booking: Booking;
@@ -24,6 +24,11 @@ interface PayBookingProps {
   onPaid: (booking: PaidBooking) => void;
   /** The 30-minute hold ran out before the payment started. */
   onHoldExpired: () => void;
+  /**
+   * Known before the payment starts (from checkout's verification step): the Guest's identity check is with
+   * support. The payment session says so too, once it exists.
+   */
+  verificationInReview?: boolean;
 }
 
 function PaymentsNotSetUp() {
@@ -43,15 +48,23 @@ function PaymentsNotSetUp() {
  * The Guest Agreement, then the payment (plan §8.1): ticking the box records the agreement and starts the
  * PaymentIntent, and the payment form opens with the Guest's saved cards. The final breakdown sits right
  * above the button, which reads Confirm and pay for Instant Book or Request to book, turns into progress,
- * then an animated tick (plan §12.4). Used at checkout and on an unpaid trip while its dates are held.
+ * then an animated tick (plan §12.4). While the Guest's identity check is in review, the card is only
+ * authorised and the booking waits for the check (plan §8.2). Used at checkout and on an unpaid trip while
+ * its dates are held.
  */
-export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) {
+export function PayBooking({
+  booking,
+  onPaid,
+  onHoldExpired,
+  verificationInReview = false,
+}: PayBookingProps) {
   const prepare = usePreparePayment();
   const [session, setSession] = useState<PaymentSession | null>(null);
   const [failed, setFailed] = useState(false);
   // Ticked from the moment it's pressed: the mutation's own state arrives a moment later.
   const [agreed, setAgreed] = useState(false);
-  const request = session ? session.captureMethod === 'manual' : !booking.instantBook;
+  const request = !booking.instantBook;
+  const inReview = session?.verificationInReview ?? verificationInReview;
   const hostName = booking.host.firstName;
 
   if (stripeKeyMode() === 'missing') return <PaymentsNotSetUp />;
@@ -91,6 +104,13 @@ export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) 
 
   return (
     <div className="grid gap-6">
+      {inReview && (
+        <Alert role="status" title="We’re still checking your identity">
+          You can finish booking now. Your card is authorised, not charged, and the dates are held for you. We
+          confirm the booking as soon as the check is approved{request && ` and ${hostName} accepts`}, usually
+          within 24 hours. If it isn’t approved, nothing is charged.
+        </Alert>
+      )}
       <Checkbox
         checked={agreed}
         disabled={agreed}
@@ -143,9 +163,9 @@ export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) 
               </p>
             )}
             <PaymentForm
-              submitLabel={request ? 'Request to book' : 'Confirm and pay'}
+              submitLabel={request ? 'Request to book' : inReview ? 'Confirm booking' : 'Confirm and pay'}
               pendingLabel={request ? 'Sending your request…' : 'Confirming your booking…'}
-              successLabel={request ? 'Request sent' : 'Booked'}
+              successLabel={request ? 'Request sent' : inReview ? 'Booking held' : 'Booked'}
               returnUrl={`${window.location.origin}/trips/${booking.ref}`}
               onFailed={() => {
                 setFailed(true);
@@ -162,7 +182,12 @@ export function PayBooking({ booking, onPaid, onHoldExpired }: PayBookingProps) 
                     Final price
                   </h3>
                   <PriceBreakdown lineItems={booking.lineItems as LineItem[]} price={booking.price} />
-                  <ChargeNote totalCents={session.amountCents} request={request} hostName={hostName} />
+                  <ChargeNote
+                    totalCents={session.amountCents}
+                    request={request}
+                    verificationInReview={inReview}
+                    hostName={hostName}
+                  />
                 </section>
               }
             />

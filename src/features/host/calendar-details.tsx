@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { CalendarBlock } from '@/api/types';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
-import { BLOCK_TONES, isCheckout, isRemovable, reasonLabel } from './calendar-blocks';
+import { BLOCK_TONES, isCheckout, isRemovable, isVerifying, reasonLabel } from './calendar-blocks';
 import { formatInstant, formatInstantRange } from './calendar-time';
 import { hostKeys, removeBlockRequest } from './host-api';
 import { InlineConfirm } from './inline-confirm';
@@ -21,6 +21,7 @@ function BlockItem({ vehicleId, block }: { vehicleId: string; block: CalendarBlo
       toast("We couldn't unblock that", { description: hostErrorMessage(error), tone: 'danger' }),
   });
   const checkout = isCheckout(block);
+  const verifying = isVerifying(block);
 
   return (
     <li className="flex animate-fade-in flex-wrap items-start gap-3 py-3">
@@ -30,7 +31,11 @@ function BlockItem({ vehicleId, block }: { vehicleId: string; block: CalendarBlo
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">
-          {checkout ? 'A guest is checking out' : reasonLabel(block.reason)}
+          {checkout
+            ? 'A guest is checking out'
+            : verifying
+              ? 'We’re verifying the guest'
+              : reasonLabel(block.reason)}
           {block.booking && !checkout && (
             <span className="font-normal text-muted">
               {' '}
@@ -51,7 +56,9 @@ function BlockItem({ vehicleId, block }: { vehicleId: string; block: CalendarBlo
           <p className="mt-0.5 text-sm text-ink">
             {checkout
               ? `Held until ${formatInstant(block.holdExpiresAt)} while they pay. If they don’t, the times open again.`
-              : `Answer by ${formatInstant(block.holdExpiresAt)}, or the request expires.`}
+              : verifying
+                ? `Held until ${formatInstant(block.holdExpiresAt)} while we check their identity. Nothing for you to do.`
+                : `Answer by ${formatInstant(block.holdExpiresAt)}, or the request expires.`}
           </p>
         )}
       </div>
