@@ -228,9 +228,40 @@ Errors are caught at four levels, so a fault takes out as little of the site as 
 
 Page-level messages come from `ErrorMessage`. When a page's code fails to download (`isChunkLoadError`), it says the connection may have dropped instead of "Something went wrong", and development builds show the error itself. Boundaries only catch errors thrown while rendering. Errors in event handlers and requests are shown by the form or query that made them, as they are today.
 
+### Added in Phase 2
+
+```tsx
+toast('Saved to your cars');                                  // success · danger · neutral; <Toaster /> is in the root layout
+<Slider value={[min, max]} onValueChange={setRange} onValueCommit={search} min={0} max={500}
+  thumbLabels={['Minimum price', 'Maximum price']} formatValue={(v) => `${v} a day`} />
+<Switch checked={instant} onCheckedChange={setInstant} label="Instant Book" description="Book without waiting" />
+<RatingStars value={4.6} size="sm" />                       // part stars fill in proportion
+<Gallery photos={photos} index={i} onIndexChange={setI} onOpen={() => setOpen(true)} label="Photos of the RAV4" />
+<Lightbox photos={photos} open={open} index={i} onIndexChange={setI} onClose={close} originRef={frameRef} label="…" />
+<BottomSheet open={open} onOpenChange={setOpen} title="Filters" footer={<Button>Show 12 cars</Button>}>…</BottomSheet>
+<Stepper steps={steps} current={2} onSelect={saveAndGo} label="Listing progress" finishedLabel="Review" />
+<DatePicker … isDateDisabled={(day) => booked.has(day)} />   // e.g. a car's fully booked days
+```
+
+| Component                | Use                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Toast`                  | Short confirmations that leave on their own (a polite live region). Errors that need action stay in an `Alert` on the page.                             |
+| `Slider`                 | One or two thumbs (a range). Keyboard: arrows, Page keys, Home/End; the thumbs never cross.                                                             |
+| `Switch`                 | On/off settings and filters, with the label beside it.                                                                                                  |
+| `RatingStars`            | Average ratings. A car with no reviews shows the **New** label instead (the VehicleCard does this).                                                     |
+| `Gallery` / `SwipeTrack` | Swipeable photos with momentum, arrow buttons and keys, thumbnails and a counter.                                                                       |
+| `Lightbox`               | Full-screen photos that grow out of the tapped one.                                                                                                     |
+| `BottomSheet`            | The phone sheet with drag-to-close (search filters, the listing's booking panel).                                                                       |
+| `ModalPanel`             | The hand-written modal behind BottomSheet and Lightbox. Not Radix: Radix blocks clicks outside its panel, and the site's pickers open in the page body. |
+| `Stepper`                | Multi-step flows (Host onboarding), marking done steps and steps with something missing.                                                                |
+
+Drag and layout animations need Motion's `domMax` features. Wrap the pages that use them in `MaxMotion` (`src/features/vehicles/max-motion.tsx`), never the homepage, which keeps the small `domAnimation` set (plan §12.5).
+
+Marketplace components live in `src/features`: `VehicleCard` and the listing's parts (`features/vehicles`), `LocationAutocomplete` and the filters (`features/search`), `PriceBreakdown` (`features/booking`, used by the listing, checkout and trips).
+
 ### Not built yet
 
-Plan §12.3 also lists Toast, a bottom sheet with drag-to-close, Chip, ListItem, Checkbox/Switch and Modal. They will be built with the first feature that needs them (search filters, checkout, saved cars), from the same tokens. The drag gesture needs Motion's `domMax` features, so load that only on the pages that use it.
+Plan §12.3 also lists Chip, ListItem, a data table and charts. They will be built with the Phase 3 dashboards that need them, from the same tokens.
 
 ## Motion
 
