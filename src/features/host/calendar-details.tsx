@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import type { CalendarBlock } from '@/api/types';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
@@ -32,7 +33,14 @@ function BlockItem({ vehicleId, block }: { vehicleId: string; block: CalendarBlo
           {block.booking && (
             <span className="font-normal text-muted">
               {' '}
-              · {block.booking.guestFirstName} · {block.booking.ref}
+              · {block.booking.guestFirstName} ·{' '}
+              <Link
+                to={`/host/bookings/${block.booking.ref}`}
+                viewTransition
+                className="link-underline font-medium text-primary"
+              >
+                {block.booking.ref}
+              </Link>
             </span>
           )}
         </p>
