@@ -1,25 +1,49 @@
-import type { FieldErrors, Resolver } from 'react-hook-form';
-import { addDays, combineDateTime, toDateInputValue } from '@/lib/dates';
+import { addDays, combineDateTime, parseDateValue, toDateInputValue } from '@/lib/dates';
+import { filterParams, tripParams, type PlaceValue } from './place';
 
 /*
- * Homepage search checks for instant feedback. Written without Zod so the homepage doesn't
- * download it (plan §12.5 speed budget). The backend's search validation (plan §3) and
- * NZ-time handling arrive with the search API in Phase 2.
+ * Search form checks for instant feedback, written without Zod or a form library so the homepage doesn't
+ * download them (plan §12.5 speed budget). The backend repeats the checks (plan §3) and its field errors
+ * are shown on the results page.
  */
 
 export interface SearchValues {
-  where: string;
+  /** The place as typed, or as chosen from the suggestions. */
+  place: PlaceValue;
   pickupDate: string;
   pickupTime: string;
   returnDate: string;
   returnTime: string;
 }
 
-export type SearchErrors = Partial<Record<keyof SearchValues, string>>;
+export type SearchField = 'where' | 'pickupDate' | 'pickupTime' | 'returnDate' | 'returnTime';
+export type SearchErrors = Partial<Record<SearchField, string>>;
 
-export function validateSearch(values: SearchValues, now = Date.now()): SearchErrors {
+/** The fields in the order they appear, so the first one with an error can take focus. */
+export const SEARCH_FIELDS: readonly SearchField[] = [
+  'where',
+  'pickupDate',
+  'pickupTime',
+  'returnDate',
+  'returnTime',
+];
+
+interface ValidateOptions {
+  now?: number;
+  /** The homepage needs a place; results pages don't (no place means all of NZ). */
+  requirePlace?: boolean;
+  /** Search Results need dates; Browse Cars doesn't, but once one date is given, so is the rest. */
+  requireDates?: boolean;
+}
+
+export function validateSearch(
+  values: SearchValues,
+  { now = Date.now(), requirePlace = true, requireDates = true }: ValidateOptions = {},
+): SearchErrors {
   const errors: SearchErrors = {};
-  if (values.where.trim().length < 2) errors.where = "Tell us where you're headed";
+  if (requirePlace && values.place.label.trim().length < 2) errors.where = "Tell us where you're headed";
+  if (!requireDates && !values.pickupDate && !values.returnDate) return errors;
+
   if (!values.pickupDate) errors.pickupDate = 'Choose a pick-up date';
   if (!values.pickupTime) errors.pickupTime = 'Choose a pick-up time';
   if (!values.returnDate) errors.returnDate = 'Choose a return date';
@@ -38,23 +62,11 @@ export function validateSearch(values: SearchValues, now = Date.now()): SearchEr
   return errors;
 }
 
-export const searchResolver: Resolver<SearchValues> = (values) => {
-  const errors = validateSearch(values);
-  const entries = Object.entries(errors);
-  if (entries.length === 0) return { values, errors: {} };
-  return {
-    values: {},
-    errors: Object.fromEntries(
-      entries.map(([field, message]) => [field, { type: 'validate', message }]),
-    ) as FieldErrors<SearchValues>,
-  };
-};
-
 /** Tomorrow at 10 am, back three days later. */
 export function defaultSearchValues(now = new Date()): SearchValues {
   const pickup = addDays(now, 1);
   return {
-    where: '',
+    place: { label: '' },
     pickupDate: toDateInputValue(pickup),
     pickupTime: '10:00',
     returnDate: toDateInputValue(addDays(pickup, 3)),
@@ -62,12 +74,45 @@ export function defaultSearchValues(now = new Date()): SearchValues {
   };
 }
 
-/** The Search Results URL (plan §1.4); the page itself is built in Phase 2. */
-export function searchUrl(values: SearchValues): string {
-  const params = new URLSearchParams({
-    where: values.where.trim(),
-    start: `${values.pickupDate}T${values.pickupTime}`,
-    end: `${values.returnDate}T${values.returnTime}`,
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * The dates after choosing a pick-up date. A return that would now be before it moves too, keeping the
+ * trip's length, so choosing a later pick-up never leaves the form in error.
+ */
+export function movePickupDate<Dates extends { pickupDate: string; returnDate: string }>(
+  dates: Dates,
+  pickupDate: string,
+): Dates {
+  const pickup = parseDateValue(pickupDate);
+  if (!pickup || !dates.returnDate || dates.returnDate >= pickupDate) return { ...dates, pickupDate };
+  const oldPickup = parseDateValue(dates.pickupDate);
+  const oldReturn = parseDateValue(dates.returnDate);
+  const days =
+    oldPickup && oldReturn ? Math.max(1, Math.round((oldReturn.getTime() - oldPickup.getTime()) / DAY)) : 3;
+  return { ...dates, pickupDate, returnDate: toDateInputValue(addDays(pickup, days)) };
+}
+
+/** "2026-10-12T10:00": a date and time as the API and the URLs take them (NZ time). */
+export const toDateTimeParam = (date: string, time: string) => `${date}T${time}`;
+
+/** Splits "2026-10-12T10:00" back into the form's date and time. */
+export function fromDateTimeParam(value: string | undefined): { date: string; time: string } {
+  const [date = '', time = ''] = value?.split('T') ?? [];
+  return { date, time: time.slice(0, 5) };
+}
+
+/**
+ * The results URL for a search (plan §1.4): Search Results with dates, Browse Cars without. `keep` carries
+ * the filters and sort over when the place or dates change on the results page.
+ */
+export function searchUrl(values: SearchValues, keep?: URLSearchParams): string {
+  const dated = Boolean(values.pickupDate && values.returnDate);
+  const params = tripParams({
+    place: { ...values.place, label: values.place.label.trim() },
+    start: dated ? toDateTimeParam(values.pickupDate, values.pickupTime) : undefined,
+    end: dated ? toDateTimeParam(values.returnDate, values.returnTime) : undefined,
   });
-  return `/search?${params.toString()}`;
+  if (keep) filterParams(keep).forEach((value, key) => params.append(key, value));
+  return `${dated ? '/search' : '/cars'}?${params.toString()}`;
 }

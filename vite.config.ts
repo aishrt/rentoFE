@@ -33,6 +33,8 @@ export default defineConfig({
     setupFiles: ['src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
+    // Form tests type and wait a lot; the whole suite runs in parallel, so allow more than 5 s.
+    testTimeout: 15_000,
     env: {
       VITE_API_URL: 'http://api.test',
     },

@@ -14,7 +14,10 @@ const PLAN_BUDGET_KB = 170;
 // Raised from 185.5 later that day (185.0 → 186.4 KB): the staff Payments page's currency picker
 // shares Select and Field with the homepage, so Rollup moved them into chunks of their own, which
 // compress less well. No homepage code was added; listing and checkout pages would split them anyway.
-const LIMIT_KB = 186.5;
+// Lowered from 186.5 on 30 September 2026 (185.1 KB): the hero search form no longer uses react-hook-form
+// (about 11 KB), which paid for its API-backed location search, the lazy featured-cars and reviews sections'
+// placeholders, and the Phase 2 routes that grew the entry chunk by 2.7 KB the same day.
+const LIMIT_KB = 185.5;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

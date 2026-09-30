@@ -1,6 +1,9 @@
-import { ComingSoonPage } from '@/routes/public/coming-soon-page';
+import { SearchResultsView } from '@/features/search/search-results-view';
 
-/** Placeholder until this page is built (plan §9, Phase 2). */
+/**
+ * Search Results (spec §5): cars free for the chosen dates, each with its estimated total. The URL holds the
+ * whole search (plan §1.4), and the page is `noindex` so the clean city pages are indexed instead.
+ */
 export function SearchPage() {
-  return <ComingSoonPage />;
+  return <SearchResultsView mode="search" />;
 }
