@@ -28,8 +28,8 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
     title: 'Marketplace',
     items: [
       { label: 'Users', icon: Users },
-      { label: 'Host applications', icon: KeyRound },
-      { label: 'Vehicles', icon: Car },
+      { label: 'Host applications', icon: KeyRound, to: '/admin/host-applications' },
+      { label: 'Vehicles', icon: Car, to: '/admin/vehicles' },
       { label: 'Bookings', icon: CalendarRange },
     ],
   },

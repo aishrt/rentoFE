@@ -90,7 +90,8 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
                   <li key={item.label}>
                     <NavLink
                       to={item.to}
-                      end
+                      // Overview matches only itself; other sections stay highlighted on their own pages.
+                      end={item.to === '/admin'}
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
