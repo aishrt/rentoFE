@@ -77,6 +77,24 @@ export const routes: RouteObject[] = [
                 path: 'account/settings',
                 lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),
               },
+              // Hosting: the application, vehicle onboarding and the calendar (plan §9, Days 8–11).
+              { path: 'host', lazy: page(() => import('@/routes/host/host-home-page'), 'HostHomePage') },
+              {
+                path: 'host/apply',
+                lazy: page(() => import('@/routes/host/host-apply-page'), 'HostApplyPage'),
+              },
+              {
+                path: 'host/vehicles/new',
+                lazy: page(() => import('@/routes/host/new-vehicle-page'), 'NewVehiclePage'),
+              },
+              {
+                path: 'host/vehicles/:id/calendar',
+                lazy: page(() => import('@/routes/host/vehicle-calendar-page'), 'VehicleCalendarPage'),
+              },
+              {
+                path: 'host/vehicles/:id/:step?',
+                lazy: page(() => import('@/routes/host/vehicle-editor-page'), 'VehicleEditorPage'),
+              },
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
               ...[...seoPages, ...backendTaggedPages]
                 .filter((planned) => planned.comingSoon)
@@ -122,6 +140,24 @@ export const routes: RouteObject[] = [
                 path: 'payments',
                 handle: { title: 'Payments & payouts' } satisfies AdminRouteHandle,
                 lazy: page(() => import('@/routes/admin/payments-page'), 'AdminPaymentsPage'),
+              },
+              {
+                path: 'host-applications',
+                handle: { title: 'Host applications' } satisfies AdminRouteHandle,
+                lazy: page(
+                  () => import('@/routes/admin/host-applications-page'),
+                  'AdminHostApplicationsPage',
+                ),
+              },
+              {
+                path: 'vehicles',
+                handle: { title: 'Vehicles' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/vehicle-queue-page'), 'AdminVehicleQueuePage'),
+              },
+              {
+                path: 'vehicles/:id',
+                handle: { title: 'Vehicle review' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/vehicle-review-page'), 'AdminVehicleReviewPage'),
               },
               {
                 path: 'settings',

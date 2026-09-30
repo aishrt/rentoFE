@@ -65,3 +65,30 @@ export type ContactRequest = Schemas['ContactRequest'];
 /** The ids of the cars the user saved with the heart. */
 export type Favourites = Schemas['Favourites'];
 export type LastSearch = Schemas['LastSearch'];
+
+// Hosting (Phase 2).
+export type HostProfile = Schemas['HostProfile'];
+export type HostApplicationRequest = Schemas['HostApplicationRequest'];
+/** One of the Host's own cars, with everything they can edit and what's missing. */
+export type HostVehicle = Schemas['HostVehicle'];
+export type HostVehicleSummary = Schemas['HostVehicleSummary'];
+export type VehiclePatch = Schemas['VehiclePatch'];
+export type ListingChecklist = Schemas['ListingChecklist'];
+export type DeliveryOptionInput = Schemas['DeliveryOptionInput'];
+export type AddressWithPoint = Schemas['AddressWithPoint'];
+export type PhotoAttach = Schemas['PhotoAttach'];
+export type DocumentAttach = Schemas['DocumentAttach'];
+export type UploadRequest = Schemas['UploadRequest'];
+export type UploadTarget = Schemas['UploadTarget'];
+export type HostCalendar = Schemas['HostCalendar'];
+export type CalendarBlock = Schemas['CalendarBlock'];
+export type BlockInput = Schemas['BlockInput'];
+export type RecurringRulesInput = Schemas['RecurringRulesInput'];
+export type RecurringResult = Schemas['RecurringResult'];
+export type NotificationItem = Schemas['NotificationItem'];
+export type Notifications = Schemas['Notifications'];
+
+// Staff approval queues (Phase 2).
+export type HostApplication = Schemas['HostApplication'];
+export type ReviewQueueItem = Schemas['ReviewQueueItem'];
+export type AdminVehicle = Schemas['AdminVehicle'];
