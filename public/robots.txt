@@ -6,6 +6,9 @@ Disallow: /account
 Disallow: /host/
 Disallow: /host$
 Disallow: /checkout
+# Checkout and trips (plan §9, Days 11–14).
+Disallow: /book/
+Disallow: /trips
 Disallow: /login
 Disallow: /signup
 Disallow: /forgot-password
