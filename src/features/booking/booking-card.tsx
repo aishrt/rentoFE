@@ -25,6 +25,7 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
   const status = statusLabel({ ...booking, otherPartyName: booking.otherParty.firstName }, viewer, now);
   const waiting = booking.status === 'PENDING' && booking.requestExpiresAt;
   const left = waiting ? new Date(booking.requestExpiresAt!).getTime() - now : 0;
+  const ended = ['CANCELLED', 'DECLINED', 'EXPIRED'].includes(booking.status);
 
   return (
     <Card className="lift-card has-[a:active]:scale-98">
@@ -70,10 +71,13 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
                 : `${booking.otherParty.firstName} has ${formatTimeLeft(left)} to answer`}
             </p>
           )}
-          <p className="text-sm text-ink">
-            {viewer === 'HOST' ? 'You earn ' : 'Total '}
-            <span className="font-semibold tabular-nums">NZ{formatNzd(booking.amountCents)}</span>
-          </p>
+          {/* A booking that ended without a trip earns and costs nothing; its page has any refund or fee. */}
+          {!ended && (
+            <p className="text-sm text-ink">
+              {viewer === 'GUEST' ? 'Total ' : booking.status === 'PENDING' ? 'You’d earn ' : 'You earn '}
+              <span className="font-semibold tabular-nums">NZ{formatNzd(booking.amountCents)}</span>
+            </p>
+          )}
         </div>
         <ChevronRight
           aria-hidden="true"

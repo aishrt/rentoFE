@@ -155,6 +155,23 @@ describe('TripPage', () => {
     expect(screen.queryByRole('button', { name: 'Cancel trip' })).not.toBeInTheDocument();
   });
 
+  it('doesn’t promise an address or a mobile number on a booking that has ended', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        holdExpiresAt: undefined,
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(await screen.findByText('This booking expired')).toBeInTheDocument();
+    expect(
+      screen.getByText('Mobile numbers are shared only while a booking is confirmed.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/once your booking is confirmed/)).not.toBeInTheDocument();
+  });
+
   it('explains why a trip can’t be cancelled, without a confirm button', async () => {
     mockTrip(confirmedBooking(), (request) =>
       request.path.endsWith('/cancellation-preview')

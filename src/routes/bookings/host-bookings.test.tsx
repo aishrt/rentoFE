@@ -81,7 +81,7 @@ describe('HostBookingsPage', () => {
     );
     expect(item.getByText('Request to answer')).toBeInTheDocument();
     expect(item.getByText('23 h left to answer')).toBeInTheDocument();
-    expect(item.getByText('You earn')).toHaveTextContent('You earn NZ$800');
+    expect(item.getByText('You’d earn')).toHaveTextContent('You’d earn NZ$800');
     expect(item.getByRole('link')).toHaveAttribute('href', `/host/bookings/${REF}`);
     expect(screen.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
   });
@@ -159,13 +159,14 @@ describe('HostBookingPage', () => {
       screen.getByText('Kiri’s mobile number shows here once the booking is confirmed.'),
     ).toBeInTheDocument();
 
-    const earnings = within(screen.getByRole('region', { name: 'What you earn' }));
+    const earnings = within(screen.getByRole('region', { name: 'What you’d earn' }));
     expect(earnings.getByText('Your payout').nextElementSibling).toHaveTextContent('NZ$800');
     expect(earnings.getByText('Platform commission').nextElementSibling).toHaveTextContent('$120');
 
     await userEvent.click(screen.getByRole('button', { name: 'Accept request' }));
 
     expect(await screen.findByText('Confirmed', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'What you earn' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '+64220001111' })).toHaveAttribute('href', 'tel:+64220001111');
     expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
     expect(sent.filter((entry) => entry.path.endsWith('/accept'))).toHaveLength(1);
@@ -174,6 +175,8 @@ describe('HostBookingPage', () => {
   it('shows the Guest’s full refund and the Host fee before a Host cancels', async () => {
     const cancelled = hostConfirmed({
       status: 'CANCELLED',
+      // The API stops sharing the mobile once a booking is over.
+      guest: hostRequest().guest,
       payment: { status: 'REFUNDED' },
       cancellation: {
         at: new Date().toISOString(),
@@ -229,6 +232,11 @@ describe('HostBookingPage', () => {
     ).toBeInTheDocument();
     expect(sent.find((entry) => entry.path.endsWith('/cancel'))?.body).toEqual({});
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // A cancelled booking pays nothing, and the Guest's mobile is no longer shared.
+    expect(screen.queryByRole('region', { name: /What you/ })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Mobile numbers are shared only while a booking is confirmed.'),
+    ).toBeInTheDocument();
   });
 
   it('sends the Guest of a booking to their trip page', async () => {

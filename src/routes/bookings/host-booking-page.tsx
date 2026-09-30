@@ -200,6 +200,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
   const guest = booking.guest.firstName;
   const status = statusLabel({ ...booking, otherPartyName: guest }, 'HOST');
   const confirmed = ['CONFIRMED', 'ACTIVE', 'COMPLETED'].includes(booking.status);
+  const ended = ['CANCELLED', 'DECLINED', 'EXPIRED'].includes(booking.status);
 
   return (
     <div className="grid gap-8">
@@ -232,9 +233,11 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
               party={booking.guest}
               role="guest"
               phoneNote={
-                confirmed
-                  ? `${guest}’s mobile number isn’t available.`
-                  : `${guest}’s mobile number shows here once the booking is confirmed.`
+                booking.status === 'PENDING'
+                  ? `${guest}’s mobile number shows here once the booking is confirmed.`
+                  : confirmed
+                    ? `${guest}’s mobile number isn’t available.`
+                    : 'Mobile numbers are shared only while a booking is confirmed.'
               }
             />
           </DetailCard>
@@ -242,7 +245,8 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
             <TripStops
               booking={booking}
               hiddenNote={
-                booking.pickup.type === 'DELIVERY' || booking.dropoff.type === 'DELIVERY'
+                booking.status === 'PENDING' &&
+                (booking.pickup.type === 'DELIVERY' || booking.dropoff.type === 'DELIVERY')
                   ? 'The delivery address shows here once the booking is confirmed.'
                   : undefined
               }
@@ -255,8 +259,12 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
           )}
         </div>
         <div className="grid gap-6 lg:sticky lg:top-24">
-          {booking.payout && (
-            <DetailCard title="What you earn" icon={Coins}>
+          {/* A booking that ended without a trip pays nothing; the banner above has any kept share or fee. */}
+          {booking.payout && !ended && (
+            <DetailCard
+              title={booking.status === 'PENDING' ? 'What you’d earn' : 'What you earn'}
+              icon={Coins}
+            >
               <dl className="grid gap-2">
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="font-semibold text-ink">Your payout</dt>

@@ -278,6 +278,8 @@ function Trip({ tripRef }: { tripRef: string }) {
 
   const status = statusLabel({ ...booking, otherPartyName: booking.host.firstName }, 'GUEST');
   const confirmed = ['CONFIRMED', 'ACTIVE', 'COMPLETED'].includes(booking.status);
+  // Still to be paid for or answered: the address and the Host's mobile are on their way.
+  const waiting = booking.status === 'PAYMENT_PENDING' || booking.status === 'PENDING';
   const cancelKind = booking.actions.withdraw
     ? 'withdraw'
     : booking.actions.cancel
@@ -337,7 +339,11 @@ function Trip({ tripRef }: { tripRef: string }) {
           <DetailCard title="Pick-up and return" icon={CalendarClock}>
             <TripStops
               booking={booking}
-              hiddenNote="The exact address and any instructions show here once your booking is confirmed."
+              hiddenNote={
+                waiting
+                  ? 'The exact address and any instructions show here once your booking is confirmed.'
+                  : undefined
+              }
             />
             {booking.vehicle.regoPlate && (
               <p className="mt-4">
@@ -351,9 +357,11 @@ function Trip({ tripRef }: { tripRef: string }) {
               party={booking.host}
               role="host"
               phoneNote={
-                confirmed
-                  ? `${booking.host.firstName}’s mobile number isn’t available.`
-                  : `${booking.host.firstName}’s mobile number shows here once your booking is confirmed.`
+                waiting
+                  ? `${booking.host.firstName}’s mobile number shows here once your booking is confirmed.`
+                  : confirmed
+                    ? `${booking.host.firstName}’s mobile number isn’t available.`
+                    : 'Mobile numbers are shared only while a booking is confirmed.'
               }
             />
           </DetailCard>

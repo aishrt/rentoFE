@@ -25,12 +25,20 @@ export const LEGEND_ORDER: readonly BlockReason[] = [
   'ADMIN',
 ];
 
+/**
+ * Dates held for 30 minutes while a Guest pays. Nothing for the Host to answer yet: it becomes a booking or a
+ * request once they've paid, or the dates open again.
+ */
+export const isCheckout = (block: CalendarBlock) =>
+  block.reason === 'HOLD' && block.booking?.status === 'PAYMENT_PENDING';
+
 /** The short label on a block: the guest and booking for trips, or what it is. */
 export function blockLabel(block: CalendarBlock): string {
   switch (block.reason) {
     case 'BOOKED':
       return block.booking ? `${block.booking.guestFirstName} · ${block.booking.ref}` : 'Booked';
     case 'HOLD':
+      if (isCheckout(block)) return 'Guest checking out';
       return block.booking ? `Request pending · ${block.booking.guestFirstName}` : 'Request pending';
     case 'HOST_BLOCK':
       return block.note ? `Blocked · ${block.note}` : 'Blocked by you';

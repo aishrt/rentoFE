@@ -81,6 +81,8 @@ describe('TripsPage', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Cancelled' }));
 
     expect(await screen.findByText('Cancelled', { selector: 'span' })).toBeInTheDocument();
+    // No total on a trip that didn't happen: its page has the refund.
+    expect(screen.queryByText(/Total/)).not.toBeInTheDocument();
     expect(router.state.location.search).toBe('?tab=cancelled');
     expect(sent.at(-1)?.query.get('group')).toBe('cancelled');
   });
