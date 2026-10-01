@@ -47,6 +47,7 @@ export const samplePolicies: PublicPolicies = {
     hostCancellationFeeCents: 0,
   },
   protectionPlans: [],
+  roadsideAssistance: { phone: '' },
   eligibility: {
     minAge: 21,
     minYearsLicensed: 1,

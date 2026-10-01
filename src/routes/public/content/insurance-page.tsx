@@ -36,6 +36,8 @@ type PoliciesQuery = ReturnType<typeof usePolicies>;
 
 function PlansSection({ policies }: { policies: PoliciesQuery }) {
   const included = policies.data && includedPlan(policies.data.protectionPlans);
+  // The insurance partner's number, set by an admin (plan §16, item 9); hidden until it's set.
+  const roadside = policies.data?.roadsideAssistance.phone;
 
   return (
     <section aria-labelledby="plans-heading" className="py-16 sm:py-24 lg:py-28">
@@ -61,6 +63,18 @@ function PlansSection({ policies }: { policies: PoliciesQuery }) {
             />
           )}
           {policies.data && <ProtectionPlans plans={policies.data.protectionPlans} />}
+          {roadside && (
+            <p className="mt-6 text-muted">
+              Broken down, or a flat battery? Call roadside assistance on{' '}
+              <a
+                href={`tel:${roadside.replace(/[^\d+]/g, '')}`}
+                className="link-underline font-medium whitespace-nowrap text-primary"
+              >
+                {roadside}
+              </a>
+              .
+            </p>
+          )}
         </div>
       </Container>
     </section>

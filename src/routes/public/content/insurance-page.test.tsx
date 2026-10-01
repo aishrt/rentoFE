@@ -37,6 +37,26 @@ describe('InsurancePage', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the roadside assistance number once an admin has set it', async () => {
+    mockApi({ 'GET /policies': { status: 200, body: policiesFixture } });
+    const { unmount } = renderWithProviders(<InsurancePage />, '/insurance');
+    await screen.findAllByRole('article');
+    expect(screen.queryByText(/Call roadside assistance/)).not.toBeInTheDocument();
+    unmount();
+
+    mockApi({
+      'GET /policies': {
+        status: 200,
+        body: { ...policiesFixture, roadsideAssistance: { phone: '0800 123 456' } },
+      },
+    });
+    renderWithProviders(<InsurancePage />, '/insurance');
+    expect(await screen.findByRole('link', { name: '0800 123 456' })).toHaveAttribute(
+      'href',
+      'tel:0800123456',
+    );
+  });
+
   it('explains the excess for each plan, and that final terms come from the insurance partner', async () => {
     mockApi({ 'GET /policies': { status: 200, body: policiesFixture } });
     renderWithProviders(<InsurancePage />, '/insurance');

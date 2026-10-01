@@ -1,9 +1,22 @@
-import type { Faq, LegalPage, PublicPolicies } from '@/api/types';
+import type { DecisionKey, PlatformSettings, PlatformSettingsResponse } from '@/api/types';
 
-/* Test data for the public content pages: the launch defaults from the backend's default-settings.ts. */
+/** The backend's launch defaults (backend/src/modules/admin/default-settings.ts), for tests. */
 
-export const policiesFixture: PublicPolicies = {
-  fees: { guestServiceFeePct: 10, hostCommissionPct: 20, gstRatePct: 15 },
+const DECISIONS: DecisionKey[] = [
+  'fees',
+  'cancellation',
+  'securityDeposit',
+  'eligibility',
+  'gst',
+  'protection',
+  'reviewsAndTrips',
+  'company',
+  'bookingRules',
+  'verificationServices',
+];
+
+export const settingsFixture: PlatformSettings = {
+  fees: { guestServiceFeePct: 10, hostCommissionPct: 20, gstRatePct: 15, platformPaysCardFees: true },
   cancellation: {
     tiers: [
       {
@@ -39,6 +52,8 @@ export const policiesFixture: PublicPolicies = {
     hostSelectableTiers: ['FLEXIBLE', 'MODERATE', 'STRICT'],
     defaultTier: 'MODERATE',
     hostCancellationFeeCents: 0,
+    guestCancellationHostSharePct: 100,
+    refundUnusedDaysOnEarlyReturn: false,
   },
   protectionPlans: [
     {
@@ -66,12 +81,17 @@ export const policiesFixture: PublicPolicies = {
       mandatory: false,
     },
   ],
-  roadsideAssistance: { phone: '' },
   eligibility: {
     minAge: 21,
     minYearsLicensed: 1,
     acceptedLicenceClasses: ['NZ_FULL', 'OVERSEAS'],
     overseasNeedsEnglishProof: true,
+  },
+  verification: {
+    identityBeforeFirstBooking: true,
+    identityForHosts: true,
+    phoneAtCheckout: true,
+    emailBeforeTripStart: true,
   },
   vehicles: {
     requiredDocuments: ['REGO', 'WOF', 'INSURANCE'],
@@ -81,17 +101,22 @@ export const policiesFixture: PublicPolicies = {
     minPhotoHeightPx: 800,
     seats: { min: 2, max: 12 },
     doors: { min: 2, max: 5 },
-    dailyPriceCents: { min: 2000, max: 200_000 },
+    dailyPriceCents: { min: 2_000, max: 200_000 },
     maxDiscountPct: 50,
   },
+  reviews: { windowDays: 14, revealTogether: true, homepageThreshold: 10 },
+  trips: { lateReturnGraceMinutes: 30, damageReportWindowHours: 48, threadReadOnlyDays: 30 },
   search: { maxTripDays: 90, radiusKm: { min: 5, default: 25, max: 300 } },
+  retention: { financialRecordsYears: 7, idImagesDays: 90, tripRecordsYears: 2, auditLogYears: 7 },
+  risk: { failedPaymentsPerDay: 3, bookingsPerDay: 5, reportsBeforeFlag: 3, hostCancellationsPer90Days: 3 },
+  sms: { quietHoursStart: '21:00', quietHoursEnd: '07:00' },
   hostEstimator: {
     bookedDaysPerMonth: 10,
     dailyCentsByBodyType: {
-      HATCHBACK: 6000,
-      SEDAN: 7000,
-      WAGON: 7500,
-      SUV: 9500,
+      HATCHBACK: 6_000,
+      SEDAN: 7_000,
+      WAGON: 7_500,
+      SUV: 9_500,
       UTE: 10_000,
       VAN: 11_000,
       PEOPLE_MOVER: 11_000,
@@ -99,55 +124,15 @@ export const policiesFixture: PublicPolicies = {
       CONVERTIBLE: 13_000,
     },
   },
-  reviews: { windowDays: 14 },
-  trips: { lateReturnGraceMinutes: 30 },
+  business: { legalName: 'Rento Vroom', gstNumber: '', supportEmail: 'rentovroom@gmail.com' },
+  decisions: Object.fromEntries(
+    DECISIONS.map((key) => [key, { status: 'PENDING', note: '' }]),
+  ) as PlatformSettings['decisions'],
+  securityDeposit: { amountCents: 0 },
+  roadsideAssistance: { phone: '' },
+  brandChecks: { finalLogoSupplied: false, trademarkSearchDone: false, companyNameCheckDone: false },
+  bookingRules: { enquiriesBeforeBooking: false, additionalDrivers: false },
+  verificationServices: { nzLicenceCheck: false, plateLookup: false },
 };
 
-export const faqsFixture: Faq[] = [
-  {
-    id: 'f1',
-    question: 'How is Rento Vroom different from a rental company?',
-    answer: 'Every car belongs to a local host, not a rental fleet.',
-    category: 'Getting started',
-    audience: 'ALL',
-  },
-  {
-    id: 'f2',
-    question: 'Who can rent a car?',
-    answer: 'You need a valid driver licence and to complete our verification checks.',
-    category: 'Booking',
-    audience: 'GUEST',
-  },
-  {
-    id: 'f3',
-    question: 'How do I list my car?',
-    answer: 'Choose Become a Host, then add your car in six guided steps.',
-    category: 'Hosting',
-    audience: 'HOST',
-  },
-  {
-    id: 'f4',
-    question: 'Can I cancel a booking?',
-    answer: 'Yes. Each listing shows its cancellation policy before you book.',
-    category: 'Booking',
-    audience: 'ALL',
-  },
-  {
-    id: 'f5',
-    question: 'When do hosts get paid?',
-    answer: 'Your earnings for a trip are released after the trip starts.',
-    category: 'Hosting',
-    audience: 'HOST',
-  },
-];
-
-export function legalPageFixture(overrides: Partial<LegalPage> = {}): LegalPage {
-  return {
-    key: 'legal.terms',
-    version: '2026-09-28',
-    title: 'Terms & Conditions',
-    markdown: '# Terms & Conditions\n\n*This is placeholder text.*\n\n## Using Rento Vroom\n\nBe kind.',
-    updatedAt: '2026-09-28T10:03:51.714Z',
-    ...overrides,
-  };
-}
+export const settingsResponseFixture: PlatformSettingsResponse = { settings: settingsFixture };
