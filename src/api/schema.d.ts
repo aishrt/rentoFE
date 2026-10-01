@@ -2699,6 +2699,8 @@ export interface paths {
                     q?: string;
                     /** @description One per search, passed again to GET /places/{id}, so Google bills it once */
                     sessionToken?: string;
+                    /** @description Only our places, without Google street addresses (the Host place picker) */
+                    oursOnly?: boolean;
                 };
                 header?: never;
                 path?: never;

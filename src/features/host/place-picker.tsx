@@ -47,7 +47,7 @@ interface PlacePickerProps {
  * Chooses one of our NZ places (plan §3, `places`): a suburb or town for an address, whose coordinates
  * become where the car is found in search, or an airport for airport delivery. It works like the site's
  * Combobox: the list opens as you type or on a click, arrows move, Enter chooses, Escape closes, and focus
- * stays in the field. Street addresses from Google Places aren't available yet, so the street is typed.
+ * stays in the field. The street is typed beside it, so it asks for our places only, never Google's addresses.
  */
 export function PlacePicker({
   value,
@@ -70,9 +70,14 @@ export function PlacePicker({
   const query = useDebounced(text, DEBOUNCE);
 
   const suggestions = useQuery({
-    queryKey: ['places', 'suggest', query],
+    queryKey: ['places', 'suggest', query, 'ours'],
+    // Only our places: the street is typed, so Google's addresses would be fetched (and billed) for nothing.
     queryFn: async ({ signal }) =>
-      (await unwrap(client.GET('/places/suggest', { params: { query: { q: query } }, signal }))).suggestions,
+      (
+        await unwrap(
+          client.GET('/places/suggest', { params: { query: { q: query, oursOnly: true } }, signal }),
+        )
+      ).suggestions,
     enabled: open,
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
