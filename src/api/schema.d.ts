@@ -7439,10 +7439,10 @@ export interface components {
                 endTime: string;
             }[];
         };
-        /** @description Where to send one file. Afterwards, attach it with the key the upload returned: local uploads answer `{ key }`, Cloudinary answers `{ public_id }`. */
+        /** @description Where to send one file: the API itself in development (`local`), or the S3 bucket (`s3`, a presigned POST with no cookies). */
         UploadTarget: {
             /** @enum {string} */
-            driver: "local" | "cloudinary";
+            driver: "local" | "s3";
             /** @enum {string} */
             method: "PUT" | "POST";
             url: string;
@@ -7450,10 +7450,12 @@ export interface components {
             headers?: {
                 [key: string]: string;
             };
-            /** @description POST: a multipart form with these fields and the file as `file` */
+            /** @description POST: a multipart form with these fields, then the file as `file` */
             fields?: {
                 [key: string]: string;
             };
+            /** @description Attach the file to the car with this once it is sent */
+            key: string;
             maxBytes: number;
         };
         UploadRequest: {

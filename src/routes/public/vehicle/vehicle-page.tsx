@@ -27,6 +27,7 @@ import { vehicleQueryOptions } from '@/features/vehicles/vehicle-api';
 import type { ListingLinkState } from '@/features/vehicles/vehicle-card';
 import { ComplianceSection, SpecsSection } from '@/features/vehicles/vehicle-facts';
 import { formatNzdFromCents } from '@/lib/format';
+import { smallPhoto } from '@/lib/photos';
 import {
   DeliveryOptionsSection,
   PoliciesSection,
@@ -68,7 +69,7 @@ function ListingSkeleton({ card }: { card?: ListingLinkState['card'] }) {
             <div className="relative aspect-4/3 overflow-hidden bg-ink/6 sm:aspect-3/2 sm:rounded-sheet">
               {card?.photo ? (
                 <img
-                  src={card.photo.url}
+                  src={smallPhoto(card.photo.url)}
                   alt={card.photo.alt}
                   className="size-full object-cover"
                   style={{ viewTransitionName: vehiclePhotoTransitionName(card.id) }}

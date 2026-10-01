@@ -12,6 +12,7 @@ import { staggerIndex } from '@/components/motion/presets';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
 import { formatNzdFromCents } from '@/lib/format';
+import { smallPhoto } from '@/lib/photos';
 import { AngleIllustration } from './angle-illustrations';
 import { deleteVehicleRequest, hostKeys, useHostVehicles } from './host-api';
 import { InlineConfirm } from './inline-confirm';
@@ -74,7 +75,7 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
         >
           {vehicle.photo ? (
             <img
-              src={vehicle.photo}
+              src={smallPhoto(vehicle.photo)}
               alt=""
               loading="lazy"
               className="absolute inset-0 size-full object-cover"

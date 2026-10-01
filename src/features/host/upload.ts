@@ -4,8 +4,8 @@ import type { UploadRequest, UploadTarget } from '@/api/types';
 /*
  * Photos and documents go straight from the browser to storage (plan §3, "Public and private files"): the
  * API signs a target for one file, the browser sends it there with progress, then the car's photos or
- * documents endpoint attaches what came back. Development stores files on the API itself (the `local`
- * driver, which needs the session cookie); production sends them to Cloudinary (no cookies).
+ * documents endpoint attaches the target's key. Development stores files on the API itself (the `local`
+ * driver, which needs the session cookie); production sends them to the S3 bucket (no cookies).
  */
 
 export type UploadPurpose = UploadRequest['purpose'];
@@ -58,14 +58,19 @@ interface SendOptions {
   /** 0 to 1 as the file goes up. */
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
-  /** The file name Cloudinary records. */
+  /** The file's name in a POST upload's form. */
   filename?: string;
 }
 
 function errorFrom(status: number, body: string): ApiError {
+  // S3 answers in XML: <Error><Code>EntityTooLarge</Code><Message>…</Message></Error>.
+  const s3Code = /<Code>(\w+)<\/Code>/.exec(body)?.[1];
+  if (s3Code === 'EntityTooLarge') return new ApiError(status, 'FILE_TOO_LARGE', 'Files can be up to 15 MB.');
+  if (s3Code === 'AccessDenied' && body.includes('Policy expired')) {
+    return new ApiError(status, 'UPLOAD_EXPIRED', 'This upload link has expired. Please try again.');
+  }
   try {
     const error = (JSON.parse(body) as { error?: { code?: string; message?: string } }).error;
-    // Cloudinary answers { error: { message } } without a code.
     if (error?.message) return new ApiError(status, error.code ?? 'UPLOAD_FAILED', error.message);
   } catch {
     // Not JSON: fall through to the general message.
@@ -79,7 +84,7 @@ function sendOnce(target: UploadTarget, file: Blob, options: SendOptions): Promi
     const xhr = new XMLHttpRequest();
     const local = target.driver === 'local';
     xhr.open(local ? 'PUT' : 'POST', target.url);
-    // The local driver checks the session cookie; Cloudinary is another site and must not get it.
+    // The local driver checks the session cookie; S3 is another site and must not get it.
     xhr.withCredentials = local;
 
     let body: Blob | FormData = file;
@@ -100,15 +105,9 @@ function sendOnce(target: UploadTarget, file: Blob, options: SendOptions): Promi
         reject(errorFrom(xhr.status, xhr.responseText));
         return;
       }
-      try {
-        const result = JSON.parse(xhr.responseText) as { key?: string; public_id?: string };
-        const reference = local ? result.key : result.public_id;
-        if (!reference) throw new Error('No reference');
-        options.onProgress?.(1);
-        resolve(reference);
-      } catch {
-        reject(new ApiError(xhr.status, 'UPLOAD_FAILED', "We couldn't upload that file. Please try again."));
-      }
+      // S3 answers 204 with no body; the key was fixed when the target was signed.
+      options.onProgress?.(1);
+      resolve(target.key);
     };
     xhr.onerror = () => reject(new ApiError(0, 'NETWORK_ERROR', NETWORK_MESSAGE));
     xhr.onabort = () => reject(new DOMException('The upload was cancelled.', 'AbortError'));
@@ -118,9 +117,9 @@ function sendOnce(target: UploadTarget, file: Blob, options: SendOptions): Promi
 }
 
 /**
- * Sends the file to its signed target and resolves with what to attach: the local driver's `key`, or
- * Cloudinary's `public_id`. A local upload whose 15-minute access cookie ran out renews it once and retries,
- * as the API client does for every other call.
+ * Sends the file to its signed target and resolves with the target's `key`, which attaches it. A local
+ * upload whose 15-minute access cookie ran out renews it once and retries, as the API client does for
+ * every other call.
  */
 export async function sendFile(target: UploadTarget, file: Blob, options: SendOptions = {}): Promise<string> {
   try {

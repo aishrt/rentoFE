@@ -6,6 +6,7 @@ import type { VehicleCard as VehicleCardData } from '@/api/types';
 import { Badge } from '@/components/ui/badge';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
+import { smallPhoto } from '@/lib/photos';
 import { SaveButton } from './save-button';
 import { vehicleQueryOptions } from './vehicle-api';
 import {
@@ -104,7 +105,7 @@ export function VehicleCard({
       <div className="relative aspect-4/3 overflow-hidden rounded-t-card bg-ink/6">
         {vehicle.photo ? (
           <img
-            src={vehicle.photo.url}
+            src={smallPhoto(vehicle.photo.url)}
             alt={vehicle.photo.alt}
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : undefined}

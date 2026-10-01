@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import type { BookingSummary } from '@/api/types';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { smallPhoto } from '@/lib/photos';
 import {
   awaitsVerification,
   formatNzDateTime,
@@ -56,7 +57,7 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
         <div className="aspect-4/3 w-24 shrink-0 overflow-hidden rounded-control bg-canvas sm:w-32">
           {booking.vehicle.photoUrl ? (
             <img
-              src={booking.vehicle.photoUrl}
+              src={smallPhoto(booking.vehicle.photoUrl)}
               alt=""
               loading="lazy"
               className="size-full object-cover"

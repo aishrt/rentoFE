@@ -40,8 +40,11 @@ class FakeXhr {
     this.upload.onprogress?.({ lengthComputable: true, loaded, total });
   }
   respond(status: number, body: unknown) {
+    this.respondText(status, JSON.stringify(body));
+  }
+  respondText(status: number, text: string) {
     this.status = status;
-    this.responseText = JSON.stringify(body);
+    this.responseText = text;
     this.onload?.();
   }
 }
@@ -60,19 +63,21 @@ const localTarget: UploadTarget = {
   method: 'PUT',
   url: 'http://api.test/api/v1/uploads/local/signed-token',
   headers: { 'Content-Type': 'image/jpeg' },
+  key: 'vehicles/v1/photos/front.jpg',
   maxBytes: 15 * 1024 * 1024,
 };
 
-const cloudinaryTarget: UploadTarget = {
-  driver: 'cloudinary',
+const s3Target: UploadTarget = {
+  driver: 's3',
   method: 'POST',
-  url: 'https://api.cloudinary.com/v1_1/rento/auto/upload',
+  url: 'https://rento-vroom-media.s3.ap-southeast-2.amazonaws.com/',
   fields: {
-    folder: 'rento-vroom/vehicles/v1/documents',
-    timestamp: '1790000000',
-    api_key: 'key',
-    signature: 'sig',
+    key: 'private/vehicles/v1/documents/wof.pdf',
+    'Content-Type': 'application/pdf',
+    Policy: 'policy',
+    'X-Amz-Signature': 'sig',
   },
+  key: 'private/vehicles/v1/documents/wof.pdf',
   maxBytes: 15 * 1024 * 1024,
 };
 
@@ -96,20 +101,44 @@ describe('sendFile', () => {
     expect(progress).toEqual([0.5, 1]);
   });
 
-  it('POSTs a Cloudinary upload as a form with every signed field and the file, without cookies', async () => {
-    FakeXhr.reply = (xhr) => xhr.respond(200, { public_id: 'rento-vroom/vehicles/v1/documents/rego' });
+  it('POSTs an S3 upload as a form with every signed field, then the file, without cookies', async () => {
+    FakeXhr.reply = (xhr) => xhr.respondText(204, '');
 
-    const reference = await sendFile(cloudinaryTarget, photo, { filename: 'rego.jpg' });
+    const reference = await sendFile(s3Target, photo, { filename: 'wof.jpg' });
 
-    expect(reference).toBe('rento-vroom/vehicles/v1/documents/rego');
+    expect(reference).toBe(s3Target.key);
     const [xhr] = FakeXhr.sent;
-    expect(xhr).toMatchObject({ method: 'POST', url: cloudinaryTarget.url, withCredentials: false });
+    expect(xhr).toMatchObject({ method: 'POST', url: s3Target.url, withCredentials: false });
     const form = xhr?.body as FormData;
     expect(form).toBeInstanceOf(FormData);
     expect(Object.fromEntries([...form.entries()].filter(([name]) => name !== 'file'))).toEqual(
-      cloudinaryTarget.fields,
+      s3Target.fields,
     );
-    expect((form.get('file') as File).name).toBe('rego.jpg');
+    // S3 reads the fields up to the file and ignores anything after it.
+    expect([...form.keys()].at(-1)).toBe('file');
+    expect((form.get('file') as File).name).toBe('wof.jpg');
+  });
+
+  it("explains S3's refusals: a file that's too large, or a link that expired", async () => {
+    FakeXhr.reply = (xhr) =>
+      xhr.respondText(
+        400,
+        '<Error><Code>EntityTooLarge</Code><Message>Your proposed upload exceeds the maximum allowed size</Message></Error>',
+      );
+    await expect(sendFile(s3Target, photo)).rejects.toMatchObject({
+      code: 'FILE_TOO_LARGE',
+      message: 'Files can be up to 15 MB.',
+    });
+
+    FakeXhr.reply = (xhr) =>
+      xhr.respondText(
+        403,
+        '<Error><Code>AccessDenied</Code><Message>Invalid according to Policy: Policy expired.</Message></Error>',
+      );
+    await expect(sendFile(s3Target, photo)).rejects.toMatchObject({ code: 'UPLOAD_EXPIRED' });
+
+    FakeXhr.reply = (xhr) => xhr.respondText(403, '<Error><Code>AccessDenied</Code></Error>');
+    await expect(sendFile(s3Target, photo)).rejects.toMatchObject({ code: 'UPLOAD_FAILED' });
   });
 
   it('renews an expired session once and tries a local upload again', async () => {
@@ -136,7 +165,7 @@ describe('sendFile', () => {
 });
 
 describe('uploading to a car', () => {
-  it('signs, uploads and attaches a photo with the key the upload returned', async () => {
+  it("signs, uploads and attaches a photo with the target's key", async () => {
     let signature: unknown;
     let attached: unknown;
     mockApi({
@@ -149,7 +178,7 @@ describe('uploading to a car', () => {
         return { status: 201, body: { vehicle: { id: 'v1' } } };
       },
     });
-    FakeXhr.reply = (xhr) => xhr.respond(201, { key: 'vehicles/v1/photos/abc.jpg' });
+    FakeXhr.reply = (xhr) => xhr.respond(201, { key: localTarget.key });
 
     await uploadVehiclePhoto({
       vehicleId: 'v1',
@@ -172,30 +201,30 @@ describe('uploading to a car', () => {
     });
     expect(attached).toEqual({
       type: 'FRONT',
-      upload: 'vehicles/v1/photos/abc.jpg',
+      upload: localTarget.key,
       width: 2000,
       height: 1500,
       qualityFlag: 'DARK',
     });
   });
 
-  it("attaches a document with Cloudinary's public_id and its expiry", async () => {
+  it('attaches a document uploaded to S3 with its key and its expiry', async () => {
     let attached: unknown;
     mockApi({
-      'POST /uploads/signature': { status: 200, body: cloudinaryTarget },
+      'POST /uploads/signature': { status: 200, body: s3Target },
       'POST /host/vehicles/v1/documents': (init) => {
         attached = JSON.parse(String(init?.body));
         return { status: 201, body: { vehicle: { id: 'v1' } } };
       },
     });
-    FakeXhr.reply = (xhr) => xhr.respond(200, { public_id: 'rento-vroom/vehicles/v1/documents/wof' });
+    FakeXhr.reply = (xhr) => xhr.respondText(204, '');
     const pdf = new File(['%PDF'], 'wof.pdf', { type: 'application/pdf' });
 
     await uploadVehicleDocument({ vehicleId: 'v1', type: 'WOF', file: pdf, expiry: '2027-03-31' });
 
     expect(attached).toEqual({
       type: 'WOF',
-      upload: 'rento-vroom/vehicles/v1/documents/wof',
+      upload: s3Target.key,
       expiry: '2027-03-31',
     });
   });

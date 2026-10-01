@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Expand, ImageOff } from 'lucide-react';
 import { animate, m, useMotionValue, useReducedMotion, type PanInfo } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { cn } from '@/lib/cn';
+import { smallPhoto } from '@/lib/photos';
 import { motion } from '@/styles/tokens';
 import { IconButton } from './icon-button';
 
@@ -302,7 +303,7 @@ export function Gallery({
                 )}
               >
                 <img
-                  src={photo.url}
+                  src={smallPhoto(photo.url)}
                   alt=""
                   loading="lazy"
                   decoding="async"
