@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MfaStatus } from '@/api/types';
+import { settingsResponseFixture } from '@/features/admin/platform-settings/test-fixtures';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminSettingsPage } from './settings-page';
 
@@ -13,6 +14,9 @@ const render = () =>
   renderWithRouter([{ path: '/admin/settings', element: <AdminSettingsPage /> }], '/admin/settings');
 
 const section = () => screen.findByRole('region', { name: 'Two-factor sign-in' });
+
+// The admin's settings menu loads the platform settings alongside.
+const platformSettingsRoute = { 'GET /admin/settings': { status: 200, body: settingsResponseFixture } };
 
 const phone = { id: 'd1', name: 'Work phone', addedAt: '2026-09-01T00:00:00.000Z' };
 const tablet = {
@@ -41,6 +45,7 @@ describe('AdminSettingsPage: two-factor sign-in', () => {
     let status = statusWith([]);
     let sent: unknown;
     mockApi({
+      ...platformSettingsRoute,
       'POST /auth/session': { status: 200, body: { user: { ...adminUser, mfaEnabled: false } } },
       'GET /me/mfa': () => ({ status: 200, body: status }),
       'POST /me/mfa/setup': setupResponse,
@@ -82,6 +87,7 @@ describe('AdminSettingsPage: two-factor sign-in', () => {
     let status = statusWith([phone]);
     let sent: unknown;
     mockApi({
+      ...platformSettingsRoute,
       'POST /auth/session': { status: 200, body: { user: adminUser } },
       'GET /me/mfa': () => ({ status: 200, body: status }),
       'POST /me/mfa/setup': setupResponse,
@@ -116,6 +122,7 @@ describe('AdminSettingsPage: two-factor sign-in', () => {
   it('removes one of two apps once a code is entered', async () => {
     const codes: unknown[] = [];
     mockApi({
+      ...platformSettingsRoute,
       'POST /auth/session': { status: 200, body: { user: adminUser } },
       'GET /me/mfa': { status: 200, body: statusWith([phone, tablet]) },
       'POST /me/mfa/devices/d1/remove': (init) => {
@@ -155,6 +162,7 @@ describe('AdminSettingsPage: two-factor sign-in', () => {
   it('turns it off once a code is entered', async () => {
     let sent: unknown;
     mockApi({
+      ...platformSettingsRoute,
       'POST /auth/session': { status: 200, body: { user: adminUser } },
       'GET /me/mfa': { status: 200, body: statusWith([phone]) },
       'POST /me/mfa/disable': (init) => {

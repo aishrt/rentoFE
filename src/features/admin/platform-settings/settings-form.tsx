@@ -20,9 +20,10 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
 import { platformSettingsQueryKey, savePlatformSettingsRequest, settingsErrorMessages } from './settings-api';
+import { useReportUnsaved } from './unsaved-changes';
 
 interface SettingsFormProps<Values extends FieldValues> {
-  /** Also the card's id, for the links in the summary at the top of the tab. */
+  /** The client's decision these settings wait for. */
   decision: DecisionKey;
   title: string;
   description: ReactNode;
@@ -64,6 +65,7 @@ export function SettingsForm<Values extends FieldValues>({
   const [note, setNote] = useState(saved.note);
   const save = useMutation({ mutationFn: savePlatformSettingsRequest });
   const decisionChanged = confirmed !== (saved.status === 'CONFIRMED') || note.trim() !== saved.note;
+  useReportUnsaved(decision, form.formState.isDirty || decisionChanged);
 
   const onSubmit = form.handleSubmit(async (values) => {
     // The latest settings, in case another card was saved since this one loaded.
@@ -87,8 +89,8 @@ export function SettingsForm<Values extends FieldValues>({
   });
 
   return (
-    <Card asChild className="scroll-mt-24 p-6 sm:p-8">
-      <section id={`settings-${decision}`} aria-labelledby={headingId}>
+    <Card asChild className="p-6 sm:p-8">
+      <section aria-labelledby={headingId}>
         <div className="mb-6">
           {saved.status === 'CONFIRMED' ? (
             <Badge variant="primary">Confirmed by the client</Badge>
