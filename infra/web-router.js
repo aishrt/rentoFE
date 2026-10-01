@@ -1,6 +1,7 @@
-// CloudFront Function `rento-vroom-web-router` (viewer request) on the website distribution
-// E19WXD8ZXT5ZQM (plan §1.4, §13.1). It is published by hand, not by the pipeline; see
-// "Changing the page router" in DEPLOYING_UPDATES.md. Runtime: cloudfront-js-2.0.
+// CloudFront Functions `rento-vroom-web-router` (viewer request) on the website distribution
+// E19WXD8ZXT5ZQM, and `rento-vroom-staging-router` on the staging website's distribution (plan §1.4,
+// §13.1). Both run this file. They are published by hand, not by the pipeline; see "Changing the page
+// router" in DEPLOYING_UPDATES.md. Runtime: cloudfront-js-2.0.
 // It runs on the default behaviour and on the /cars/* and /rental/* behaviours.
 
 // The static public pages that have their own prerendered file (src/seo/pages.ts; a test keeps
@@ -31,6 +32,10 @@ var PAGES = [
 // send them to api.<domain>/pages (plan §1.4). Their URLs pass through unchanged.
 var BACKEND_PAGES = ['/cars/', '/rental/'];
 
+// The staging website has no such behaviours: the backend builds those pages from the live website's
+// HTML, so on staging they load the staging app like any other page.
+var STAGING_HOST = 'staging.rentovroom.com';
+
 function queryString(request) {
   var qs = Object.keys(request.querystring)
     .map(function (k) {
@@ -60,8 +65,9 @@ function handler(event) {
   var uri = request.uri;
   if (uri.length > 1 && uri.charAt(uri.length - 1) === '/') uri = uri.slice(0, -1);
 
-  for (var i = 0; i < BACKEND_PAGES.length; i++) {
-    if (request.uri.indexOf(BACKEND_PAGES[i]) === 0) {
+  var backendPages = request.headers.host.value === STAGING_HOST ? [] : BACKEND_PAGES;
+  for (var i = 0; i < backendPages.length; i++) {
+    if (request.uri.indexOf(backendPages[i]) === 0) {
       // One URL per page: "/cars/x/" moves to "/cars/x", and "/cars/" to "/cars" (Browse cars).
       if (uri !== request.uri) return redirect(uri + queryString(request));
       return request;

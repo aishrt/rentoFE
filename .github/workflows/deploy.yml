@@ -1,18 +1,22 @@
-# Deploys the website on every push to master (plan §13.3): lint, test, check the API types against the
-# backend's contract, build with the production API address, check the JavaScript and Lighthouse budgets,
-# upload to S3 (hashed assets cached for a year, everything else no-cache, nothing deleted so open pages
-# keep working) and refresh CloudFront.
-# Pull requests into master (including Dependabot's) run the checks only; they never deploy.
+# Deploys the website (plan §13.3): lint, test, check the API types against the backend's contract, build
+# with the API address, check the JavaScript and Lighthouse budgets, upload to S3 (hashed assets cached for
+# a year, everything else no-cache, nothing deleted so open pages keep working) and refresh CloudFront.
+# - A push to master deploys the live website, www.rentovroom.com.
+# - A push to staging deploys staging.rentovroom.com, to try a change before it goes to master. Both
+#   websites call the same API, api.rentovroom.com; the API types are checked against the backend's
+#   branch of the same name.
+# Pull requests into master or staging (including Dependabot's) run the checks only; they never deploy.
 #
-# AWS access uses GitHub's OIDC login and the IAM role rento-vroom-github-frontend, which trusts only
-# pushes to master of aishrt/rentoFE. No AWS keys are stored in GitHub.
+# AWS access uses GitHub's OIDC login: the IAM role rento-vroom-github-frontend trusts only pushes to master
+# of aishrt/rentoFE, and rento-vroom-github-frontend-staging only pushes to staging. No AWS keys are stored
+# in GitHub.
 name: Deploy frontend
 
 on:
   push:
-    branches: [master]
+    branches: [master, staging]
   pull_request:
-    branches: [master]
+    branches: [master, staging]
   workflow_dispatch:
 
 permissions:
@@ -22,16 +26,21 @@ permissions:
 # One deploy at a time; a newer push waits for the running one instead of cancelling it.
 # A pull request's checks run on their own, and a newer commit to it cancels the older run.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('checks-{0}', github.ref) || 'deploy-frontend-production' }}
+  group: ${{ github.event_name == 'pull_request' && format('checks-{0}', github.ref) || format('deploy-frontend-{0}', github.ref_name) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Each setting is the staging website's for the staging branch (or a pull request into it), and the live
+# website's otherwise.
 env:
   AWS_REGION: ap-southeast-2
-  AWS_ROLE_ARN: arn:aws:iam::935937182366:role/rento-vroom-github-frontend
-  S3_BUCKET: rento-vroom-web-prod-935937182366
-  CLOUDFRONT_DISTRIBUTION_ID: E19WXD8ZXT5ZQM
+  SITE_ENVIRONMENT: ${{ (github.base_ref || github.ref_name) == 'staging' && 'staging' || 'production' }}
+  AWS_ROLE_ARN: ${{ (github.base_ref || github.ref_name) == 'staging' && 'arn:aws:iam::935937182366:role/rento-vroom-github-frontend-staging' || 'arn:aws:iam::935937182366:role/rento-vroom-github-frontend' }}
+  S3_BUCKET: ${{ (github.base_ref || github.ref_name) == 'staging' && 'rento-vroom-web-staging-935937182366' || 'rento-vroom-web-prod-935937182366' }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ (github.base_ref || github.ref_name) == 'staging' && 'E3SAI1QCIAI036' || 'E19WXD8ZXT5ZQM' }}
+  SITE_URL: ${{ (github.base_ref || github.ref_name) == 'staging' && 'https://staging.rentovroom.com' || 'https://www.rentovroom.com' }}
+  # The backend branch whose openapi.json the website must match.
+  API_BRANCH: ${{ (github.base_ref || github.ref_name) == 'staging' && 'staging' || 'master' }}
   API_URL: https://api.rentovroom.com
-  SITE_URL: https://www.rentovroom.com
   # The website's Sentry project (src/lib/monitoring.ts). Public by design: it ends up in the browser code.
   SENTRY_DSN: https://e2eb932d84d1dd9745c2e79ed4ef90c9@o4512162398339072.ingest.us.sentry.io/4512162483339264
 
@@ -50,16 +59,16 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      # src/api/schema.d.ts must match the contract the live backend publishes (plan §2.3).
+      # src/api/schema.d.ts must match the contract the backend publishes on the same branch (plan §2.3).
       - name: Check the API types match the backend
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -H "Accept: application/vnd.github.raw" "repos/aishrt/rentoBe/contents/openapi.json?ref=master" \
+          gh api -H "Accept: application/vnd.github.raw" "repos/aishrt/rentoBe/contents/openapi.json?ref=$API_BRANCH" \
             > "$RUNNER_TEMP/openapi.json"
           npx openapi-typescript "$RUNNER_TEMP/openapi.json" -o "$RUNNER_TEMP/schema.d.ts"
           if ! diff -u src/api/schema.d.ts "$RUNNER_TEMP/schema.d.ts"; then
-            echo "::error::src/api/schema.d.ts doesn't match the backend's openapi.json on master. Pull the backend, run npm run api:types and commit the result."
+            echo "::error::src/api/schema.d.ts doesn't match the backend's openapi.json on $API_BRANCH. Pull the backend, run npm run api:types and commit the result."
             exit 1
           fi
 
@@ -71,7 +80,7 @@ jobs:
           VITE_API_URL: ${{ env.API_URL }}
           VITE_SITE_URL: ${{ env.SITE_URL }}
           VITE_SENTRY_DSN: ${{ env.SENTRY_DSN }}
-          VITE_SENTRY_ENVIRONMENT: production
+          VITE_SENTRY_ENVIRONMENT: ${{ env.SITE_ENVIRONMENT }}
           VITE_RELEASE: rento-vroom-frontend@${{ github.sha }}
           # Stripe's publishable key (public by design): the repository variable STRIPE_PUBLISHABLE_KEY,
           # pk_test_… until launch, then pk_live_…. Unset, the payment pages say Stripe isn't set up.
@@ -138,7 +147,8 @@ jobs:
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors -o /dev/null "$SITE_URL/login"
 
       # Each public page must be served its own prerendered file by the CloudFront Function
-      # (plan §1.4). If this fails, publish infra/web-router.js (DEPLOYING_UPDATES.md, section 6).
+      # (plan §1.4). If this fails, publish infra/web-router.js to the website's function
+      # (rento-vroom-web-router, or rento-vroom-staging-router for staging; DEPLOYING_UPDATES.md, section 6).
       - name: Check page routing
         if: github.event_name != 'pull_request'
         run: |

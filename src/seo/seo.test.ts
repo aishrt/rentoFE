@@ -134,6 +134,15 @@ describe('CloudFront page router (infra/web-router.js)', () => {
     expect(route('/cars').uri).toBe('/pages/cars.html');
   });
 
+  it('loads the staging app for vehicle and destination pages on the staging website', () => {
+    const staging = (uri: string) => route(uri, 'staging.rentovroom.com');
+    expect(staging('/cars/2021-toyota-corolla-auckland').uri).toBe('/index.html');
+    expect(staging('/rental/queenstown').uri).toBe('/index.html');
+    expect(staging('/cars').uri).toBe('/pages/cars.html');
+    expect(staging('/how-it-works').uri).toBe('/pages/how-it-works.html');
+    expect(staging('/assets/index-abc123.js').uri).toBe('/assets/index-abc123.js');
+  });
+
   it('moves the bare domain to www, keeping the path and query', () => {
     const response = route('/search', 'rentovroom.com', { where: { value: 'Queenstown' } });
     expect(response.statusCode).toBe(301);
