@@ -26,6 +26,12 @@ export type StaffInviteInput =
   paths['/admin/staff/invites']['post']['requestBody']['content']['application/json'];
 /** Who a support team invitation is for, shown before they choose a password. */
 export type StaffInviteDetails = Schemas['StaffInviteDetails'];
+/** Everything an admin can change on the Platform settings tab (plan §3 `platformSettings`, §16). */
+export type PlatformSettings = Schemas['PlatformSettings'];
+export type PlatformSettingsResponse = Schemas['PlatformSettingsResponse'];
+export type PlatformSettingsUpdate = Schemas['PlatformSettingsUpdate'];
+/** One of the client's decisions, each PENDING until an admin marks it confirmed. */
+export type DecisionKey = keyof PlatformSettings['decisions'];
 /** The day's exchange rates per NZ$1, for estimates in other currencies. */
 export type ExchangeRates = Schemas['ExchangeRates'];
 /** A NZ$1 sandbox payment from the staff portal, and how it went. */

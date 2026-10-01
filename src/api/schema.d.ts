@@ -1768,6 +1768,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The platform settings in force
+         * @description Admin only. Fees, cancellation tiers, protection plans, eligibility and the other values that wait for the client’s decisions (plan §16), with where each decision stands.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlatformSettingsResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change some platform settings
+         * @description Admin only. Each group sent is complete and replaces the saved one; `decisions` can name just the decisions that change. The result is checked as a whole (400 with `error.fields` keyed by path, e.g. `cancellation.defaultTier`). Cancellation tiers and protection plans keep their codes. Applies to the next request; bookings already made keep their terms. Written to the audit log.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PlatformSettingsUpdate"];
+                };
+            };
+            responses: {
+                /** @description The settings now in force */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlatformSettingsResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/admin/staff/{id}/mfa/reset": {
         parameters: {
             query?: never;
@@ -6872,6 +6983,394 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
+        PlatformSettingsResponse: {
+            settings: components["schemas"]["PlatformSettings"];
+            /**
+             * Format: date-time
+             * @description When an admin last saved them
+             */
+            updatedAt?: string;
+            /** @description The name of the admin who last saved them */
+            updatedBy?: string;
+        };
+        PlatformSettings: {
+            fees: {
+                guestServiceFeePct: number;
+                hostCommissionPct: number;
+                gstRatePct: number;
+                platformPaysCardFees: boolean;
+            };
+            cancellation: {
+                tiers: {
+                    code: string;
+                    name: string;
+                    summary: string;
+                    refunds: {
+                        minHoursBefore: number;
+                        refundPct: number;
+                    }[];
+                }[];
+                hostSelectableTiers: string[];
+                defaultTier: string;
+                hostCancellationFeeCents: number;
+                guestCancellationHostSharePct: number;
+                refundUnusedDaysOnEarlyReturn: boolean;
+            };
+            protectionPlans: {
+                code: string;
+                name: string;
+                dailyPriceCents: number;
+                excessCents: number;
+                coverSummary: string;
+                mandatory: boolean;
+            }[];
+            eligibility: {
+                minAge: number;
+                minYearsLicensed: number;
+                acceptedLicenceClasses: ("NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS")[];
+                overseasNeedsEnglishProof: boolean;
+            };
+            verification: {
+                identityBeforeFirstBooking: boolean;
+                identityForHosts: boolean;
+                phoneAtCheckout: boolean;
+                emailBeforeTripStart: boolean;
+            };
+            vehicles: {
+                requiredDocuments: ("REGO" | "WOF" | "COF" | "RUC" | "INSURANCE" | "OWNER_CONSENT" | "OTHER")[];
+                requiredPhotoAngles: ("FRONT" | "REAR" | "DRIVER" | "PASSENGER" | "INTERIOR" | "DASH" | "BOOT" | "TYRES" | "DAMAGE")[];
+                vinOrChassisRequired: boolean;
+                minPhotoWidthPx: number;
+                minPhotoHeightPx: number;
+                seats: {
+                    min: number;
+                    max: number;
+                };
+                doors: {
+                    min: number;
+                    max: number;
+                };
+                dailyPriceCents: {
+                    min: number;
+                    max: number;
+                };
+                maxDiscountPct: number;
+            };
+            reviews: {
+                windowDays: number;
+                revealTogether: boolean;
+                homepageThreshold: number;
+            };
+            trips: {
+                lateReturnGraceMinutes: number;
+                damageReportWindowHours: number;
+                threadReadOnlyDays: number;
+            };
+            search: {
+                maxTripDays: number;
+                radiusKm: {
+                    min: number;
+                    default: number;
+                    max: number;
+                };
+            };
+            retention: {
+                financialRecordsYears: number;
+                idImagesDays: number;
+                tripRecordsYears: number;
+                auditLogYears: number;
+            };
+            risk: {
+                failedPaymentsPerDay: number;
+                bookingsPerDay: number;
+                reportsBeforeFlag: number;
+                hostCancellationsPer90Days: number;
+            };
+            sms: {
+                quietHoursStart: string;
+                quietHoursEnd: string;
+            };
+            hostEstimator: {
+                bookedDaysPerMonth: number;
+                dailyCentsByBodyType: {
+                    HATCHBACK?: number;
+                    SEDAN?: number;
+                    WAGON?: number;
+                    SUV?: number;
+                    UTE?: number;
+                    VAN?: number;
+                    PEOPLE_MOVER?: number;
+                    COUPE?: number;
+                    CONVERTIBLE?: number;
+                };
+            };
+            business: {
+                legalName: string;
+                gstNumber: string;
+                /** Format: email */
+                supportEmail: string;
+            };
+            decisions: {
+                fees: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                cancellation: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                securityDeposit: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                eligibility: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                gst: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                protection: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                reviewsAndTrips: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                company: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                bookingRules: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                verificationServices: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+            };
+            securityDeposit: {
+                amountCents: number;
+            };
+            roadsideAssistance: {
+                phone: string;
+            };
+            brandChecks: {
+                finalLogoSupplied: boolean;
+                trademarkSearchDone: boolean;
+                companyNameCheckDone: boolean;
+            };
+            bookingRules: {
+                enquiriesBeforeBooking: boolean;
+                additionalDrivers: boolean;
+            };
+            verificationServices: {
+                nzLicenceCheck: boolean;
+                plateLookup: boolean;
+            };
+        };
+        PlatformSettingsUpdate: {
+            fees?: {
+                guestServiceFeePct: number;
+                hostCommissionPct: number;
+                gstRatePct: number;
+                platformPaysCardFees: boolean;
+            };
+            cancellation?: {
+                tiers: {
+                    code: string;
+                    name: string;
+                    summary: string;
+                    refunds: {
+                        minHoursBefore: number;
+                        refundPct: number;
+                    }[];
+                }[];
+                hostSelectableTiers: string[];
+                defaultTier: string;
+                hostCancellationFeeCents: number;
+                guestCancellationHostSharePct: number;
+                refundUnusedDaysOnEarlyReturn: boolean;
+            };
+            protectionPlans?: {
+                code: string;
+                name: string;
+                dailyPriceCents: number;
+                excessCents: number;
+                coverSummary: string;
+                mandatory: boolean;
+            }[];
+            eligibility?: {
+                minAge: number;
+                minYearsLicensed: number;
+                acceptedLicenceClasses: ("NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS")[];
+                overseasNeedsEnglishProof: boolean;
+            };
+            verification?: {
+                identityBeforeFirstBooking: boolean;
+                identityForHosts: boolean;
+                phoneAtCheckout: boolean;
+                emailBeforeTripStart: boolean;
+            };
+            vehicles?: {
+                requiredDocuments: ("REGO" | "WOF" | "COF" | "RUC" | "INSURANCE" | "OWNER_CONSENT" | "OTHER")[];
+                requiredPhotoAngles: ("FRONT" | "REAR" | "DRIVER" | "PASSENGER" | "INTERIOR" | "DASH" | "BOOT" | "TYRES" | "DAMAGE")[];
+                vinOrChassisRequired: boolean;
+                minPhotoWidthPx: number;
+                minPhotoHeightPx: number;
+                seats: {
+                    min: number;
+                    max: number;
+                };
+                doors: {
+                    min: number;
+                    max: number;
+                };
+                dailyPriceCents: {
+                    min: number;
+                    max: number;
+                };
+                maxDiscountPct: number;
+            };
+            reviews?: {
+                windowDays: number;
+                revealTogether: boolean;
+                homepageThreshold: number;
+            };
+            trips?: {
+                lateReturnGraceMinutes: number;
+                damageReportWindowHours: number;
+                threadReadOnlyDays: number;
+            };
+            search?: {
+                maxTripDays: number;
+                radiusKm: {
+                    min: number;
+                    default: number;
+                    max: number;
+                };
+            };
+            retention?: {
+                financialRecordsYears: number;
+                idImagesDays: number;
+                tripRecordsYears: number;
+                auditLogYears: number;
+            };
+            risk?: {
+                failedPaymentsPerDay: number;
+                bookingsPerDay: number;
+                reportsBeforeFlag: number;
+                hostCancellationsPer90Days: number;
+            };
+            sms?: {
+                quietHoursStart: string;
+                quietHoursEnd: string;
+            };
+            hostEstimator?: {
+                bookedDaysPerMonth: number;
+                dailyCentsByBodyType: {
+                    HATCHBACK?: number;
+                    SEDAN?: number;
+                    WAGON?: number;
+                    SUV?: number;
+                    UTE?: number;
+                    VAN?: number;
+                    PEOPLE_MOVER?: number;
+                    COUPE?: number;
+                    CONVERTIBLE?: number;
+                };
+            };
+            business?: {
+                legalName: string;
+                gstNumber: string;
+                /** Format: email */
+                supportEmail: string;
+            };
+            decisions?: {
+                fees?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                cancellation?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                securityDeposit?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                eligibility?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                gst?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                protection?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                reviewsAndTrips?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                company?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                bookingRules?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                verificationServices?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+            };
+            securityDeposit?: {
+                amountCents: number;
+            };
+            roadsideAssistance?: {
+                phone: string;
+            };
+            brandChecks?: {
+                finalLogoSupplied: boolean;
+                trademarkSearchDone: boolean;
+                companyNameCheckDone: boolean;
+            };
+            bookingRules?: {
+                enquiriesBeforeBooking: boolean;
+                additionalDrivers: boolean;
+            };
+            verificationServices?: {
+                nzLicenceCheck: boolean;
+                plateLookup: boolean;
+            };
+        };
         TestPayment: {
             /** @description The Stripe PaymentIntent id (pi_…) */
             id: string;
@@ -7444,6 +7943,10 @@ export interface components {
                 coverSummary: string;
                 mandatory: boolean;
             }[];
+            roadsideAssistance: {
+                /** @description The insurance partner's number; empty until it's set */
+                phone: string;
+            };
             eligibility: {
                 minAge: number;
                 minYearsLicensed: number;
