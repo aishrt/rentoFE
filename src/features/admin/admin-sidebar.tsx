@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router';
 import { Logo } from '@/components/brand/logo';
 import { staggerIndex } from '@/components/motion/presets';
 import { Divider } from '@/components/ui/divider';
+import { useSession } from '@/features/auth/use-session';
 import { cn } from '@/lib/cn';
 import { adminNav } from './admin-nav';
 
@@ -40,6 +41,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, staggered }: AdminSidebarProps) {
   const t = tones[tone];
+  const isAdmin = useSession().data?.roles.includes('ADMIN') ?? false;
 
   return (
     <div className={cn('flex h-full flex-col', t.root)}>
@@ -66,51 +68,53 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
           >
             {group.title && <p className={cn('eyebrow mb-1.5 px-3', t.group)}>{group.title}</p>}
             <ul className="grid gap-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const itemClasses =
-                  'flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium';
+              {group.items
+                .filter((item) => isAdmin || !item.adminOnly)
+                .map((item) => {
+                  const Icon = item.icon;
+                  const itemClasses =
+                    'flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium';
 
-                if (!item.to) {
+                  if (!item.to) {
+                    return (
+                      <li key={item.label}>
+                        <span aria-disabled="true" className={cn(itemClasses, 'cursor-default', t.soon)}>
+                          <Icon aria-hidden="true" className="size-4.5" />
+                          <span className="flex-1">{item.label}</span>
+                          <span aria-hidden="true" className={cn('rounded-full px-2 py-0.5 text-xs', t.chip)}>
+                            Soon
+                          </span>
+                          <span className="sr-only">(coming soon)</span>
+                        </span>
+                      </li>
+                    );
+                  }
+
                   return (
                     <li key={item.label}>
-                      <span aria-disabled="true" className={cn(itemClasses, 'cursor-default', t.soon)}>
+                      <NavLink
+                        to={item.to}
+                        // Overview matches only itself; other sections stay highlighted on their own pages.
+                        end={item.to === '/admin'}
+                        onClick={onNavigate}
+                        className={({ isActive }) =>
+                          cn(
+                            itemClasses,
+                            'relative transition-colors duration-120',
+                            isActive ? t.active : t.link,
+                            // The accent bar grows in from its centre when an item becomes active.
+                            isActive &&
+                              'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:animate-bar-in before:rounded-full',
+                            isActive && t.bar,
+                          )
+                        }
+                      >
                         <Icon aria-hidden="true" className="size-4.5" />
-                        <span className="flex-1">{item.label}</span>
-                        <span aria-hidden="true" className={cn('rounded-full px-2 py-0.5 text-xs', t.chip)}>
-                          Soon
-                        </span>
-                        <span className="sr-only">(coming soon)</span>
-                      </span>
+                        {item.label}
+                      </NavLink>
                     </li>
                   );
-                }
-
-                return (
-                  <li key={item.label}>
-                    <NavLink
-                      to={item.to}
-                      // Overview matches only itself; other sections stay highlighted on their own pages.
-                      end={item.to === '/admin'}
-                      onClick={onNavigate}
-                      className={({ isActive }) =>
-                        cn(
-                          itemClasses,
-                          'relative transition-colors duration-120',
-                          isActive ? t.active : t.link,
-                          // The accent bar grows in from its centre when an item becomes active.
-                          isActive &&
-                            'before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:animate-bar-in before:rounded-full',
-                          isActive && t.bar,
-                        )
-                      }
-                    >
-                      <Icon aria-hidden="true" className="size-4.5" />
-                      {item.label}
-                    </NavLink>
-                  </li>
-                );
-              })}
+                })}
             </ul>
           </div>
         ))}

@@ -1,5 +1,5 @@
 import { client, unwrap } from '@/api/client';
-import type { LoginRequest, SessionUser, SignupRequest } from '@/api/types';
+import type { LoginRequest, SessionUser, SignupRequest, StaffInviteDetails } from '@/api/types';
 
 /**
  * The signed-in user, or null for a visitor who isn't signed in. The backend renews an expired
@@ -53,4 +53,14 @@ export async function resetPasswordRequest(input: { token: string; password: str
 /** Switches to a new email address from the link sent to it; returns the new address. */
 export async function confirmEmailChangeRequest(token: string): Promise<string> {
   return (await unwrap(client.POST('/auth/confirm-email-change', { body: { token } }))).email;
+}
+
+/** Who a support team invitation is for, from the emailed link (plan §6.2). */
+export async function staffInviteDetailsRequest(token: string): Promise<StaffInviteDetails> {
+  return unwrap(client.POST('/auth/staff-invite', { body: { token } }));
+}
+
+/** Joins the support team with a new password; returns the account's email. It doesn't sign in. */
+export async function acceptStaffInviteRequest(input: { token: string; password: string }): Promise<string> {
+  return (await unwrap(client.POST('/auth/staff-invite/accept', { body: input }))).email;
 }

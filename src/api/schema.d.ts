@@ -1988,6 +1988,416 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The admin, the support team and open invitations
+         * @description Admin only.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The staff */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffList"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite someone to the support team
+         * @description Admin only. Emails a link that works once for 7 days; inviting the same address again replaces the earlier link. 409 ALREADY_STAFF for the admin’s own email or someone already on the support team. Written to the audit log.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        email: string;
+                        firstName: string;
+                        lastName: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Invitation sent */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffInviteResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff/invites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel an invitation
+         * @description Admin only. The link stops working. Written to the audit log.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The invitation id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cancelled */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take someone off the support team
+         * @description Admin only. Removes the Support role, any extra permissions and their authenticator apps, and signs them out everywhere. The account stays, and can be invited again. Written to the audit log.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The support member’s user id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/staff-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Who a support team invitation is for
+         * @description The token from the invitation email. 400 LINK_INVALID when it has expired, was used or was cancelled. Rate-limited per IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The invitation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffInviteDetails"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/staff-invite/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a support team invitation with a password
+         * @description Creates the support account, or adds Support to the account the email already has (its password is replaced and it’s signed out everywhere). The link confirms the email address. It does not sign in. Rate-limited per IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Joined the support team */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EmailResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchange-rates": {
         parameters: {
             query?: never;
@@ -6489,6 +6899,48 @@ export interface components {
             } | null;
             /** @description Whether Stripe’s payment_intent.succeeded event reached the webhook */
             webhookReceived: boolean;
+        };
+        StaffList: {
+            staff: components["schemas"]["StaffMember"][];
+            invites: components["schemas"]["StaffInvite"][];
+        };
+        StaffMember: {
+            id: string;
+            /** Format: email */
+            email: string;
+            firstName: string;
+            lastName: string;
+            /** @enum {string} */
+            role: "ADMIN" | "SUPPORT";
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED";
+            mfaEnabled: boolean;
+            /** Format: date-time */
+            lastLoginAt?: string;
+        };
+        StaffInvite: {
+            id: string;
+            /** Format: email */
+            email: string;
+            firstName: string;
+            lastName: string;
+            /** Format: date-time */
+            invitedAt: string;
+            /**
+             * Format: date-time
+             * @description The link stops working after this
+             */
+            expiresAt: string;
+        };
+        StaffInviteResponse: {
+            invite: components["schemas"]["StaffInvite"];
+        };
+        StaffInviteDetails: {
+            /** Format: email */
+            email: string;
+            firstName: string;
+            /** @description The email already has a Rento Vroom account; the new password replaces its old one */
+            existingAccount: boolean;
         };
         ExchangeRates: {
             /** @enum {string} */

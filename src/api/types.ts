@@ -18,6 +18,14 @@ export type MfaSetup = Schemas['MfaSetupResponse'];
 /** A staff member's two-factor sign-in: whether it's on, and their authenticator apps (up to two). */
 export type MfaStatus = Schemas['MfaStatus'];
 export type MfaDevice = Schemas['MfaDevice'];
+/** The admin, the support team and the invitations not yet accepted (plan §6.2). */
+export type StaffList = Schemas['StaffList'];
+export type StaffMember = Schemas['StaffMember'];
+export type StaffInvite = Schemas['StaffInvite'];
+export type StaffInviteInput =
+  paths['/admin/staff/invites']['post']['requestBody']['content']['application/json'];
+/** Who a support team invitation is for, shown before they choose a password. */
+export type StaffInviteDetails = Schemas['StaffInviteDetails'];
 /** The day's exchange rates per NZ$1, for estimates in other currencies. */
 export type ExchangeRates = Schemas['ExchangeRates'];
 /** A NZ$1 sandbox payment from the staff portal, and how it went. */
