@@ -138,6 +138,11 @@ export const routes: RouteObject[] = [
         lazy: page(() => import('@/routes/auth/confirm-email-change-page'), 'ConfirmEmailChangePage'),
       },
       { path: 'admin/login', lazy: page(() => import('@/routes/admin/admin-login-page'), 'AdminLoginPage') },
+      // The link in a support team invitation: open to visitors, outside the portal's staff-only frame.
+      {
+        path: 'admin/invite',
+        lazy: page(() => import('@/routes/admin/accept-invite-page'), 'AcceptInvitePage'),
+      },
       {
         path: 'admin',
         lazy: page(() => import('@/routes/admin/admin-shell'), 'AdminShell'),
@@ -173,6 +178,11 @@ export const routes: RouteObject[] = [
                 path: 'vehicles/:id',
                 handle: { title: 'Vehicle review' } satisfies AdminRouteHandle,
                 lazy: page(() => import('@/routes/admin/vehicle-review-page'), 'AdminVehicleReviewPage'),
+              },
+              {
+                path: 'staff',
+                handle: { title: 'Staff' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/staff-page'), 'AdminStaffPage'),
               },
               {
                 path: 'settings',

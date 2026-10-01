@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldCheck,
   TriangleAlert,
+  UserCog,
   Users,
   Wallet,
   type LucideIcon,
@@ -19,6 +20,8 @@ export interface AdminNavItem {
   icon: LucideIcon;
   /** Set once the section exists; items without it show as "Soon". */
   to?: string;
+  /** Hidden from the support team. The API refuses them these pages anyway. */
+  adminOnly?: boolean;
 }
 
 /** Staff portal sections from plan §12.6. Each gets a route as its module is built. */
@@ -46,6 +49,7 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
     title: 'Platform',
     items: [
       { label: 'Content', icon: FileText },
+      { label: 'Staff', icon: UserCog, to: '/admin/staff', adminOnly: true },
       { label: 'Settings', icon: Settings, to: '/admin/settings' },
       { label: 'Audit log', icon: ScrollText },
     ],
