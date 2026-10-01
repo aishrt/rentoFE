@@ -1,42 +1,27 @@
 import { useSearchParams } from 'react-router';
 import { PageMeta } from '@/components/layout/page-meta';
-import { SegmentedTabs, type TabOption } from '@/components/ui/segmented-tabs';
-import { tabId, tabPanelId } from '@/components/ui/tab-ids';
-import { PlatformSettingsTab } from '@/features/admin/platform-settings/platform-settings-tab';
+import { PlatformSettingsPanel } from '@/features/admin/platform-settings/platform-settings-panel';
+import { UnsavedChangesContext, useUnsavedGroups } from '@/features/admin/platform-settings/unsaved-changes';
+import { SettingsNav } from '@/features/admin/settings-nav';
+import { readSettingsView, type SettingsView } from '@/features/admin/settings-view';
 import { TwoFactorSection } from '@/features/admin/two-factor-section';
 import { useSession } from '@/features/auth/use-session';
-
-const TAB_PREFIX = 'settings';
-
-const TABS = [
-  { value: 'account', label: 'Your sign-in' },
-  { value: 'platform', label: 'Platform settings' },
-] as const satisfies readonly TabOption<string>[];
-
-type Tab = (typeof TABS)[number]['value'];
+import { cn } from '@/lib/cn';
 
 /**
  * Staff portal settings: everyone's own sign-in security, and for the admin, the platform settings that
- * wait for the client's decisions (plan §16). The tab is in the address (?tab=platform), so a link can
- * open it.
+ * wait for the client's decisions (plan §16), laid out as a small dashboard with its own menu. The page
+ * shown is in the address (?tab=platform&section=fees), so a link can open it.
  */
 export function AdminSettingsPage() {
   const session = useSession();
   const isAdmin = session.data?.roles.includes('ADMIN') ?? false;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isAdmin && searchParams.get('tab') === 'platform' ? 'platform' : 'account';
-
-  const changeTab = (next: Tab) =>
-    setSearchParams(next === 'account' ? {} : { tab: next }, { replace: true });
-
-  const account = (
-    <div className="grid gap-6">
-      <TwoFactorSection />
-    </div>
-  );
+  const [searchParams] = useSearchParams();
+  const view: SettingsView = isAdmin ? readSettingsView(searchParams) : 'account';
+  const [unsaved, reportUnsaved] = useUnsavedGroups();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={cn('mx-auto max-w-3xl', isAdmin && 'xl:max-w-6xl')}>
       <PageMeta title="Settings · Staff portal" noindex />
 
       <header className="animate-fade-up">
@@ -49,24 +34,27 @@ export function AdminSettingsPage() {
         </p>
       </header>
 
-      {isAdmin && (
-        <SegmentedTabs
-          idPrefix={TAB_PREFIX}
-          label="Settings"
-          options={TABS}
-          value={tab}
-          onChange={changeTab}
-          className="mt-8 w-full sm:w-auto"
-        />
-      )}
-      {/* The same element either way, so the sign-in settings aren't rebuilt once the session loads. */}
       <div
-        role={isAdmin ? 'tabpanel' : undefined}
-        id={isAdmin ? tabPanelId(TAB_PREFIX, tab) : undefined}
-        aria-labelledby={isAdmin ? tabId(TAB_PREFIX, tab) : undefined}
-        className={isAdmin ? 'mt-6' : 'mt-8'}
+        className={cn(
+          'mt-8',
+          isAdmin && 'xl:grid xl:grid-cols-[17rem_minmax(0,1fr)] xl:items-start xl:gap-8',
+        )}
       >
-        {tab === 'platform' ? <PlatformSettingsTab /> : account}
+        {isAdmin && <SettingsNav view={view} unsaved={unsaved} />}
+        {/* In the same place either way, so the sign-in settings aren't rebuilt once the session loads. */}
+        <div className={cn('min-w-0', isAdmin && 'mt-6 xl:mt-0')}>
+          <div hidden={view !== 'account'} className="grid animate-fade-up gap-6">
+            <TwoFactorSection />
+          </div>
+          {isAdmin && (
+            // Kept mounted on the sign-in page too, so changes not saved yet survive a look at it.
+            <div hidden={view === 'account'}>
+              <UnsavedChangesContext value={reportUnsaved}>
+                <PlatformSettingsPanel view={view === 'account' ? 'overview' : view} unsaved={unsaved} />
+              </UnsavedChangesContext>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
