@@ -7,6 +7,7 @@ import type { CalendarBlock, HostVehicle } from '@/api/types';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
@@ -324,6 +325,12 @@ function CarCalendar({ id }: { id: string }) {
   return (
     <div className="grid gap-8">
       <HostPageHeader
+        back={
+          // Opened from My vehicles, the listing, its editor or a checkout, so Back returns to whichever.
+          <BackLink to={vehiclePath(car.id)} previous>
+            Back
+          </BackLink>
+        }
         eyebrow={
           <Link to={vehiclePath(car.id)} className="link-underline">
             {vehicleDisplayTitle(car.title)}

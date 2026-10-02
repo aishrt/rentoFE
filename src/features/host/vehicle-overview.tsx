@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router';
 import type { HostVehicle, PublicPolicies } from '@/api/types';
 import { CheckDraw } from '@/components/motion/check-draw';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
@@ -163,11 +164,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
   return (
     <div className="grid gap-8">
       <HostPageHeader
-        eyebrow={
-          <Link to="/host" className="link-underline">
-            Hosting
-          </Link>
-        }
+        back={<BackLink to="/host">Hosting</BackLink>}
         title={vehicleDisplayTitle(vehicle.title)}
         titleAside={<VehicleStatusBadge status={vehicle.status} />}
         actions={

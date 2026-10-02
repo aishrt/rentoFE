@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CarFront, RotateCw } from 'lucide-react';
+import { CarFront, RotateCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -7,6 +7,7 @@ import type { VehicleDetail } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -39,17 +40,12 @@ const columns =
   'lg:grid lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_25rem] xl:gap-16';
 
 /** "Back to results" when the car was opened from a search. */
-function BackLink({ to }: { to?: string }) {
+function ResultsLink({ to }: { to?: string }) {
   if (!to || !/^\/(search|cars)(\?|$)/.test(to)) return null;
   return (
-    <Link
-      to={to}
-      viewTransition
-      className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-ink/80 transition-colors duration-120 hover:text-ink"
-    >
-      <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
-      <span className="link-underline">Back to results</span>
-    </Link>
+    <BackLink to={to} className="my-3">
+      Back to results
+    </BackLink>
   );
 }
 
@@ -142,7 +138,7 @@ function Listing({ vehicle, backTo }: { vehicle: VehicleDetail; backTo?: string 
       />
       {/* Room at the bottom on phones for the sticky booking bar. */}
       <Container className="pt-2 pb-28 sm:pt-4 lg:pt-6 lg:pb-24">
-        <BackLink to={backTo} />
+        <ResultsLink to={backTo} />
         <div className={columns}>
           <div className="min-w-0">
             <div className="-mx-4 sm:mx-0">

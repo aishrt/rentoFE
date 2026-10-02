@@ -1,8 +1,9 @@
-import { ArrowLeft, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
@@ -24,15 +25,11 @@ import {
   VehicleDetailsSection,
 } from '@/features/admin/listings/vehicle-facts';
 
-function BackLink() {
+function QueueLink() {
   return (
-    <Link
-      to="/admin/vehicles"
-      className="inline-flex min-h-11 items-center gap-1.5 rounded-control text-sm text-muted transition-colors duration-120 hover:text-ink"
-    >
-      <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
+    <BackLink to="/admin/vehicles" className="mt-3">
       Review queue
-    </Link>
+    </BackLink>
   );
 }
 
@@ -67,8 +64,8 @@ export function AdminVehicleReviewPage() {
     return (
       <div className="mx-auto max-w-6xl">
         <PageMeta title="Vehicle review · Staff portal" noindex />
-        <BackLink />
-        <div className="mt-4">
+        <QueueLink />
+        <div className="mt-7">
           <ReviewSkeleton />
         </div>
       </div>
@@ -80,10 +77,10 @@ export function AdminVehicleReviewPage() {
     return (
       <div className="mx-auto max-w-6xl">
         <PageMeta title="Vehicle review · Staff portal" noindex />
-        <BackLink />
+        <QueueLink />
         {missing ? (
           <EmptyState
-            className="mx-auto mt-8"
+            className="mx-auto mt-11"
             visual={
               <IconBadge size="xl" tone="muted">
                 <SearchX />
@@ -101,7 +98,7 @@ export function AdminVehicleReviewPage() {
           <Alert
             variant="danger"
             role="alert"
-            className="mt-6"
+            className="mt-9"
             title="We couldn't load the listing"
             action={
               <Button
@@ -127,9 +124,9 @@ export function AdminVehicleReviewPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageMeta title={`${vehicle.title} · Vehicle review · Staff portal`} noindex />
-      <BackLink />
+      <QueueLink />
 
-      <header className="mt-2 animate-fade-up">
+      <header className="mt-5 animate-fade-up">
         <p className="eyebrow text-primary">Listing review</p>
         <h1 className="headline mt-2 text-title-3 font-medium">{vehicle.title}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">

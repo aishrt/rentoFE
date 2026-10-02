@@ -41,6 +41,8 @@ export function HostSubNav({ className }: { className?: string }) {
 }
 
 interface HostPageHeaderProps {
+  /** A `BackLink`, above everything else. */
+  back?: ReactNode;
   eyebrow?: ReactNode;
   title: ReactNode;
   /** Beside the title but outside the heading, such as a status badge. */
@@ -53,6 +55,7 @@ interface HostPageHeaderProps {
 
 /** A Host page's heading, matching the account pages' compact titles. */
 export function HostPageHeader({
+  back,
   eyebrow,
   title,
   titleAside,
@@ -63,6 +66,7 @@ export function HostPageHeader({
   return (
     <div className={cn('flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="min-w-0">
+        {back && <div className="mb-4">{back}</div>}
         {eyebrow && <p className="eyebrow mb-2 text-primary">{eyebrow}</p>}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="headline text-title-3 font-medium text-balance">{title}</h1>

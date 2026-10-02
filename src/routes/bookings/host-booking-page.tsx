@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   CalendarClock,
   Check,
   CircleCheck,
@@ -17,6 +16,7 @@ import type { Booking } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -231,14 +231,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
     <div className="grid gap-8">
       <HostSubNav />
       <div>
-        <Link
-          to="/host/bookings"
-          viewTransition
-          className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary"
-        >
-          <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
-          All bookings
-        </Link>
+        <BackLink to="/host/bookings">All bookings</BackLink>
         <p className="eyebrow mt-4 text-primary">Booking {booking.ref}</p>
         <h1 className="headline mt-2 text-title-3 font-medium text-balance">
           {guest}’s trip in the {booking.vehicle.title}

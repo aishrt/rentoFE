@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   CalendarClock,
   CarFront,
   CircleCheck,
@@ -18,6 +17,7 @@ import type { Booking } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -335,14 +335,7 @@ function Trip({ tripRef }: { tripRef: string }) {
   return (
     <div className="grid gap-8">
       <div>
-        <Link
-          to="/trips"
-          viewTransition
-          className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary"
-        >
-          <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
-          All trips
-        </Link>
+        <BackLink to="/trips">All trips</BackLink>
         <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p className="eyebrow text-primary">Trip {booking.ref}</p>
