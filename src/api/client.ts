@@ -42,12 +42,26 @@ async function send(request: Request): Promise<Response> {
   }
 }
 
+/**
+ * Whether a 401 means the access token ran out. Under /auth/, a 401 can also be a wrong password or an
+ * ended session, so there only UNAUTHENTICATED counts: the answer of the signed-in routes there (phone
+ * codes, resending the email link), as everywhere else.
+ */
+async function accessExpired(request: Request, response: Response): Promise<boolean> {
+  if (response.status !== 401) return false;
+  if (!new URL(request.url).pathname.startsWith(new URL(`${baseUrl}/auth/`).pathname)) return true;
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => null)) as { error?: { code?: string } } | null;
+  return body?.error?.code === 'UNAUTHENTICATED';
+}
+
 /** Every API call goes through here: it renews an expired access token once and retries (plan §6.1). */
 async function apiFetch(request: Request): Promise<Response> {
   const retry = request.clone();
   const response = await send(request);
-  const isAuthRoute = new URL(request.url).pathname.startsWith(new URL(`${baseUrl}/auth/`).pathname);
-  if (response.status === 401 && !isAuthRoute && (await refreshSession())) return send(retry);
+  if ((await accessExpired(request, response)) && (await refreshSession())) return send(retry);
   return response;
 }
 
