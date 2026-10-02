@@ -148,6 +148,18 @@ describe('VehicleEditorPage', () => {
     });
   });
 
+  it('saves the step on the way back to the Host home, as Save & exit does', async () => {
+    const patch = vi.fn(() => ({ status: 200, body: { vehicle: sampleVehicle({ onboardingStep: 5 }) } }));
+    api(sampleVehicle({ onboardingStep: 5 }), { 'PATCH /host/vehicles/v1': patch });
+    render('/host/vehicles/v1/5');
+
+    await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
+    await userEvent.click(screen.getByRole('link', { name: 'Hosting' }));
+
+    expect(await screen.findByText('Host home')).toBeInTheDocument();
+    expect(patch).toHaveBeenCalledOnce();
+  });
+
   it('resumes a draft at the step it reached', async () => {
     api(sampleVehicle({ onboardingStep: 4 }));
     const { router } = render('/host/vehicles/v1');

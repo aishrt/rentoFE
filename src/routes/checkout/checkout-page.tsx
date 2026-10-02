@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CarFront, KeyRound } from 'lucide-react';
+import { CarFront, KeyRound } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -8,6 +8,7 @@ import type { Booking, VehicleDetail } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
@@ -426,13 +427,9 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
 
   return (
     <>
-      <Link
-        to={`/cars/${vehicle.slug}${back.size > 0 ? `?${back.toString()}` : ''}`}
-        className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary"
-      >
-        <ArrowLeft aria-hidden="true" className="nudge-left size-4" />
+      <BackLink to={`/cars/${vehicle.slug}${back.size > 0 ? `?${back.toString()}` : ''}`}>
         Back to the listing
-      </Link>
+      </BackLink>
       <div className="mt-4">
         <p className="eyebrow text-primary">Checkout</p>
         <h1 className="headline mt-2 text-title-3 font-medium text-balance">

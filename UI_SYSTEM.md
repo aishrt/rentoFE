@@ -113,6 +113,14 @@ Arrow icons nudge towards where their link goes:
 </Link>
 ```
 
+A page that the header, the account menu, the Host tabs and the staff sidebar don't link to gets a `BackLink` above its title, such as a trip, a booking, a car's listing or its calendar. Name the page it leads to. A page opened from several places takes `previous`, and returns to whichever page came before, or to `to` when opened directly:
+
+```tsx
+<BackLink to="/trips">All trips</BackLink>
+<BackLink to={vehiclePath(car.id)} previous>Back</BackLink>
+<HostPageHeader back={<BackLink to="/host">Hosting</BackLink>} title={…} />
+```
+
 ### Card
 
 ```tsx

@@ -73,6 +73,13 @@ const render = (search = '?date=2026-10-12') =>
 const day = (name: string | RegExp) => screen.findByRole('button', { name });
 
 describe('VehicleCalendarPage', () => {
+  it("leads back to the car's listing when opened directly", async () => {
+    api();
+    render();
+
+    expect(await screen.findByRole('link', { name: 'Back' })).toHaveAttribute('href', '/host/vehicles/v1');
+  });
+
   it('shows every block by its reason, with a key', async () => {
     api();
     render();

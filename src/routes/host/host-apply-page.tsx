@@ -5,6 +5,7 @@ import type { SessionUser } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -99,6 +100,12 @@ function HostApplication({ user }: { user: SessionUser }) {
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
       <div className="grid animate-fade-up gap-6">
         <HostPageHeader
+          back={
+            // Opened from Become a host or the Host home, so Back returns to whichever.
+            <BackLink to="/host" previous>
+              Back
+            </BackLink>
+          }
           eyebrow="Hosting"
           title={arrivedAs === 'REJECTED' ? 'Apply again to host' : 'Become a Host'}
           description={`Kia ora ${user.firstName}. Two quick steps, then you can add your car.`}
@@ -145,7 +152,7 @@ function HostApplication({ user }: { user: SessionUser }) {
         </Section>
       </div>
 
-      <aside aria-labelledby="apply-next" className="lg:pt-24">
+      <aside aria-labelledby="apply-next" className="lg:pt-33">
         <Card variant="flat" className="p-6 lg:sticky lg:top-24">
           <h2 id="apply-next" className="eyebrow text-primary">
             What happens next

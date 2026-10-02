@@ -1,8 +1,9 @@
 import { AnimatePresence, m, type Variants } from 'motion/react';
 import { useCallback, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import type { HostVehicle, PublicPolicies } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
+import { BackLink } from '@/components/ui/back-link';
 import { Stepper, type StepperStep } from '@/components/ui/stepper';
 import { motion } from '@/styles/tokens';
 import { AvailabilityStep } from './availability-step';
@@ -79,10 +80,18 @@ export function ListingEditor({
   return (
     <div className="grid gap-8">
       <HostPageHeader
-        eyebrow={
-          <Link to={draft ? '/host' : vehiclePath(vehicle.id)} className="link-underline">
+        back={
+          <BackLink
+            to={draft ? '/host' : vehiclePath(vehicle.id)}
+            onClick={(event) => {
+              // Saves the step first, like every other way out of it.
+              if (!saveRef.current) return;
+              event.preventDefault();
+              saveRef.current(draft ? 'exit' : 'overview');
+            }}
+          >
             {draft ? 'Hosting' : 'Listing overview'}
-          </Link>
+          </BackLink>
         }
         title={draft ? 'List your car' : vehicleDisplayTitle(vehicle.title)}
         titleAside={!draft && <VehicleStatusBadge status={vehicle.status} />}
