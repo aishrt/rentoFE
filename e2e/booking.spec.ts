@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { demoPassword, logIn, nzDay } from './helpers';
+import { expect, test } from '@playwright/test';
+import { bookFromListing, cancelForFullRefund, demoPassword, logIn, tripQuery } from './helpers';
 
 /*
  * A full Guest booking (plan §9, Day 15): a demo Guest opens a car with dates, goes through checkout, pays
@@ -14,65 +14,6 @@ import { demoPassword, logIn, nzDay } from './helpers';
 const INSTANT_CAR = '2020-toyota-prius-rotorua';
 const REQUEST_CAR = { slug: '2018-honda-jazz-rotorua', hostEmail: 'host.rotorua@rentovroom.test' };
 const GUEST_EMAIL = 'guest@rentovroom.test';
-
-/**
- * Different dates on each run, so an earlier run that stopped halfway can't be in the way. Three to ten
- * weeks ahead: far enough for a full refund, and before the demo cars' registration and WOF run out.
- */
-function tripQuery(): string {
-  const offset = 21 + Math.floor(Math.random() * 50);
-  return `start=${nzDay(offset)}&end=${nzDay(offset + 3)}`;
-}
-
-/** Stripe's card fields live in its own iframe. A saved card from an earlier run needs nothing typed. */
-async function payByCard(page: Page) {
-  const stripe = page.frameLocator('iframe[title="Secure payment input frame"]').first();
-  const number = stripe.getByLabel('Card number');
-  const saved = stripe.getByText(/•••• 4242/).first();
-  await expect(number.or(saved).first()).toBeVisible({ timeout: 30_000 });
-  if (await number.isVisible()) {
-    await number.fill('4242 4242 4242 4242');
-    await stripe.getByRole('textbox', { name: /Expiration date|Expiry date/ }).fill('12 / 34');
-    await stripe.getByRole('textbox', { name: 'Security code' }).fill('123');
-  }
-}
-
-/** From the listing to the trip page: Book, the checkout's steps, the Guest Agreement and the card. */
-async function bookFromListing(page: Page, slug: string, action: 'Book' | 'Request to book') {
-  const heading = action === 'Book' ? 'Confirm and pay' : 'Request to book';
-  const payLabel = action === 'Book' ? 'Confirm and pay' : 'Request to book';
-
-  // The listing prices the trip, then its button opens checkout with the same dates.
-  await page.getByRole('link', { name: action, exact: true }).first().click();
-  await expect(page).toHaveURL(new RegExp(`/book/${slug}\\?`));
-  await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-
-  // Trip, protection, then the policies and price. Logged in and verified, so payment opens next.
-  for (const step of ['checkout-trip', 'checkout-protection', 'checkout-details']) {
-    await page.locator(`#${step}`).getByRole('button', { name: 'Continue' }).click();
-  }
-  const payment = page.locator('#checkout-payment');
-  await expect(payment.getByText('We’re holding these dates for you')).toBeVisible({ timeout: 30_000 });
-
-  await payment.getByRole('checkbox', { name: /I agree to the Guest Agreement/ }).check();
-  await payByCard(page);
-  await payment.getByRole('button', { name: payLabel }).click();
-
-  await expect(page).toHaveURL(/\/trips\/RV-[A-Z0-9]+$/, { timeout: 60_000 });
-  return new URL(page.url()).pathname.split('/').pop()!;
-}
-
-/** Cancelling shows the refund first. Weeks ahead, it's all of it. */
-async function cancelForFullRefund(page: Page) {
-  await page.getByRole('button', { name: 'Cancel trip' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Cancel this booking?' });
-  await expect(dialog.getByText('Refund to your card')).toBeVisible();
-  await expect(dialog.getByText('Kept under the cancellation policy')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Cancel booking' }).click();
-
-  await expect(page.getByText('You cancelled this trip')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(/Refunded in full/)).toBeVisible();
-}
 
 test('a Guest books an Instant Book car with a card, then cancels for a full refund', async ({ page }) => {
   test.setTimeout(240_000);
