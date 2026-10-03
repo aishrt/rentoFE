@@ -1,5 +1,6 @@
 import { ArrowRight, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
+import { ConnectionArcs } from '@/components/brand/patterns/connection-arcs';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Reveal } from '@/components/motion/reveal';
@@ -19,7 +20,14 @@ export function ContactPage() {
   return (
     <>
       <PageMeta page={seoPage('/contact')} />
-      <PageHero tone="light" compact eyebrow={hero.eyebrow} title={hero.title} lead={<p>{hero.lead}</p>} />
+      <PageHero
+        tone="light"
+        art={ConnectionArcs}
+        compact
+        eyebrow={hero.eyebrow}
+        title={hero.title}
+        lead={<p>{hero.lead}</p>}
+      />
 
       <section aria-label="Send us a message" className="py-12 sm:py-16 lg:py-20">
         <Container className="grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">

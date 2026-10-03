@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Booking, VehicleDetail } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { CalmWaves } from '@/components/brand/patterns/calm-waves';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -619,6 +621,7 @@ export function CheckoutPage() {
 
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={CalmWaves} />
       <PageMeta title={vehicle.data ? `Book the ${vehicle.data.title}` : 'Checkout'} noindex />
       {body}
     </Container>

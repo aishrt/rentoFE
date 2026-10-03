@@ -13,6 +13,8 @@ import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Booking } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -334,6 +336,7 @@ export function HostBookingPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title={ref ? `Booking ${ref}` : 'Booking'} noindex />
       <RequireSignedIn fallback={<BookingPageSkeleton />}>
         {() => <HostBooking key={ref} bookingRef={ref} />}

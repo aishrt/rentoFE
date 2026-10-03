@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import type { PublicPolicies } from '@/api/types';
+import { StreetArt } from '@/components/brand/scenes/street-art';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -295,6 +296,7 @@ export function BecomeAHostPage() {
       <PageMeta page={seoPage('/become-a-host')} />
       <PageHero
         tone="primary"
+        art={StreetArt}
         eyebrow={hero.eyebrow}
         title={hero.title}
         lead={<p>{hero.lead}</p>}

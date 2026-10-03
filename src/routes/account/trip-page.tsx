@@ -14,6 +14,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Booking } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -449,6 +451,7 @@ export function TripPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title={ref ? `Trip ${ref}` : 'Trip'} noindex />
       <RequireSignedIn fallback={<BookingPageSkeleton />}>
         {() => <Trip key={ref} tripRef={ref} />}

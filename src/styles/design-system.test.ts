@@ -11,8 +11,14 @@ import { motion } from './tokens';
 
 const SRC = resolve(process.cwd(), 'src');
 
-/** Not checked: the token files themselves, tests, and the landscape illustration (artwork, not UI). */
-const EXCLUDED = [/^styles\//, /\.test\.tsx?$/, /^test\//, /^components\/brand\/landscape-art\.tsx$/];
+/** Not checked: the token files themselves, tests, and the illustrations (artwork, not UI). */
+const EXCLUDED = [
+  /^styles\//,
+  /\.test\.tsx?$/,
+  /^test\//,
+  /^components\/brand\/landscape-art\.tsx$/,
+  /^components\/brand\/scenes\//,
+];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

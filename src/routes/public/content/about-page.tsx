@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
+import { HarbourArt } from '@/components/brand/scenes/harbour-art';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { SectionHeading } from '@/components/layout/section-heading';
@@ -70,7 +71,13 @@ export function AboutPage() {
   return (
     <>
       <PageMeta page={seoPage('/about')} />
-      <PageHero tone="dark" eyebrow={hero.eyebrow} title={hero.title} lead={<p>{hero.lead}</p>} />
+      <PageHero
+        tone="dark"
+        art={HarbourArt}
+        eyebrow={hero.eyebrow}
+        title={hero.title}
+        lead={<p>{hero.lead}</p>}
+      />
       <StorySection />
       <ValuesSection />
       <CtaBand

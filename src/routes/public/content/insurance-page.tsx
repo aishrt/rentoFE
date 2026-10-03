@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
+import { CoverRings } from '@/components/brand/patterns/cover-rings';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -164,7 +165,13 @@ export function InsurancePage() {
   return (
     <>
       <PageMeta page={seoPage('/insurance')} />
-      <PageHero tone="light" eyebrow={hero.eyebrow} title={hero.title} lead={<p>{hero.lead}</p>} />
+      <PageHero
+        tone="light"
+        art={CoverRings}
+        eyebrow={hero.eyebrow}
+        title={hero.title}
+        lead={<p>{hero.lead}</p>}
+      />
       <PlansSection policies={policies} />
       <ExcessSection policies={policies} />
       <CheckoutSection />

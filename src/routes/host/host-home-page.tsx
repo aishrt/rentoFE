@@ -1,6 +1,8 @@
 import { ArrowRight, BadgeCheck, CalendarRange, KeyRound, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router';
 import type { SessionUser } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { RidgeLines } from '@/components/brand/ridge-lines';
 import { Container } from '@/components/layout/container';
 import { staggerIndex } from '@/components/motion/presets';
@@ -180,6 +182,7 @@ function HostHome({ user }: { user: SessionUser }) {
 export function HostHomePage() {
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Hosting" noindex />
       <RequireSignedIn fallback={<HomeSkeleton />}>{(user) => <HostHome user={user} />}</RequireSignedIn>
     </Container>

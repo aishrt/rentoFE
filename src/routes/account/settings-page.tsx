@@ -1,3 +1,5 @@
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { DotGrid } from '@/components/brand/patterns/dot-grid';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +25,7 @@ function SettingsSkeleton() {
 export function AccountSettingsPage() {
   return (
     <Container className="py-10 sm:py-14">
+      <PageBackdrop art={DotGrid} />
       <PageMeta title="Account settings" noindex />
       <RequireSignedIn fallback={<SettingsSkeleton />}>
         {(user) => (

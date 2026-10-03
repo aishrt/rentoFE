@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router';
+import { RuledLines } from '@/components/brand/patterns/ruled-lines';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -108,6 +109,7 @@ function LegalDocumentView({ document }: { document: LegalDocument }) {
       <PageMeta page={seo} />
       <PageHero
         tone="light"
+        art={RuledLines}
         compact
         eyebrow="Legal"
         title={title}
