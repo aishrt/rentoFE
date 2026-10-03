@@ -1,5 +1,5 @@
-import { Bell, CheckCheck } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { ArrowRight, Bell, CheckCheck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
 import type { NotificationItem } from '@/api/types';
 import {
   DropdownMenu,
@@ -8,9 +8,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IconButton } from '@/components/ui/icon-button';
-import { formatRelativeTime } from '@/features/booking/booking-format';
-import { cn } from '@/lib/cn';
-import { useMarkNotificationsRead, useNotifications } from './notifications-api';
+import { NotificationText } from './notification-text';
+import { BELL_SIZE, internalLink, useMarkNotificationsRead, useNotifications } from './notifications-api';
 
 function NotificationRow({
   item,
@@ -24,26 +23,16 @@ function NotificationRow({
       onSelect={() => onOpen(item)}
       className="min-h-0 items-start gap-3 rounded-control px-3 py-3 [&_svg]:size-auto"
     >
-      <span
-        aria-hidden="true"
-        className={cn('mt-1.5 size-2 shrink-0 rounded-full', item.read ? 'bg-transparent' : 'bg-primary')}
-      />
-      <span className="grid min-w-0 flex-1 gap-0.5">
-        <span className={cn('text-sm text-ink', !item.read && 'font-semibold')}>
-          {!item.read && <span className="sr-only">Unread: </span>}
-          {item.title}
-        </span>
-        {item.body && <span className="line-clamp-2 text-sm text-muted">{item.body}</span>}
-        <span className="text-xs text-muted">{formatRelativeTime(item.createdAt)}</span>
-      </span>
+      <NotificationText item={item} />
     </DropdownMenuItem>
   );
 }
 
 /**
  * The header's bell (plan §7): the unread count, refreshed every minute until Socket.IO messaging arrives,
- * and the latest notifications. Opening one marks it read and goes to its page. Only signed-in visitors get
- * it, and it loads on its own, after the page (plan §12.5).
+ * and the newest three notifications, with "Show all" to the Notifications page when there are more. Opening
+ * one marks it read and goes to its page. Only signed-in visitors get it, and it loads on its own, after the
+ * page (plan §12.5).
  */
 export function NotificationBell() {
   const navigate = useNavigate();
@@ -51,10 +40,12 @@ export function NotificationBell() {
   const markRead = useMarkNotificationsRead();
   const items = notifications.data?.notifications ?? [];
   const unread = notifications.data?.unreadCount ?? 0;
+  const total = notifications.data?.total ?? 0;
 
   const open = (item: NotificationItem) => {
     if (!item.read) markRead.mutate([item.id]);
-    if (item.link?.startsWith('/')) navigate(item.link, { viewTransition: true });
+    const link = internalLink(item);
+    if (link) navigate(link, { viewTransition: true });
   };
 
   return (
@@ -106,10 +97,20 @@ export function NotificationBell() {
         ) : items.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted">You’re all caught up. Booking news will show here.</p>
         ) : (
-          <div className="scrollbar-subtle grid max-h-[min(28rem,70dvh)] gap-0.5 overflow-y-auto p-1.5">
+          <div className="grid gap-0.5 p-1.5">
             {items.map((item) => (
               <NotificationRow key={item.id} item={item} onOpen={open} />
             ))}
+          </div>
+        )}
+        {total > BELL_SIZE && (
+          <div className="border-t border-line p-1.5">
+            <DropdownMenuItem asChild className="justify-center text-primary [&_svg]:text-primary">
+              <Link to="/notifications" viewTransition>
+                Show all {total} notifications
+                <ArrowRight aria-hidden="true" className="nudge-right" />
+              </Link>
+            </DropdownMenuItem>
           </div>
         )}
       </DropdownMenuContent>

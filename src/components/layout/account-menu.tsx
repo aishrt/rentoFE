@@ -1,4 +1,13 @@
-import { CarFront, ChevronDown, KeyRound, LayoutDashboard, LogOut, Luggage, Settings } from 'lucide-react';
+import {
+  Bell,
+  CarFront,
+  ChevronDown,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Luggage,
+  Settings,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import type { SessionUser } from '@/api/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -62,6 +71,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <Link to={hosting.to} viewTransition>
               {user.hostStatus ? <KeyRound aria-hidden="true" /> : <CarFront aria-hidden="true" />}
               {hosting.label}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/notifications" viewTransition>
+              <Bell aria-hidden="true" />
+              Notifications
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

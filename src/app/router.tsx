@@ -101,6 +101,10 @@ export const routes: RouteObject[] = [
                 lazy: page(() => import('@/routes/checkout/checkout-page'), 'CheckoutPage'),
               },
               { path: 'trips', lazy: page(() => import('@/routes/account/trips-page'), 'TripsPage') },
+              {
+                path: 'notifications',
+                lazy: page(() => import('@/routes/account/notifications-page'), 'NotificationsPage'),
+              },
               { path: 'trips/:ref', lazy: page(() => import('@/routes/account/trip-page'), 'TripPage') },
               {
                 path: 'host/bookings',

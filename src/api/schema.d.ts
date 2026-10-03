@@ -4787,25 +4787,41 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The notification bell
-         * @description The latest 30 in-app notifications and the unread count.
+         * The bell and the Notifications page
+         * @description The signed-in user’s in-app notifications, newest first, a page at a time, with the unread count and the total. Deleted ones are left out.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description How many to return, newest first: 1 to 50 */
+                    limit?: number;
+                    /** @description The `nextCursor` of the page before, for the next page */
+                    cursor?: string;
+                    /** @description `true`: unread ones only */
+                    unread?: "true" | "false";
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Notifications */
+                /** @description One page of notifications */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": components["schemas"]["Notifications"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -4850,13 +4866,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description The unread count */
+                /** @description The counts afterwards */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["UnreadCount"];
+                        "application/json": components["schemas"]["NotificationCounts"];
                     };
                 };
                 /** @description Invalid input. `error.fields` has one message per invalid field. */
@@ -4880,6 +4896,183 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark notifications unread again */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MarkNotificationsUnread"];
+                };
+            };
+            responses: {
+                /** @description The counts afterwards */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationCounts"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete some notifications, or every one already read
+         * @description Ids that aren’t the user’s own notifications are ignored.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteNotifications"];
+                };
+            };
+            responses: {
+                /** @description How many were deleted, and the counts afterwards */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationsDeleted"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a notification
+         * @description Deleting one again is fine. Someone else’s notification is a 404.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The notification’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -8424,7 +8617,12 @@ export interface components {
         };
         Notifications: {
             notifications: components["schemas"]["NotificationItem"][];
+            /** @description Unread notifications in all, not just on this page */
             unreadCount: number;
+            /** @description Every notification the user has, whatever the filter */
+            total: number;
+            /** @description Pass as `cursor` for the next page. Left out on the last page */
+            nextCursor?: string;
         };
         NotificationItem: {
             id: string;
@@ -8437,12 +8635,35 @@ export interface components {
             createdAt: string;
             read: boolean;
         };
-        UnreadCount: {
+        NotificationCounts: {
+            /** @description Unread notifications in all, not just on this page */
             unreadCount: number;
+            /** @description Every notification the user has, whatever the filter */
+            total: number;
         };
         MarkNotificationsRead: {
             /** @description Left out: marks every notification read */
             ids?: string[];
+        };
+        MarkNotificationsUnread: {
+            ids: string[];
+        };
+        NotificationsDeleted: {
+            /** @description How many were deleted */
+            deleted: number;
+            /** @description Unread notifications in all, not just on this page */
+            unreadCount: number;
+            /** @description Every notification the user has, whatever the filter */
+            total: number;
+        };
+        DeleteNotifications: {
+            ids: string[];
+        } | {
+            /**
+             * @description Deletes every notification already read
+             * @enum {boolean}
+             */
+            read: true;
         };
         HostApplications: {
             applications: components["schemas"]["HostApplication"][];
