@@ -1,7 +1,5 @@
 import { m } from 'motion/react';
-import type { ReactNode } from 'react';
-import { LandscapeArt } from '@/components/brand/landscape-art';
-import { RidgeLines } from '@/components/brand/ridge-lines';
+import type { ComponentType, ReactNode } from 'react';
 import { Container } from '@/components/layout/container';
 import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp, heroTimeline } from '@/components/motion/presets';
@@ -18,11 +16,17 @@ interface PageHeroProps {
   /** A panel beside the text on desktop, under it on phones. */
   aside?: ReactNode;
   /**
-   * `dark`: the NZ landscape at blue hour, for the pages that tell the story (How it works, Safety, About).
-   * `primary`: brand blue with ridges, for Become a host. `light`: the canvas with ridges, for reference
-   * pages (Insurance, FAQs, Contact, legal).
+   * `dark`: a night scene under an ink veil, for the pages that tell the story (How it works, Safety, About).
+   * `primary`: brand blue with art in ink along the bottom, for Become a host. `light`: the canvas with a line
+   * pattern in faint primary, for reference pages (Insurance, FAQs, Contact, legal).
    */
   tone?: 'dark' | 'primary' | 'light';
+  /**
+   * The page's own background, about what the page is for, so no two pages share one: a scene from
+   * components/brand/scenes for `dark` and `primary`, a line pattern from components/brand/patterns for `light`.
+   * The home hero keeps the landscape for itself.
+   */
+  art: ComponentType<{ className?: string }>;
   /** Less height, for pages where the content below is the point: contact, legal. */
   compact?: boolean;
   id?: string;
@@ -41,6 +45,7 @@ export function PageHero({
   actions,
   aside,
   tone = 'dark',
+  art: Art,
   compact = false,
   id = 'page-heading',
   children,
@@ -60,18 +65,19 @@ export function PageHero({
     >
       {tone === 'dark' && (
         <div aria-hidden="true" className="parallax-exit absolute inset-0 -z-10">
-          <LandscapeArt
-            idPrefix="page-hero-art"
-            className="h-full w-full origin-[70%_65%] animate-hero-drift"
-          />
+          <Art className="h-full w-full origin-[70%_65%] animate-hero-drift" />
           <div className="absolute inset-0 bg-linear-to-b from-ink/80 via-ink/55 to-ink/85 lg:bg-linear-to-r lg:from-ink/90 lg:via-ink/55 lg:to-ink/10" />
         </div>
       )}
       {tone === 'primary' && (
-        <RidgeLines className="absolute inset-x-0 bottom-0 -z-10 h-2/5 w-full text-black/50" />
+        <Art className="absolute inset-x-0 bottom-0 -z-10 h-36 w-full text-ink sm:h-1/2 lg:h-3/5" />
       )}
       {tone === 'light' && (
-        <RidgeLines className="absolute inset-x-0 bottom-0 -z-10 h-28 w-full text-primary/12 sm:h-36" />
+        <div aria-hidden="true" className="absolute inset-0 -z-10">
+          <Art className="size-full text-primary/20" />
+          <div className="absolute inset-0 bg-linear-to-b from-canvas/60 via-canvas/40 to-canvas lg:from-transparent lg:via-transparent" />
+          <div className="absolute inset-0 hidden bg-linear-to-r from-canvas via-canvas/60 to-transparent lg:block" />
+        </div>
       )}
 
       <Container

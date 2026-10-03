@@ -1,5 +1,6 @@
 import { ArrowRight, Ticket } from 'lucide-react';
 import { Link } from 'react-router';
+import { LighthouseArt } from '@/components/brand/scenes/lighthouse-art';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { SectionHeading } from '@/components/layout/section-heading';
@@ -143,6 +144,7 @@ export function SafetyPage() {
       <PageMeta page={seoPage('/safety')} />
       <PageHero
         tone="dark"
+        art={LighthouseArt}
         eyebrow={hero.eyebrow}
         title={hero.title}
         lead={<p>{hero.lead}</p>}

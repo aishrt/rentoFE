@@ -3,6 +3,7 @@ import { AnimatePresence, m } from 'motion/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { Faq } from '@/api/types';
+import { ContourLines } from '@/components/brand/patterns/contour-lines';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -120,6 +121,7 @@ export function FaqPage() {
       {faqs.data && faqs.data.length > 0 && <JsonLd data={faqPageJsonLd(faqs.data)} />}
       <PageHero
         tone="light"
+        art={ContourLines}
         eyebrow={hero.eyebrow}
         title={hero.title}
         lead={

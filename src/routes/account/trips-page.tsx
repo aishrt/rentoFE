@@ -1,5 +1,7 @@
 import { CalendarRange } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { staggerIndex } from '@/components/motion/presets';
@@ -136,6 +138,7 @@ function TripsSkeleton() {
 export function TripsPage() {
   return (
     <Container className="max-w-4xl py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title="Trips" noindex />
       <RequireSignedIn fallback={<TripsSkeleton />}>{() => <Trips />}</RequireSignedIn>
     </Container>

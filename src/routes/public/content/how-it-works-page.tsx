@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { JourneyArt } from '@/components/brand/scenes/journey-art';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -174,6 +175,7 @@ export function HowItWorksPage() {
       <PageMeta page={seoPage('/how-it-works')} />
       <PageHero
         tone="dark"
+        art={JourneyArt}
         eyebrow={hero.eyebrow}
         title={hero.title}
         lead={<p>{hero.lead}</p>}

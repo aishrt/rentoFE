@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { CalendarBlock, HostVehicle } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -366,6 +368,7 @@ export function VehicleCalendarPage() {
   const { id = '' } = useParams();
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Calendar" noindex />
       <RequireSignedIn fallback={<CalendarSkeleton />}>
         {() => (

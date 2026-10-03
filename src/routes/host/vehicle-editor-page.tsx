@@ -1,6 +1,8 @@
 import { CarFront } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Button } from '@/components/ui/button';
@@ -109,6 +111,7 @@ export function VehicleEditorPage() {
   const { id = '', step } = useParams();
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Your listing" noindex />
       <RequireSignedIn fallback={<EditorSkeleton />}>
         {() => (

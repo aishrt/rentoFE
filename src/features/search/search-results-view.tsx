@@ -3,6 +3,8 @@ import { ArrowRight, ArrowUpDown, CalendarX, KeyRound, Search, SlidersHorizontal
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ApiError, client, unwrap } from '@/api/client';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { StreetMap } from '@/components/brand/patterns/street-map';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -365,6 +367,7 @@ export function SearchResultsView({ mode }: { mode: 'browse' | 'search' }) {
       </div>
 
       <Container className="pt-6 pb-16 sm:pt-8 lg:pt-10 lg:pb-24">
+        <PageBackdrop art={StreetMap} />
         <header className="animate-fade-up">
           <p className="eyebrow text-primary">{browse ? 'Browse cars' : 'Search results'}</p>
           <h1 className="headline mt-2 text-title-2 font-medium">{title}</h1>

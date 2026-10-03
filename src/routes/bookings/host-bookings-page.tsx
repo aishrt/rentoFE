@@ -2,6 +2,8 @@ import { CalendarRange, Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { BookingSummary } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { staggerIndex } from '@/components/motion/presets';
@@ -187,6 +189,7 @@ function HostBookingsSkeleton() {
 export function HostBookingsPage() {
   return (
     <Container className="max-w-4xl py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Bookings" noindex />
       <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>
     </Container>

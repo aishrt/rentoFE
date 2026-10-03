@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, type ReactNode, type Ref } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import type { SessionUser } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -187,6 +189,7 @@ function HostApplication({ user }: { user: SessionUser }) {
 export function HostApplyPage() {
   return (
     <Container className="py-10 sm:py-14">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Become a Host" noindex />
       <RequireSignedIn fallback={<ApplySkeleton />}>
         {(user) => <HostApplication user={user} />}

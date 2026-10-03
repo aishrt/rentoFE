@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { SessionUser } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Button } from '@/components/ui/button';
@@ -93,6 +95,7 @@ function StartListing({ user }: { user: SessionUser }) {
 export function NewVehiclePage() {
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Add a car" noindex />
       <RequireSignedIn fallback={<StartingSkeleton />}>
         {(user) => <StartListing user={user} />}

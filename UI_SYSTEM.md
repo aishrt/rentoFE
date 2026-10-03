@@ -216,6 +216,36 @@ Use skeletons for content that is loading, and a `Spinner` only inside a busy bu
 
 Also: `Avatar`, `DropdownMenu` (action menus; for choosing a value use `Select`), `Sheet` (side panel), `SegmentedTabs` (sliding indicator), and in `components/layout` `SectionHeading`, `Container` and `UserMenuLabel`.
 
+### Page backgrounds
+
+Every page has its own background art, about what the page is for. The home hero's landscape (`LandscapeArt`) belongs to the home page alone.
+
+- **Scenes** ([`components/brand/scenes`](src/components/brand/scenes)) are night illustrations in the landscape's palette, for `PageHero tone="dark"` and the sign-in panel. They are artwork, so the design-system test lets them use hex colours.
+- **Line patterns** ([`components/brand/patterns`](src/components/brand/patterns)) are drawn in `currentColor` (faint `primary`), for `PageHero tone="light"` and for `PageBackdrop`.
+- `PageHero` takes the page's art as `art={…}`. App pages put `<PageBackdrop art={…} />` first inside their outer `Container`. It positions itself against `<main>` and fades into the canvas before the content.
+
+| Page                                         | Art                                                 |
+| -------------------------------------------- | --------------------------------------------------- |
+| Home                                         | `LandscapeArt`: alpine road at blue hour            |
+| How it works                                 | `JourneyArt`: from a farmhouse driveway to the road |
+| Safety                                       | `LighthouseArt`: its beam sweeps (`animate-sweep`)  |
+| About                                        | `HarbourArt`: a harbour town with its lights on     |
+| Become a host                                | `StreetArt`: a street with a car under a carport    |
+| Insurance                                    | `CoverRings`: rings of cover around a shield        |
+| FAQs                                         | `ContourLines`: a contour map                       |
+| Contact                                      | `ConnectionArcs`: places linked by arcs             |
+| Legal pages                                  | `RuledLines`: ruled paper and a seal                |
+| Browse cars, search                          | `StreetMap`: streets with cars pinned               |
+| Trips, a trip                                | `TripRoute`: a route across hill country            |
+| Hosting (overview, bookings, cars, apply)    | `ParkingBays`: a car park from above                |
+| Account settings                             | `DotGrid`: dots and switches                        |
+| Checkout                                     | `CalmWaves`: slow, even waves                       |
+| Log in, sign up and the other guest sign-ins | `CoastArt`: a coast road under the moon             |
+| Staff log-in and invitation                  | `CityArt`: the city at night                        |
+| Destinations                                 | Their `tone-*` gradients                            |
+
+A new page picks a scene or pattern that suits it, or adds one. Keep it to a few KB of inline SVG, and keep focal points on the right, clear of the text.
+
 ### Errors
 
 Errors are caught at four levels, so a fault takes out as little of the site as possible:
@@ -311,6 +341,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | `stagger-in`                                                                      | Fade up in turn, with `style={staggerIndex(i)}`; first 6 items only                                                       |
 | `tilt`, `magnet`, `tooltip`                                                       | Used by `TiltedCard`, `Magnet` and `IconButton`; you don't need to add them yourself                                      |
 | `road-dashes`, `roadside-posts`, `animate-drive-in`, `-wheel-spin`, `-pan-far`, … | The 404's `RoadTripScene`. Ground-level motion runs at one speed (12rem/s); farther hills pan slower                      |
+| `animate-sweep`                                                                   | The Safety hero's lighthouse beam swings slowly back and forth (set its `origin-*` on the lamp)                           |
 
 ### Where motion is used
 
