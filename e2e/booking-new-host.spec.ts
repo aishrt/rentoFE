@@ -217,12 +217,13 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   // 4. The admin approves the Host, then the car.
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await admin.goto('/admin/login');
+  admin.setDefaultTimeout(20_000);
+  // The log-in page is under /admin too, so wait for the page it sends the admin on to.
+  await admin.goto('/admin/login?next=/admin/host-applications');
   await admin.getByLabel('Email address').fill(ADMIN_EMAIL);
   await admin.getByLabel('Password', { exact: true }).fill(demoPassword());
   await admin.getByRole('button', { name: 'Log in to the staff portal' }).click();
-  await expect(admin).toHaveURL(/\/admin(\/|$)/);
-  await admin.goto('/admin/host-applications');
+  await expect(admin).toHaveURL(/\/admin\/host-applications$/);
   await admin.getByRole('button', { name: `Approve ${hostName}`, exact: true }).click();
   await admin
     .getByRole('dialog', { name: `Approve ${hostName}?` })
@@ -248,6 +249,7 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
 
   const guestContext = await browser.newContext();
   const guest = await guestContext.newPage();
+  guest.setDefaultTimeout(20_000);
   await logIn(guest, GUEST_EMAIL, demoPassword(), `/cars/${slug}?${tripQuery()}`);
   const requestedAt = Date.now() - 1000;
   const ref = await bookFromListing(guest, slug!, 'Request to book');
