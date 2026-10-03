@@ -19,7 +19,10 @@ const PLAN_BUDGET_KB = 170;
 // placeholders, and the Phase 2 routes that grew the entry chunk by 2.7 KB the same day.
 // Lowered from 185.5 later that day (182.5 KB): the first load's icons now share one file instead of about
 // thirty (vite.config.ts), and the toasts load with the first toast.
-const LIMIT_KB = 183;
+// Raised from 183 on 3 October 2026 (182.8 → 183.05 KB) with no new homepage code: the /notifications route
+// adds its entry to the router (about 0.07 KB), and BlurText became a file of its own (about 0.18 KB) once
+// the landscape it shared one with became the home page's alone (every page now has its own background).
+const LIMIT_KB = 183.1;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

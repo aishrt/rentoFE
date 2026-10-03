@@ -1,10 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { NotificationItem } from '@/api/types';
-import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { renderWithRouter } from '@/test/utils';
 import { NotificationBell } from './notification-bell';
+import {
+  mockNotificationsApi as mockNotifications,
+  notification as item,
+  notifications,
+} from './test-fixtures';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -12,43 +15,12 @@ afterEach(() => {
 
 const MINUTE = 60_000;
 
-const item = (overrides: Partial<NotificationItem>): NotificationItem => ({
-  id: 'n1',
-  type: 'BOOKING_CONFIRMED',
-  title: 'You’re booked',
-  body: 'Your trip in the 2022 Toyota RAV4 is confirmed.',
-  link: '/trips/RV-7K2Q9M',
-  createdAt: new Date(Date.now() - 5 * MINUTE).toISOString(),
-  read: false,
-  ...overrides,
-});
-
-/** The API keeps what's read, so a refetch after marking shows the same as the screen. */
-function mockNotifications(initial: NotificationItem[]) {
-  let items = initial;
-  return mockRoutes((request) => {
-    switch (`${request.method} ${request.path}`) {
-      case 'GET /notifications':
-        return {
-          status: 200,
-          body: { notifications: items, unreadCount: items.filter((entry) => !entry.read).length },
-        };
-      case 'POST /notifications/read': {
-        const ids = (request.body as { ids?: string[] }).ids;
-        items = items.map((entry) => (!ids || ids.includes(entry.id) ? { ...entry, read: true } : entry));
-        return { status: 200, body: { unreadCount: items.filter((entry) => !entry.read).length } };
-      }
-      default:
-        return undefined;
-    }
-  });
-}
-
 const render = () =>
   renderWithRouter(
     [
       { path: '/', element: <NotificationBell /> },
       { path: '/trips/:ref', element: <p>Trip page</p> },
+      { path: '/notifications', element: <p>Notifications page</p> },
     ],
     '/',
   );
@@ -116,6 +88,35 @@ describe('NotificationBell', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Notifications' }));
 
     expect(await screen.findByText('You’re all caught up. Booking news will show here.')).toBeInTheDocument();
+  });
+
+  it('shows only the newest three, with Show all to the Notifications page when there are more', async () => {
+    const sent = mockNotifications(notifications(5));
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 5 unread' }));
+
+    const menu = within(await screen.findByRole('menu'));
+    expect(menu.getAllByRole('menuitem', { name: /Notification \d/ }).map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Notification 1'),
+      expect.stringContaining('Notification 2'),
+      expect.stringContaining('Notification 3'),
+    ]);
+    expect(sent.find((request) => request.path === '/notifications')?.query.get('limit')).toBe('3');
+
+    await userEvent.click(menu.getByRole('menuitem', { name: 'Show all 5 notifications' }));
+    expect(await screen.findByText('Notifications page')).toBeInTheDocument();
+  });
+
+  it('has no Show all while three or fewer would all fit', async () => {
+    mockNotifications(notifications(3));
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 3 unread' }));
+
+    const menu = within(await screen.findByRole('menu'));
+    expect(menu.getAllByRole('menuitem', { name: /Notification \d/ })).toHaveLength(3);
+    expect(menu.queryByRole('menuitem', { name: /Show all/ })).not.toBeInTheDocument();
   });
 
   it('never follows a link that leaves the website', async () => {

@@ -20,7 +20,7 @@ function mockHeaderApi(user: SessionUser) {
       case 'POST /auth/session':
         return { status: 200, body: { user } };
       case 'GET /notifications':
-        return { status: 200, body: { notifications: [], unreadCount: 0 } };
+        return { status: 200, body: { notifications: [], unreadCount: 0, total: 0 } };
       default:
         return undefined;
     }
@@ -43,6 +43,7 @@ describe('AccountMenu', () => {
     expect(hrefs(await screen.findByRole('menu'))).toEqual([
       ['Trips', '/trips'],
       ['Become a host', '/become-a-host'],
+      ['Notifications', '/notifications'],
       ['Account settings', '/account/settings'],
       ['Log out', null],
     ]);
@@ -57,6 +58,7 @@ describe('AccountMenu', () => {
     expect(hrefs(await screen.findByRole('menu'))).toEqual([
       ['Trips', '/trips'],
       ['Hosting', '/host'],
+      ['Notifications', '/notifications'],
       ['Account settings', '/account/settings'],
       ['Log out', null],
     ]);
@@ -91,6 +93,7 @@ describe('MobileMenu', () => {
     expect(links('Your account')).toEqual([
       ['Trips', '/trips'],
       ['Hosting', '/host'],
+      ['Notifications', '/notifications'],
       ['Account settings', '/account/settings'],
     ]);
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
@@ -106,6 +109,7 @@ describe('MobileMenu', () => {
     expect(links('Main').map(([label]) => label)).toContain('Become a host');
     expect(links('Your account')).toEqual([
       ['Trips', '/trips'],
+      ['Notifications', '/notifications'],
       ['Account settings', '/account/settings'],
     ]);
   });

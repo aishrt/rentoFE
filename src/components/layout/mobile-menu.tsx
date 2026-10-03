@@ -28,6 +28,7 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
     ? [
         { label: 'Trips', to: '/trips' },
         ...(hosting ? [{ label: 'Hosting', to: '/host' }] : []),
+        { label: 'Notifications', to: '/notifications' },
         { label: 'Account settings', to: '/account/settings' },
       ]
     : [];

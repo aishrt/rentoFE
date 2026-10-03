@@ -239,6 +239,7 @@ Every page has its own background art, about what the page is for. The home hero
 | Trips, a trip                                | `TripRoute`: a route across hill country            |
 | Hosting (overview, bookings, cars, apply)    | `ParkingBays`: a car park from above                |
 | Account settings                             | `DotGrid`: dots and switches                        |
+| Notifications                                | `SignalArcs`: a bell sending out arcs               |
 | Checkout                                     | `CalmWaves`: slow, even waves                       |
 | Log in, sign up and the other guest sign-ins | `CoastArt`: a coast road under the moon             |
 | Staff log-in and invitation                  | `CityArt`: the city at night                        |
