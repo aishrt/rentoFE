@@ -1,5 +1,6 @@
 import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
 import { LogoMark } from '@/components/brand/logo';
+import { Toaster } from '@/components/ui/toast';
 
 /** A thin blue bar while the next page's code loads. */
 function NavigationProgress() {
@@ -20,6 +21,7 @@ export function RootLayout() {
       <NavigationProgress />
       <ScrollRestoration />
       <Outlet />
+      <Toaster />
     </>
   );
 }

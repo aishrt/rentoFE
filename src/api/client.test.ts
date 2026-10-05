@@ -46,6 +46,42 @@ describe('api client', () => {
     expect(calls.filter((call) => call === 'refresh')).toHaveLength(1);
   });
 
+  it('renews the session for the signed-in routes under /auth/ too (verifying a mobile)', async () => {
+    let verifyCalls = 0;
+    const fetchMock = mockApi({
+      'POST /auth/phone/verify': () => {
+        verifyCalls += 1;
+        return verifyCalls === 1
+          ? {
+              status: 401,
+              body: { error: { code: 'UNAUTHENTICATED', message: 'Please sign in to continue.' } },
+            }
+          : { status: 200, body: { user: adminUser } };
+      },
+      'POST /auth/refresh': { status: 200, body: { user: adminUser } },
+    });
+
+    await expect(unwrap(client.POST('/auth/phone/verify', { body: { code: '482913' } }))).resolves.toEqual({
+      user: adminUser,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("doesn't renew the session when signing in fails", async () => {
+    const fetchMock = mockApi({
+      'POST /auth/login': {
+        status: 401,
+        body: { error: { code: 'INVALID_CREDENTIALS', message: "That email and password don't match." } },
+      },
+      'POST /auth/refresh': { status: 200, body: {} },
+    });
+
+    await expect(
+      unwrap(client.POST('/auth/login', { body: { email: 'a@example.com', password: 'wrong' } })),
+    ).rejects.toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('turns API errors into ApiError with the code, message and field errors', async () => {
     mockApi({
       'POST /auth/login': {

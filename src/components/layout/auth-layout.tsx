@@ -2,8 +2,9 @@ import { ArrowLeft } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { LandscapeArt } from '@/components/brand/landscape-art';
 import { Logo } from '@/components/brand/logo';
+import { CityArt } from '@/components/brand/scenes/city-art';
+import { CoastArt } from '@/components/brand/scenes/coast-art';
 import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp } from '@/components/motion/presets';
 import { CheckList } from '@/components/ui/check-list';
@@ -15,11 +16,13 @@ const COPY = {
     eyebrow: 'Kia ora',
     title: 'Your next road trip starts with a local.',
     points: ['Cars from real people across Aotearoa', 'All-in pricing in NZD', 'Verified hosts and guests'],
+    art: CoastArt,
   },
   staff: {
     eyebrow: 'Staff portal',
     title: 'Keep every trip running smoothly.',
     points: ['Approvals and verifications', 'Bookings, payments and payouts', 'Support and incident cases'],
+    art: CityArt,
   },
 } as const;
 
@@ -28,9 +31,13 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
-/** Split screen for sign-in pages: the form on one side, brand art on the other (desktop only). */
+/**
+ * Split screen for sign-in pages: the form on one side, brand art on the other (desktop only). Guests get
+ * a coast road under the moon, staff the city at night; the home hero's landscape stays the home page's.
+ */
 export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
   const copy = COPY[variant];
+  const Art = copy.art;
 
   return (
     <div className="grid min-h-dvh bg-canvas lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -63,7 +70,7 @@ export function AuthLayout({ variant = 'guest', children }: AuthLayoutProps) {
         aria-label="About Rento Vroom"
         className="relative hidden overflow-hidden bg-ink text-canvas lg:m-3 lg:flex lg:rounded-sheet"
       >
-        <LandscapeArt idPrefix="auth-art" className="absolute inset-0 h-full w-full animate-hero-drift" />
+        <Art className="absolute inset-0 h-full w-full origin-[60%_40%] animate-hero-drift" />
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/30 to-transparent"

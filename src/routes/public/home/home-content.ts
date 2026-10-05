@@ -34,6 +34,8 @@ export const trustPoints: Feature[] = [
 ];
 
 export interface Destination {
+  /** The city landing page: /rental/<slug> (plan §1.4). */
+  slug: string;
   name: string;
   maoriName?: string;
   region: string;
@@ -45,6 +47,7 @@ export interface Destination {
 /** The five launch destinations (MILESTONES.md, Phase 4). */
 export const destinations: Destination[] = [
   {
+    slug: 'queenstown',
     name: 'Queenstown',
     maoriName: 'Tāhuna',
     region: 'Otago',
@@ -52,6 +55,7 @@ export const destinations: Destination[] = [
     tone: 'tone-queenstown',
   },
   {
+    slug: 'auckland',
     name: 'Auckland',
     maoriName: 'Tāmaki Makaurau',
     region: 'Auckland',
@@ -59,6 +63,7 @@ export const destinations: Destination[] = [
     tone: 'tone-auckland',
   },
   {
+    slug: 'christchurch',
     name: 'Christchurch',
     maoriName: 'Ōtautahi',
     region: 'Canterbury',
@@ -66,6 +71,7 @@ export const destinations: Destination[] = [
     tone: 'tone-christchurch',
   },
   {
+    slug: 'wellington',
     name: 'Wellington',
     maoriName: 'Te Whanganui-a-Tara',
     region: 'Wellington',
@@ -73,6 +79,7 @@ export const destinations: Destination[] = [
     tone: 'tone-wellington',
   },
   {
+    slug: 'rotorua',
     name: 'Rotorua',
     region: 'Bay of Plenty',
     tagline: 'Geothermal valleys, lakes and redwood forest trails.',

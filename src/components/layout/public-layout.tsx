@@ -8,7 +8,8 @@ export function PublicLayout() {
     <div className="flex min-h-dvh flex-col">
       <SkipLink />
       <SiteHeader />
-      <main id="main" className="flex-1">
+      {/* Positioned so a page's PageBackdrop can span the full width behind its top. */}
+      <main id="main" className="relative isolate flex-1">
         <Outlet />
       </main>
       <SiteFooter />

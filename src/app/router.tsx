@@ -30,9 +30,89 @@ export const routes: RouteObject[] = [
             errorElement: <PageError />,
             children: [
               { index: true, lazy: page(() => import('@/routes/public/home/home-page'), 'HomePage') },
+              // Search and listings (plan §9, Days 6–10).
+              { path: 'cars', lazy: page(() => import('@/routes/public/search/browse-page'), 'BrowsePage') },
+              {
+                path: 'search',
+                lazy: page(() => import('@/routes/public/search/search-page'), 'SearchPage'),
+              },
+              {
+                path: 'cars/:slug',
+                lazy: page(() => import('@/routes/public/vehicle/vehicle-page'), 'VehiclePage'),
+              },
+              {
+                path: 'rental/:city',
+                lazy: page(() => import('@/routes/public/rental/destination-page'), 'DestinationPage'),
+              },
+              // Public pages (plan §9, Days 12–14).
+              {
+                path: 'how-it-works',
+                lazy: page(() => import('@/routes/public/content/how-it-works-page'), 'HowItWorksPage'),
+              },
+              {
+                path: 'become-a-host',
+                lazy: page(() => import('@/routes/public/content/become-a-host-page'), 'BecomeAHostPage'),
+              },
+              {
+                path: 'safety',
+                lazy: page(() => import('@/routes/public/content/safety-page'), 'SafetyPage'),
+              },
+              {
+                path: 'insurance',
+                lazy: page(() => import('@/routes/public/content/insurance-page'), 'InsurancePage'),
+              },
+              { path: 'faq', lazy: page(() => import('@/routes/public/content/faq-page'), 'FaqPage') },
+              { path: 'about', lazy: page(() => import('@/routes/public/content/about-page'), 'AboutPage') },
+              {
+                path: 'contact',
+                lazy: page(() => import('@/routes/public/content/contact-page'), 'ContactPage'),
+              },
+              ...['terms', 'privacy', 'cancellation-policy', 'host-agreement', 'guest-agreement'].map(
+                (path) => ({
+                  path,
+                  lazy: page(() => import('@/routes/legal/legal-page'), 'LegalPage'),
+                }),
+              ),
               {
                 path: 'account/settings',
                 lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),
+              },
+              // Hosting: the application, vehicle onboarding and the calendar (plan §9, Days 8–11).
+              { path: 'host', lazy: page(() => import('@/routes/host/host-home-page'), 'HostHomePage') },
+              {
+                path: 'host/apply',
+                lazy: page(() => import('@/routes/host/host-apply-page'), 'HostApplyPage'),
+              },
+              {
+                path: 'host/vehicles/new',
+                lazy: page(() => import('@/routes/host/new-vehicle-page'), 'NewVehiclePage'),
+              },
+              {
+                path: 'host/vehicles/:id/calendar',
+                lazy: page(() => import('@/routes/host/vehicle-calendar-page'), 'VehicleCalendarPage'),
+              },
+              {
+                path: 'host/vehicles/:id/:step?',
+                lazy: page(() => import('@/routes/host/vehicle-editor-page'), 'VehicleEditorPage'),
+              },
+              // The booking flow, trips and the Host's bookings (plan §9, Days 11–14).
+              {
+                path: 'book/:slug',
+                lazy: page(() => import('@/routes/checkout/checkout-page'), 'CheckoutPage'),
+              },
+              { path: 'trips', lazy: page(() => import('@/routes/account/trips-page'), 'TripsPage') },
+              {
+                path: 'notifications',
+                lazy: page(() => import('@/routes/account/notifications-page'), 'NotificationsPage'),
+              },
+              { path: 'trips/:ref', lazy: page(() => import('@/routes/account/trip-page'), 'TripPage') },
+              {
+                path: 'host/bookings',
+                lazy: page(() => import('@/routes/bookings/host-bookings-page'), 'HostBookingsPage'),
+              },
+              {
+                path: 'host/bookings/:ref',
+                lazy: page(() => import('@/routes/bookings/host-booking-page'), 'HostBookingPage'),
               },
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
               ...[...seoPages, ...backendTaggedPages]
@@ -62,6 +142,11 @@ export const routes: RouteObject[] = [
         lazy: page(() => import('@/routes/auth/confirm-email-change-page'), 'ConfirmEmailChangePage'),
       },
       { path: 'admin/login', lazy: page(() => import('@/routes/admin/admin-login-page'), 'AdminLoginPage') },
+      // The link in a support team invitation: open to visitors, outside the portal's staff-only frame.
+      {
+        path: 'admin/invite',
+        lazy: page(() => import('@/routes/admin/accept-invite-page'), 'AcceptInvitePage'),
+      },
       {
         path: 'admin',
         lazy: page(() => import('@/routes/admin/admin-shell'), 'AdminShell'),
@@ -79,6 +164,29 @@ export const routes: RouteObject[] = [
                 path: 'payments',
                 handle: { title: 'Payments & payouts' } satisfies AdminRouteHandle,
                 lazy: page(() => import('@/routes/admin/payments-page'), 'AdminPaymentsPage'),
+              },
+              {
+                path: 'host-applications',
+                handle: { title: 'Host applications' } satisfies AdminRouteHandle,
+                lazy: page(
+                  () => import('@/routes/admin/host-applications-page'),
+                  'AdminHostApplicationsPage',
+                ),
+              },
+              {
+                path: 'vehicles',
+                handle: { title: 'Vehicles' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/vehicle-queue-page'), 'AdminVehicleQueuePage'),
+              },
+              {
+                path: 'vehicles/:id',
+                handle: { title: 'Vehicle review' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/vehicle-review-page'), 'AdminVehicleReviewPage'),
+              },
+              {
+                path: 'staff',
+                handle: { title: 'Staff' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/staff-page'), 'AdminStaffPage'),
               },
               {
                 path: 'settings',

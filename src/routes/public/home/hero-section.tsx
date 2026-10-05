@@ -9,7 +9,7 @@ import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp, heroTimeline } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { HeroSearchForm, type SearchPrefill } from '@/features/search/hero-search-form';
+import { HeroSearchForm } from '@/features/search/hero-search-form';
 import { motion } from '@/styles/tokens';
 
 const HEADLINE = 'Rent a car from local owners across New Zealand.';
@@ -21,7 +21,7 @@ const TIMELINE = heroTimeline(HEADLINE.split(' ').length);
  * On desktop the landscape falls behind as the page scrolls. The spec's proposition and Become a Host
  * prompt sit here (spec §4).
  */
-export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
+export function HeroSection() {
   return (
     <section aria-labelledby="hero-heading" className="relative isolate overflow-hidden bg-ink text-canvas">
       <div aria-hidden="true" className="parallax-exit absolute inset-0 -z-10">
@@ -52,7 +52,7 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
               </Card>
             )}
           >
-            <HeroSearchForm prefill={prefill} />
+            <HeroSearchForm />
           </ErrorBoundary>
 
           <Card
@@ -63,7 +63,7 @@ export function HeroSection({ prefill }: { prefill?: SearchPrefill }) {
               <span className="font-semibold text-canvas">Have a car?</span> Earn money by sharing it.
             </p>
             <Button variant="outline-light" asChild className="shrink-0">
-              <Link to="/#hosting">
+              <Link to="/become-a-host" viewTransition>
                 Become a Host
                 <ArrowRight aria-hidden="true" className="nudge-right" />
               </Link>

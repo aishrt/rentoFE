@@ -10,3 +10,7 @@ coverage
 # Lighthouse CI reports
 lighthouse-report
 .lighthouseci
+
+# Playwright end-to-end runs
+test-results
+playwright-report

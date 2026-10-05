@@ -26,7 +26,10 @@ export function AdminLoginPage() {
         Staff portal
       </Badge>
       <h1 className="headline text-title-3 font-medium">Staff log-in</h1>
-      <p className="mt-2 mb-8 text-muted">For Rento Vroom administrators and the support team.</p>
+      <p className="mt-2 mb-8 text-muted">
+        For the Rento Vroom admin and the support team. Support team members join by an invitation from the
+        admin.
+      </p>
 
       {session.data && (
         <Alert className="mb-6" title={`You're logged in as ${session.data.email}`}>

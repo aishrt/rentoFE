@@ -1,4 +1,13 @@
-import { ChevronDown, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import {
+  Bell,
+  CarFront,
+  ChevronDown,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Luggage,
+  Settings,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import type { SessionUser } from '@/api/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -12,15 +21,22 @@ import {
 import { AgreementsGate } from '@/features/auth/agreements-gate';
 import { initials, isStaff } from '@/features/auth/roles';
 import { useLogout } from '@/features/auth/use-session';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { UserMenuLabel } from './user-menu-label';
 
 export function AccountMenu({ user }: { user: SessionUser }) {
   const logout = useLogout();
+  // Hosting for anyone who has applied, and the way in for everyone else.
+  const hosting = user.hostStatus
+    ? { label: 'Hosting', to: '/host' }
+    : { label: 'Become a host', to: '/become-a-host' };
 
   return (
     <>
       {/* The header's signed-in part, on every public page, so visitors never download it. */}
       <AgreementsGate />
+      {/* The bell lives in this signed-in chunk too, so the homepage's first load doesn't grow (plan §12.5). */}
+      <NotificationBell />
       <DropdownMenu>
         {/* Fades in over the placeholder it replaces once the session and this menu have loaded. */}
         <DropdownMenuTrigger
@@ -46,11 +62,30 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             </DropdownMenuItem>
           )}
           <DropdownMenuItem asChild>
+            <Link to="/trips" viewTransition>
+              <Luggage aria-hidden="true" />
+              Trips
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to={hosting.to} viewTransition>
+              {user.hostStatus ? <KeyRound aria-hidden="true" /> : <CarFront aria-hidden="true" />}
+              {hosting.label}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/notifications" viewTransition>
+              <Bell aria-hidden="true" />
+              Notifications
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link to="/account/settings" viewTransition>
               <Settings aria-hidden="true" />
               Account settings
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => logout.mutate()}>
             <LogOut aria-hidden="true" />
             Log out

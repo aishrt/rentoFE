@@ -1,6 +1,7 @@
 import { ExpressCheckoutElement, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { AvailablePaymentMethods, StripeExpressCheckoutElementConfirmEvent } from '@stripe/stripe-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { CheckDraw } from '@/components/motion/check-draw';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { reportError } from '@/lib/monitoring';
@@ -29,10 +30,23 @@ type WalletState =
 interface PaymentFormProps {
   /** The pay button's label, e.g. "Pay NZ$180". */
   submitLabel: string;
-  /** Called once Stripe has taken (or authorised) the payment. */
-  onPaid: (paymentIntentId: string) => void;
+  /**
+   * Called once Stripe has taken (or authorised) the payment. While a returned promise runs, the button keeps
+   * showing progress; it handles its own errors (a rejection just ends the progress).
+   */
+  onPaid: (paymentIntentId: string) => void | Promise<void>;
   /** Shows exactly what Stripe reported about the wallets, for the staff test payment. */
   showWalletDetails?: boolean;
+  /** Shown just above the button, e.g. checkout's final price breakdown. */
+  beforeSubmit?: ReactNode;
+  /** Where Stripe comes back to after a bank's check that needs a redirect. This page by default. */
+  returnUrl?: string;
+  /** Called with the reason when a payment doesn't go through, e.g. so the booking records it. */
+  onFailed?: (message: string) => void;
+  /** The button's text while the payment and `onPaid` run, e.g. "Confirming your booking…". */
+  pendingLabel?: string;
+  /** Once `onPaid` has finished, the button shows an animated tick and this text (plan §12.4, Checkout). */
+  successLabel?: string;
 }
 
 /**
@@ -42,11 +56,21 @@ interface PaymentFormProps {
  * servers. The wallets appear only on HTTPS pages of a domain registered with Stripe; when they can't,
  * the visitor is told and pays by card.
  */
-export function PaymentForm({ submitLabel, onPaid, showWalletDetails = false }: PaymentFormProps) {
+export function PaymentForm({
+  submitLabel,
+  onPaid,
+  showWalletDetails = false,
+  beforeSubmit,
+  returnUrl,
+  onFailed,
+  pendingLabel,
+  successLabel,
+}: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [succeeded, setSucceeded] = useState(false);
   const [wallets, setWallets] = useState<WalletState>({ status: 'loading' });
 
   // Stripe normally answers within a second or two; a blocked script never answers at all.
@@ -57,7 +81,7 @@ export function PaymentForm({ submitLabel, onPaid, showWalletDetails = false }: 
   }, [wallets.status]);
 
   const pay = async (walletEvent?: StripeExpressCheckoutElementConfirmEvent) => {
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || succeeded) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -71,14 +95,23 @@ export function PaymentForm({ submitLabel, onPaid, showWalletDetails = false }: 
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: 'if_required',
-        confirmParams: { return_url: window.location.href },
+        confirmParams: { return_url: returnUrl ?? window.location.href },
       });
       if (confirmError) {
-        setError(confirmError.message ?? FAILED_MESSAGE);
+        const message = confirmError.message ?? FAILED_MESSAGE;
+        setError(message);
         walletEvent?.paymentFailed({ reason: 'fail' });
+        onFailed?.(message);
         return;
       }
-      if (paymentIntent) onPaid(paymentIntent.id);
+      if (paymentIntent) {
+        try {
+          await onPaid(paymentIntent.id);
+          if (successLabel) setSucceeded(true);
+        } catch {
+          // onPaid shows its own error.
+        }
+      }
     } finally {
       setSubmitting(false);
     }
@@ -145,14 +178,26 @@ export function PaymentForm({ submitLabel, onPaid, showWalletDetails = false }: 
         </Alert>
       )}
 
-      <Button
-        onClick={() => void pay()}
-        loading={submitting}
-        disabled={!stripe || !elements}
-        className="w-full"
-      >
-        {submitLabel}
-      </Button>
+      {beforeSubmit}
+
+      {succeeded ? (
+        // The press turned into progress, and the progress into a tick (plan §12.4, Checkout).
+        <div role="status">
+          <Button disabled className="w-full disabled:opacity-100">
+            <CheckDraw className="size-5" />
+            {successLabel}
+          </Button>
+        </div>
+      ) : (
+        <Button
+          onClick={() => void pay()}
+          loading={submitting}
+          disabled={!stripe || !elements}
+          className="w-full"
+        >
+          {submitting && pendingLabel ? pendingLabel : submitLabel}
+        </Button>
+      )}
     </div>
   );
 }

@@ -4,14 +4,13 @@ export interface NavLinkItem {
 }
 
 /**
- * Header navigation (plan §12.6). "How it works", "Become a host" and "Help" point at homepage sections
- * until their own pages are built.
+ * Header navigation (plan §12.6). "Help" opens the FAQs until the help centre arrives in Phase 3 (plan §9).
  */
 export const primaryNav: NavLinkItem[] = [
   { label: 'Browse cars', to: '/cars' },
-  { label: 'How it works', to: '/#how-it-works' },
-  { label: 'Become a host', to: '/#hosting' },
-  { label: 'Help', to: '/#faq' },
+  { label: 'How it works', to: '/how-it-works' },
+  { label: 'Become a host', to: '/become-a-host' },
+  { label: 'Help', to: '/faq' },
 ];
 
 export const footerNav: { title: string; links: NavLinkItem[] }[] = [

@@ -23,6 +23,8 @@ interface CalendarProps {
   max?: string;
   /** A trip to show as a band from start to end, such as pick-up to return. */
   range?: readonly [start: string, end: string];
+  /** Days that can't be chosen besides those outside min and max, e.g. a car's fully booked days. */
+  isDateDisabled?: (day: string) => boolean;
   /** Puts keyboard focus on the chosen (or first available) day when the calendar appears. */
   autoFocus?: boolean;
   className?: string;
@@ -53,7 +55,16 @@ const dayClasses = cn(
  * week's ends, Page Up and Page Down by month (with Shift, by year), and Enter chooses (the WAI-ARIA date
  * picker pattern). Today is marked with a dot.
  */
-export function Calendar({ value, onSelect, min, max, range, autoFocus = false, className }: CalendarProps) {
+export function Calendar({
+  value,
+  onSelect,
+  min,
+  max,
+  range,
+  isDateDisabled,
+  autoFocus = false,
+  className,
+}: CalendarProps) {
   const headingId = useId();
   const [today] = useState(() => toDateInputValue(new Date()));
   const [focused, setFocused] = useState(() =>
@@ -145,7 +156,9 @@ export function Calendar({ value, onSelect, min, max, range, autoFocus = false, 
                 if (!day) return <div key={column} role="gridcell" />;
                 const selected = day === value;
                 const isToday = day === today;
-                const disabled = Boolean((min && day < min) || (max && day > max));
+                const outside = Boolean((min && day < min) || (max && day > max));
+                const unavailable = !outside && Boolean(isDateDisabled?.(day));
+                const disabled = outside || unavailable;
                 const inRange = Boolean(rangeStart && rangeEnd && day > rangeStart && day < rangeEnd);
                 const isStart = day === rangeStart;
                 const isEnd = day === rangeEnd;
@@ -167,11 +180,12 @@ export function Calendar({ value, onSelect, min, max, range, autoFocus = false, 
                       type="button"
                       tabIndex={day === focused ? 0 : -1}
                       disabled={disabled}
-                      aria-label={formatFullDate(day)}
+                      aria-label={unavailable ? `${formatFullDate(day)}, unavailable` : formatFullDate(day)}
                       aria-current={isToday ? 'date' : undefined}
                       onClick={() => onSelect(day)}
                       className={cn(
                         dayClasses,
+                        unavailable && 'line-through decoration-muted/60',
                         isToday &&
                           'font-semibold text-primary after:absolute after:bottom-1.5 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-current',
                         (isStart || isEnd) &&

@@ -92,7 +92,7 @@ export function SiteHeader() {
           </IconButton>
           {menuRequested && (
             <Suspense fallback={null}>
-              <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} signedIn={Boolean(session.data)} />
+              <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} user={session.data ?? null} />
             </Suspense>
           )}
         </div>
