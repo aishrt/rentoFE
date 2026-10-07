@@ -2930,6 +2930,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/{id}/area-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The listing’s area map
+         * @description Public. A Maps Static API image of the approximate area as a shaded circle, never a pin, fetched with the server’s Google key so no key reaches the browser. Use the listing’s `location.mapUrl`. Cached for a day.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Changes when the area moves, so caches refresh */
+                    v?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The car’s id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The map */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/png": string;
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/{id}/reviews": {
         parameters: {
             query?: never;
@@ -7871,6 +7943,8 @@ export interface components {
                     lng: number;
                     radiusM: number;
                 } | null;
+                /** @description The area map image (GET /vehicles/{id}/area-map), served by this API so no Google key reaches the browser; null when Google isn’t set up */
+                mapUrl: string | null;
             };
             deliveryOptions: components["schemas"]["DeliveryOptionSummary"][];
             protectionPlans: components["schemas"]["ProtectionPlanSummary"][];

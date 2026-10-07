@@ -11,7 +11,7 @@ export function SiteFooter() {
     <footer className="bg-ink text-canvas/75">
       <Container className="grid gap-12 py-16 lg:grid-cols-[1.2fr_2fr] lg:py-20">
         <div className="max-w-xs">
-          <Link to="/" aria-label="Rento Vroom home" className="inline-block rounded-control">
+          <Link to="/" viewTransition aria-label="Rento Vroom home" className="inline-block rounded-control">
             <Logo tone="light" />
           </Link>
           <p className="mt-5 text-sm leading-relaxed">
@@ -44,6 +44,7 @@ export function SiteFooter() {
                   <li key={link.to}>
                     <Link
                       to={link.to}
+                      viewTransition={!link.to.includes('#')}
                       className="link-underline text-sm transition-colors duration-120 hover:text-canvas"
                     >
                       {link.label}
@@ -59,7 +60,11 @@ export function SiteFooter() {
       <Divider tone="dark" />
       <Container className="flex flex-col gap-3 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
         <p>© {YEAR} Rento Vroom. All prices in NZD.</p>
-        <Link to="/admin/login" className="link-underline self-start hover:text-canvas sm:self-auto">
+        <Link
+          to="/admin/login"
+          viewTransition
+          className="link-underline self-start hover:text-canvas sm:self-auto"
+        >
           Staff log-in
         </Link>
       </Container>

@@ -1,63 +1,10 @@
 import { MapPin } from 'lucide-react';
+import { useState } from 'react';
 import type { VehicleDetail } from '@/api/types';
-import { colors } from '@/styles/tokens';
 import { ListingSection } from './listing-section';
 import { placeLine } from './vehicle-format';
 
-type Approx = NonNullable<VehicleDetail['location']['approx']>;
-
-/** The browser key for the Maps Static API, restricted to our domain. Unset until the client's Google account arrives. */
-const MAPS_KEY: string | undefined = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY || undefined;
-
-const EARTH_RADIUS_M = 6_371_000;
-const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-const toDegrees = (radians: number) => (radians * 180) / Math.PI;
-
-/** Points around the circle, "lat,lng|lat,lng|…", for the static map's shaded area. */
-function circlePath({ lat, lng, radiusM }: Approx, points = 48): string {
-  const distance = radiusM / EARTH_RADIUS_M;
-  const latR = toRadians(lat);
-  const lngR = toRadians(lng);
-  return Array.from({ length: points + 1 }, (_, index) => {
-    const bearing = (index / points) * 2 * Math.PI;
-    const lat2 = Math.asin(
-      Math.sin(latR) * Math.cos(distance) + Math.cos(latR) * Math.sin(distance) * Math.cos(bearing),
-    );
-    const lng2 =
-      lngR +
-      Math.atan2(
-        Math.sin(bearing) * Math.sin(distance) * Math.cos(latR),
-        Math.cos(distance) - Math.sin(latR) * Math.sin(lat2),
-      );
-    return `${toDegrees(lat2).toFixed(5)},${toDegrees(lng2).toFixed(5)}`;
-  }).join('|');
-}
-
-/** A zoom where the circle fills about a third of the map's height. */
-function zoomFor({ lat, radiusM }: Approx): number {
-  const metresPerPixel = radiusM / 60;
-  const zoom = Math.log2((156_543.03 * Math.cos(toRadians(lat))) / metresPerPixel);
-  return Math.max(8, Math.min(15, Math.floor(zoom)));
-}
-
-/** A Maps Static API image of the area as a shaded circle: never a pin (plan §1.2, spec §22). */
-function staticMapUrl(approx: Approx, key: string): string {
-  const blue = colors.primary.replace('#', '0x');
-  const params = new URLSearchParams({
-    center: `${approx.lat},${approx.lng}`,
-    zoom: String(zoomFor(approx)),
-    size: '640x360',
-    scale: '2',
-    maptype: 'roadmap',
-    key,
-  });
-  params.append('path', `color:${blue}B3|weight:2|fillcolor:${blue}2E|${circlePath(approx)}`);
-  params.append('style', 'feature:poi|visibility:off');
-  params.append('style', 'feature:transit|visibility:off');
-  return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
-}
-
-/** Stands in for the map until the Google key arrives: a quiet sketch of streets with the area shaded. */
+/** Stands in for the map until Google is set up: a quiet sketch of streets with the area shaded. */
 function MapSketch() {
   return (
     <svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true" className="size-full">
@@ -85,26 +32,29 @@ function MapSketch() {
 }
 
 /**
- * Where the car is (spec §6, §22): the suburb and an approximate area, never the address. With the Maps
- * Static API key set, a real map with the area shaded; otherwise a sketch. The exact address comes once
+ * Where the car is (spec §6, §22): the suburb and an approximate area, never the address. The API serves
+ * the map (a Maps Static API image with the area shaded, never a pin), so no Google key is in the website.
+ * Without one (`mapUrl` null), or when Google refuses the image, a sketch. The exact address comes once
  * the booking is confirmed.
  */
 export function LocationMap({ vehicle }: { vehicle: VehicleDetail }) {
   const area = placeLine(vehicle.location);
-  const approx = vehicle.location.approx;
+  const { mapUrl } = vehicle.location;
+  const [mapFailed, setMapFailed] = useState(false);
 
   return (
     <ListingSection id="location" title="Location">
       <figure>
         <div className="relative aspect-video overflow-hidden rounded-card border border-line/80 bg-canvas shadow-card">
-          {approx && MAPS_KEY ? (
+          {mapUrl && !mapFailed ? (
             <img
-              src={staticMapUrl(approx, MAPS_KEY)}
+              src={mapUrl}
               alt={`Map of the area around ${area || 'the car'}`}
               loading="lazy"
               decoding="async"
               width={640}
               height={360}
+              onError={() => setMapFailed(true)}
               className="size-full object-cover"
             />
           ) : (

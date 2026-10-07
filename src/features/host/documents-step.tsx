@@ -190,7 +190,7 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
       }),
     )();
 
-  useEffect(() => registerSave(saveTo));
+  useEffect(() => registerSave(saveTo, isDirty));
 
   useEffect(() => {
     const timer = setInterval(

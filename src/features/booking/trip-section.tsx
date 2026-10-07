@@ -1,5 +1,5 @@
 import { CalendarX, Clock, MapPin, Undo2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { TripProblem, VehicleDetail } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { TimePicker } from '@/components/ui/time-picker';
 import { PlacePicker } from '@/features/host/place-picker';
 import { fromDateTimeParam, movePickupDate, toDateTimeParam } from '@/features/search/search-validation';
-import { upcomingBusy } from '@/features/vehicles/availability';
+import { earliestPickupDay, upcomingBusy } from '@/features/vehicles/availability';
 import { useVehicleAvailability } from '@/features/vehicles/vehicle-api';
 import { optionDetail, optionFee } from '@/features/vehicles/vehicle-format';
 import { cn } from '@/lib/cn';
@@ -65,6 +65,12 @@ export function TripSection({
   onContinue,
 }: TripSectionProps) {
   const [today] = useState(() => nzWallClockParts(new Date()).date);
+  const { minNoticeHours } = vehicle.rules;
+  // Days wholly inside the Host's minimum notice can't be chosen.
+  const earliest = useMemo(() => {
+    const day = earliestPickupDay(minNoticeHours);
+    return day > today ? day : today;
+  }, [minNoticeHours, today]);
   const availability = useVehicleAvailability(vehicle.id);
   const booked = upcomingBusy(availability.data?.busy ?? []);
   const pickup = fromDateTimeParam(resolved.start || undefined);
@@ -112,7 +118,7 @@ export function TripSection({
             <DatePicker
               value={dates[dateKey]}
               onChange={(value) => setDates(isPickup ? { pickupDate: value } : { returnDate: value })}
-              min={isPickup ? today : dates.pickupDate || today}
+              min={isPickup ? earliest : dates.pickupDate || earliest}
               range={[dates.pickupDate, dates.returnDate]}
               placeholder="Add date"
               calendarLabel={isPickup ? 'Choose a pick-up date' : 'Choose a return date'}

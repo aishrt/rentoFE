@@ -107,6 +107,7 @@ export function vehicleDetail(overrides: Partial<VehicleDetail> = {}): VehicleDe
       city: 'Queenstown',
       region: 'Otago',
       approx: { lat: -45.0168, lng: 168.7307, radiusM: 1000 },
+      mapUrl: null,
     },
     deliveryOptions: [
       {

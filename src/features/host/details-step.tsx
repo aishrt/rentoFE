@@ -70,7 +70,7 @@ export function DetailsStep({ vehicle, policies, missing, registerSave }: StepPr
       else return send(patch, target);
     })();
 
-  useEffect(() => registerSave(saveTo));
+  useEffect(() => registerSave(saveTo, isDirty));
 
   const engine = fuelType !== 'EV';
   const battery = hasBattery(fuelType);
