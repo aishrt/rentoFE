@@ -66,6 +66,7 @@ const quotes = (sent: ReturnType<typeof mockListing>) =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   localStorage.clear();
 });
 
@@ -130,6 +131,22 @@ describe('VehiclePage', () => {
     await user.click(panel().getByRole('button', { name: 'Book' }));
     expect(await panel().findByText('Choose a pick-up date')).toBeInTheDocument();
     expect(quotes(sent)).toEqual([]);
+  });
+
+  it('rules out pick-up days inside the Host’s minimum notice', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // 9 am on Tue 12 Mar 2030 in NZ (NZDT, UTC+13), for a car that needs two days' notice.
+    vi.setSystemTime(new Date('2030-03-11T20:00:00.000Z'));
+    const base = vehicleDetail();
+    mockListing({ vehicle: vehicleDetail({ rules: { ...base.rules, minNoticeHours: 48 } }) });
+    const user = userEvent.setup();
+    renderListing();
+
+    await screen.findByRole('heading', { level: 1, name: 'Toyota RAV4 2022' });
+    await user.click(panel().getByRole('button', { name: /Pick-up date/ }));
+
+    expect(screen.getByRole('button', { name: 'Wednesday, 13 March 2030' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Thursday, 14 March 2030' })).toBeEnabled();
   });
 
   it('prices the trip from the URL and links Book to checkout with the choices', async () => {

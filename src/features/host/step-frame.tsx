@@ -30,6 +30,8 @@ const isStep = (target: StepTarget | null, kind: 'back' | 'exit' | 'continue', s
   if (kind === 'exit') return target === 'exit';
   if (typeof target !== 'object')
     return kind === 'continue' && (target === 'review' || target === 'overview');
+  // Leaving for another page ("Save and leave") isn't one of the footer's buttons.
+  if (!('step' in target)) return false;
   return kind === 'back' ? target.step < (step ?? 0) : target.step > (step ?? 0);
 };
 

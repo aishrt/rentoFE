@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicle } from '@/api/types';
@@ -15,6 +15,7 @@ const render = (path: string) =>
     [
       { path: '/host/vehicles/:id/:step?', element: <VehicleEditorPage /> },
       { path: '/host', element: <p>Host home</p> },
+      { path: '/host/bookings', element: <p>Host bookings</p> },
     ],
     path,
   );
@@ -158,6 +159,89 @@ describe('VehicleEditorPage', () => {
 
     expect(await screen.findByText('Host home')).toBeInTheDocument();
     expect(patch).toHaveBeenCalledOnce();
+  });
+
+  describe('unsaved changes', () => {
+    /** A link elsewhere on the site, such as the header's or the Host menu's. */
+    const leaveFor = (router: ReturnType<typeof render>['router'], path: string) =>
+      act(async () => {
+        await router.navigate(path);
+      });
+
+    it('asks before another link leaves a changed step, and can leave without saving', async () => {
+      const patch = vi.fn();
+      api(sampleVehicle({ onboardingStep: 5 }), {
+        'PATCH /host/vehicles/v1': () => (patch(), { status: 200 }),
+      });
+      const { router } = render('/host/vehicles/v1/5');
+
+      await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
+      await leaveFor(router, '/host/bookings');
+
+      const dialog = await screen.findByRole('dialog', { name: 'Save your changes?' });
+      expect(router.state.location.pathname).toBe('/host/vehicles/v1/5');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Leave without saving' }));
+
+      expect(await screen.findByText('Host bookings')).toBeInTheDocument();
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('saves the step, then leaves, with Save and leave', async () => {
+      let sent: Record<string, unknown> | undefined;
+      api(sampleVehicle({ onboardingStep: 5 }), {
+        'PATCH /host/vehicles/v1': (init) => {
+          sent = body(init);
+          return { status: 200, body: { vehicle: sampleVehicle({ onboardingStep: 5 }) } };
+        },
+      });
+      const { router } = render('/host/vehicles/v1/5');
+
+      await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
+      await leaveFor(router, '/host/bookings');
+      await userEvent.click(await screen.findByRole('button', { name: 'Save and leave' }));
+
+      expect(await screen.findByText('Host bookings')).toBeInTheDocument();
+      expect(sent).toMatchObject({ rules: { instantBook: true } });
+    });
+
+    it('stays on the step when asked to', async () => {
+      api(sampleVehicle({ onboardingStep: 5 }));
+      const { router } = render('/host/vehicles/v1/5');
+
+      await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
+      await leaveFor(router, '/host/bookings');
+      await userEvent.click(await screen.findByRole('button', { name: 'Stay on this step' }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/host/vehicles/v1/5');
+      expect(screen.getByRole('radio', { name: /Instant Book on/ })).toBeChecked();
+    });
+
+    it('has the browser ask before the tab closes, only while there are unsaved changes', async () => {
+      api(sampleVehicle({ onboardingStep: 5 }));
+      render('/host/vehicles/v1/5');
+      const closeTab = () => {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+
+      await screen.findByRole('radio', { name: /Instant Book on/ });
+      expect(closeTab()).toBe(false);
+      await userEvent.click(screen.getByRole('radio', { name: /Instant Book on/ }));
+      expect(closeTab()).toBe(true);
+    });
+
+    it('lets the Host leave an unchanged step without asking', async () => {
+      api(sampleVehicle({ onboardingStep: 5 }));
+      const { router } = render('/host/vehicles/v1/5');
+
+      await screen.findByRole('radio', { name: /Instant Book on/ });
+      await leaveFor(router, '/host/bookings');
+
+      expect(await screen.findByText('Host bookings')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('resumes a draft at the step it reached', async () => {

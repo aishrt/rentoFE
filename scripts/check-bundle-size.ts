@@ -23,7 +23,10 @@ const PLAN_BUDGET_KB = 170;
 // BlurText became a file of its own (about 0.2 KB) once the landscape it shared one with became the home
 // page's alone (every page now has its own background), and the /notifications route adds its entry to the
 // router. Local builds measure about 0.15 KB less than the pipeline's, which has the real VITE_ values.
-const LIMIT_KB = 183.3;
+// Raised from 183.3 on 7 October 2026 (183.05 → 183.31 KB locally, so about 183.46 KB in the pipeline) with
+// no new homepage code: the listing editor's unsaved-changes check uses React Router's useBlocker, whose
+// code joins the router in the entry chunk (about 0.2 KB), and the footer's links now animate the page change.
+const LIMIT_KB = 183.5;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

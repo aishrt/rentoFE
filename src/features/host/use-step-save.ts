@@ -8,8 +8,8 @@ import { formErrorMessage } from '@/features/account/form-errors';
 import { patchVehicleRequest, storeVehicle } from './host-api';
 import { STEP_COUNT } from './vehicle-labels';
 
-/** Where a step goes once it's saved. */
-export type StepTarget = { step: number } | 'review' | 'exit' | 'calendar' | 'overview';
+/** Where a step goes once it's saved; `to` is any page, for "Save and leave". */
+export type StepTarget = { step: number } | { to: string } | 'review' | 'exit' | 'calendar' | 'overview';
 
 export const vehiclePath = (id: string) => `/host/vehicles/${id}`;
 export const stepPath = (id: string, step: number | 'review') => `${vehiclePath(id)}/${step}`;
@@ -19,6 +19,8 @@ export interface StepNavigationState {
   direction?: 1 | -1;
   /** Set after a successful submit, for the overview's confirmation. */
   submitted?: boolean;
+  /** Set on every move that follows a save, so the unsaved-changes check lets it through. */
+  saved?: boolean;
 }
 
 export interface SaveProblem {
@@ -61,24 +63,29 @@ export function useStepSave(vehicle: HostVehicle, step: number) {
   });
 
   const go = (target: StepTarget) => {
+    const saved = { saved: true } satisfies StepNavigationState;
     if (target === 'exit') {
       toast('Saved', { description: 'Pick up where you left off from your Host home.' });
-      navigate('/host');
+      navigate('/host', { state: saved });
     } else if (target === 'calendar') {
-      navigate(`${vehiclePath(vehicle.id)}/calendar`);
+      navigate(`${vehiclePath(vehicle.id)}/calendar`, { state: saved });
     } else if (target === 'overview') {
-      navigate(vehiclePath(vehicle.id));
+      navigate(vehiclePath(vehicle.id), { state: saved });
     } else if (target === 'review') {
-      navigate(stepPath(vehicle.id, 'review'), { state: { direction: 1 } satisfies StepNavigationState });
+      navigate(stepPath(vehicle.id, 'review'), { state: { ...saved, direction: 1 } });
+    } else if ('to' in target) {
+      toast('Saved');
+      navigate(target.to, { state: saved });
     } else {
       const direction = target.step >= step ? 1 : -1;
-      navigate(stepPath(vehicle.id, target.step), { state: { direction } satisfies StepNavigationState });
+      navigate(stepPath(vehicle.id, target.step), { state: { ...saved, direction } });
     }
   };
 
   const save = async (patch: VehiclePatch, target: StepTarget, { changed, onFieldErrors }: SaveOptions) => {
     setProblem(null);
-    const reached = typeof target === 'object' ? target.step : target === 'review' ? STEP_COUNT : step;
+    const reached =
+      typeof target === 'object' && 'step' in target ? target.step : target === 'review' ? STEP_COUNT : step;
     const onboardingStep = Math.min(STEP_COUNT, Math.max(vehicle.onboardingStep, reached, step));
     if (!changed && onboardingStep === vehicle.onboardingStep) {
       go(target);
