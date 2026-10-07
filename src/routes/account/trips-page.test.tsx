@@ -50,7 +50,8 @@ describe('TripsPage', () => {
     });
     render();
 
-    const items = await screen.findAllByRole('listitem');
+    // The trips, not the dashboard's navigation around them.
+    const items = await within(await screen.findByRole('tabpanel')).findAllByRole('listitem');
     expect(items).toHaveLength(2);
     expect(sent.find((request) => request.path === '/bookings')?.query.toString()).toBe(
       'role=guest&group=upcoming',

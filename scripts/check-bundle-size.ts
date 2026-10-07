@@ -26,7 +26,12 @@ const PLAN_BUDGET_KB = 170;
 // Raised from 183.3 on 7 October 2026 (183.05 → 183.31 KB locally, so about 183.46 KB in the pipeline) with
 // no new homepage code: the listing editor's unsaved-changes check uses React Router's useBlocker, whose
 // code joins the router in the entry chunk (about 0.2 KB), and the footer's links now animate the page change.
-const LIMIT_KB = 183.5;
+// Raised from 183.5 later on 7 October 2026 (183.31 → 184.11 KB locally, so about 184.26 KB in the pipeline)
+// with no new homepage code: the Guest dashboard adds eight routes (account, Saved cars, payments, a receipt,
+// help and support, a support request, the help centre and a guide), and each adds its entry to the router
+// with the chunks it preloads (0.7 KB measured with and without them). The same build without those routes
+// measures 183.4 KB.
+const LIMIT_KB = 184.3;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

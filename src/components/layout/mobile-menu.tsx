@@ -17,8 +17,8 @@ const linkClasses =
 
 /**
  * The ☰ menu on phones and tablets (plan §12.6). Loaded on first use to keep the homepage light. The links
- * fade up one after another as the sheet slides in. Signed in, it adds Trips and, for anyone who has applied
- * to host, Hosting in place of Become a host.
+ * fade up one after another as the sheet slides in. Signed in, it adds the Guest dashboard's places and, for
+ * anyone who has applied to host, Hosting in place of Become a host.
  */
 export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const close = () => onOpenChange(false);
@@ -27,9 +27,10 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const account: NavLinkItem[] = user
     ? [
         { label: 'Trips', to: '/trips' },
+        { label: 'Saved cars', to: '/saved' },
         ...(hosting ? [{ label: 'Hosting', to: '/host' }] : []),
         { label: 'Notifications', to: '/notifications' },
-        { label: 'Account settings', to: '/account/settings' },
+        { label: 'Account', to: '/account' },
       ]
     : [];
 

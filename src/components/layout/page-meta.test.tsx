@@ -20,9 +20,11 @@ describe('PageMeta', () => {
   });
 
   it('keeps a page that is not built yet out of search results', () => {
-    render(<PageMeta page={seoPage('/help')} />);
+    render(
+      <PageMeta page={{ path: '/later', title: 'Later', description: 'Built later.', comingSoon: true }} />,
+    );
 
-    expect(document.title).toBe('Help centre · Rento Vroom');
+    expect(document.title).toBe('Later · Rento Vroom');
     expect(headTag('meta[name="robots"]')[0]).toHaveAttribute('content', 'noindex, follow');
     expect(headTag('link[rel="canonical"]')).toHaveLength(0);
   });

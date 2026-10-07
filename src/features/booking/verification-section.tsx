@@ -35,6 +35,8 @@ function Done({ children }: { children: ReactNode }) {
 interface VerificationSectionProps {
   user: SessionUser;
   readiness: UseQueryResult<CheckoutReadiness>;
+  /** At checkout the problems are about the trip on screen; on the account page, about booking at all. */
+  context?: 'checkout' | 'account';
 }
 
 /**
@@ -43,7 +45,7 @@ interface VerificationSectionProps {
  * licensed, a licence valid until the trip ends, English proof). The rules come from the API, so they
  * always match settings. Once nothing is missing, checkout moves on to payment by itself.
  */
-export function VerificationSection({ user, readiness }: VerificationSectionProps) {
+export function VerificationSection({ user, readiness, context = 'checkout' }: VerificationSectionProps) {
   const queryClient = useQueryClient();
   const policies = usePolicies();
   const [editing, setEditing] = useState(false);
@@ -118,7 +120,11 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
           </p>
         )}
         {licenceProblems.length > 0 && !firstTime && (
-          <Alert variant="danger" role="alert" title="Before you can book this trip">
+          <Alert
+            variant="danger"
+            role="alert"
+            title={context === 'checkout' ? 'Before you can book this trip' : 'Before you can book'}
+          >
             <ul className="grid gap-1.5">
               {licenceProblems.map((problem) => (
                 <li key={problem.code}>

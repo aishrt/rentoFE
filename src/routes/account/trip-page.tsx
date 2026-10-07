@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CarFront,
   CircleCheck,
+  FileText,
   Hourglass,
   ReceiptText,
   ShieldCheck,
@@ -96,6 +97,9 @@ function Banner({
     </div>
   );
 }
+
+/** A booking whose payment went through has a GST receipt, refunded or not. */
+const PAID: NonNullable<Booking['payment']>['status'][] = ['SUCCEEDED', 'REFUNDED', 'PARTIALLY_REFUNDED'];
 
 const CANCELLED_BY: Record<NonNullable<Booking['cancellation']>['by'], (host: string) => string> = {
   GUEST: () => 'You cancelled this trip',
@@ -410,6 +414,16 @@ function Trip({ tripRef }: { tripRef: string }) {
         <div className="grid gap-6 lg:sticky lg:top-24">
           <DetailCard title="Receipt" icon={ReceiptText}>
             <Receipt booking={booking} />
+            {booking.payment && PAID.includes(booking.payment.status) && (
+              <Link
+                to={`/trips/${booking.ref}/receipt`}
+                viewTransition
+                className="link-underline mt-4 inline-flex items-center gap-2 font-medium text-primary"
+              >
+                <FileText aria-hidden="true" className="size-4" />
+                GST receipt to print or download
+              </Link>
+            )}
           </DetailCard>
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
             {cancelKind && cancelKind !== 'release' && (

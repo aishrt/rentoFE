@@ -48,7 +48,7 @@ export function SiteHeader() {
     <header
       className={cn(
         // Named for view transitions, so the header holds still while the page below it cross-fades.
-        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 [view-transition-name:site-header]',
+        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 [view-transition-name:site-header] print:hidden',
         scrolled ? 'glass border-line/70' : 'border-transparent bg-canvas',
       )}
     >

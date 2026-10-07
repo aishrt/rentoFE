@@ -42,9 +42,10 @@ describe('AccountMenu', () => {
 
     expect(hrefs(await screen.findByRole('menu'))).toEqual([
       ['Trips', '/trips'],
+      ['Saved cars', '/saved'],
       ['Become a host', '/become-a-host'],
       ['Notifications', '/notifications'],
-      ['Account settings', '/account/settings'],
+      ['Account', '/account'],
       ['Log out', null],
     ]);
   });
@@ -57,9 +58,10 @@ describe('AccountMenu', () => {
 
     expect(hrefs(await screen.findByRole('menu'))).toEqual([
       ['Trips', '/trips'],
+      ['Saved cars', '/saved'],
       ['Hosting', '/host'],
       ['Notifications', '/notifications'],
-      ['Account settings', '/account/settings'],
+      ['Account', '/account'],
       ['Log out', null],
     ]);
   });
@@ -92,9 +94,10 @@ describe('MobileMenu', () => {
     expect(links('Main').map(([label]) => label)).toEqual(['Browse cars', 'How it works', 'Help']);
     expect(links('Your account')).toEqual([
       ['Trips', '/trips'],
+      ['Saved cars', '/saved'],
       ['Hosting', '/host'],
       ['Notifications', '/notifications'],
-      ['Account settings', '/account/settings'],
+      ['Account', '/account'],
     ]);
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
 
@@ -109,8 +112,9 @@ describe('MobileMenu', () => {
     expect(links('Main').map(([label]) => label)).toContain('Become a host');
     expect(links('Your account')).toEqual([
       ['Trips', '/trips'],
+      ['Saved cars', '/saved'],
       ['Notifications', '/notifications'],
-      ['Account settings', '/account/settings'],
+      ['Account', '/account'],
     ]);
   });
 });

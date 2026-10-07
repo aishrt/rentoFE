@@ -29,6 +29,21 @@ const nzDayMonth = new Intl.DateTimeFormat('en-NZ', {
   timeZone: NZ_TIME_ZONE,
 });
 const nzYear = new Intl.DateTimeFormat('en-NZ', { year: 'numeric', timeZone: NZ_TIME_ZONE });
+const nzNumericDate = new Intl.DateTimeFormat('en-NZ', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: NZ_TIME_ZONE,
+});
+const nzDateTimeWithYear = new Intl.DateTimeFormat('en-NZ', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: NZ_TIME_ZONE,
+});
 // en-CA writes dates as 2026-10-12, the format the API and the date pickers use.
 const nzWallClock = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
@@ -45,6 +60,12 @@ export const formatNzDateTime = (iso: string) => nzDateTime.format(new Date(iso)
 
 /** "Mon, 12 Oct" in NZ time. */
 export const formatNzDate = (iso: string) => nzDate.format(new Date(iso));
+
+/** "12/10/2026" in NZ time (plan §3: DD/MM/YYYY), for receipts and payment history, where the year matters. */
+export const formatNzNumericDate = (iso: string) => nzNumericDate.format(new Date(iso));
+
+/** "Mon, 12 Oct 2026, 10:00 am" in NZ time, for a receipt kept for years. */
+export const formatNzDateTimeWithYear = (iso: string) => nzDateTimeWithYear.format(new Date(iso));
 
 /** "12–15 Oct", "30 Oct – 2 Nov", with the year when the trip isn't this year: a trip on a card. */
 export function formatTripSpan(startIso: string, endIso: string, now = new Date()): string {

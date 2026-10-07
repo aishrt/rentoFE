@@ -15,11 +15,14 @@ describe('routes', () => {
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
-  it('shows "coming soon" for a linked page built in a later milestone (the help centre, Phase 3)', async () => {
-    mockApi({ 'POST /auth/session': { status: 200, body: { user: null } } });
+  it('opens the help centre, built in Phase 3 in place of its "coming soon" page', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: null } },
+      'GET /help/articles': { status: 200, body: { articles: [] } },
+    });
     renderWithRouter(routes, '/help');
 
-    expect(await screen.findByRole('heading', { name: 'Help centre' })).toBeInTheDocument();
-    expect(screen.getByText('Coming soon')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /How can we help/ })).toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
   });
 });

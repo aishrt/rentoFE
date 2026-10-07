@@ -41,6 +41,10 @@ export function useToggleFavourite() {
         tone: 'danger',
       });
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: favouritesKey }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: favouritesKey });
+      // The Saved cars page lists the cars themselves.
+      return queryClient.invalidateQueries({ queryKey: ['me', 'saved-cars'] });
+    },
   });
 }

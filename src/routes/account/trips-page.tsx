@@ -12,6 +12,7 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useBookings, type BookingGroup } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
@@ -137,10 +138,14 @@ function TripsSkeleton() {
 /** The Guest's trips (spec §8): Upcoming, Current, Completed and Cancelled, grouped by the API (plan §8.2). */
 export function TripsPage() {
   return (
-    <Container className="max-w-4xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
       <PageMeta title="Trips" noindex />
-      <RequireSignedIn fallback={<TripsSkeleton />}>{() => <Trips />}</RequireSignedIn>
+      <AccountShell>
+        <div className="max-w-4xl">
+          <RequireSignedIn fallback={<TripsSkeleton />}>{() => <Trips />}</RequireSignedIn>
+        </div>
+      </AccountShell>
     </Container>
   );
 }

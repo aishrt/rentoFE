@@ -2,11 +2,12 @@ import {
   Bell,
   CarFront,
   ChevronDown,
+  Heart,
   KeyRound,
   LayoutDashboard,
   LogOut,
   Luggage,
-  Settings,
+  UserRound,
 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { SessionUser } from '@/api/types';
@@ -68,6 +69,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
+            <Link to="/saved" viewTransition>
+              <Heart aria-hidden="true" />
+              Saved cars
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link to={hosting.to} viewTransition>
               {user.hostStatus ? <KeyRound aria-hidden="true" /> : <CarFront aria-hidden="true" />}
               {hosting.label}
@@ -80,9 +87,9 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to="/account/settings" viewTransition>
-              <Settings aria-hidden="true" />
-              Account settings
+            <Link to="/account" viewTransition>
+              <UserRound aria-hidden="true" />
+              Account
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

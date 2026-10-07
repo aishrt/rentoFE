@@ -8,7 +8,7 @@ const YEAR = new Date().getFullYear();
 
 export function SiteFooter() {
   return (
-    <footer className="bg-ink text-canvas/75">
+    <footer className="bg-ink text-canvas/75 print:hidden">
       <Container className="grid gap-12 py-16 lg:grid-cols-[1.2fr_2fr] lg:py-20">
         <div className="max-w-xs">
           <Link to="/" viewTransition aria-label="Rento Vroom home" className="inline-block rounded-control">

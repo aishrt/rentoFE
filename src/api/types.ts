@@ -117,3 +117,22 @@ export type CancellationPreview = Schemas['CancellationPreview'];
 /** What checkout's verification step still needs: mobile, licence details and eligibility. */
 export type CheckoutReadiness = Schemas['CheckoutReadiness'];
 export type DriverLicenceInput = Schemas['DriverLicenceInput'];
+
+// Guest dashboard (Phase 3).
+/** The Saved cars page: each car, priced for the last searched dates when it can be booked for them. */
+export type SavedCars = Schemas['SavedCars'];
+export type SavedCar = Schemas['SavedCar'];
+/** A card saved with Stripe for checkout and post-trip charges. */
+export type SavedCard = Schemas['SavedCard'];
+export type PaymentHistoryItem = Schemas['PaymentHistoryItem'];
+/** The GST receipt for a paid booking. */
+export type Receipt = Schemas['Receipt'];
+/** Whether the account can be closed now, and what stops it. */
+export type AccountClosure = Schemas['AccountClosure'];
+export type PrivacyRequest = Schemas['PrivacyRequest'];
+export type PrivacyRequestResponse = Schemas['PrivacyRequestResponse'];
+export type SupportTicketSummary = Schemas['SupportTicketSummary'];
+/** One of the user's own support tickets, with its replies. */
+export type SupportTicket = Schemas['SupportTicket'];
+export type HelpArticleSummary = Schemas['HelpArticleSummary'];
+export type HelpArticle = Schemas['HelpArticle'];

@@ -74,9 +74,32 @@ export const routes: RouteObject[] = [
                 }),
               ),
               {
+                path: 'help',
+                lazy: page(() => import('@/routes/help/help-page'), 'HelpPage'),
+              },
+              {
+                path: 'help/:slug',
+                lazy: page(() => import('@/routes/help/help-article-page'), 'HelpArticlePage'),
+              },
+              // The Guest dashboard (plan §9, Days 16–18): the account, Saved cars, payments and support.
+              { path: 'account', lazy: page(() => import('@/routes/account/account-page'), 'AccountPage') },
+              {
                 path: 'account/settings',
                 lazy: page(() => import('@/routes/account/settings-page'), 'AccountSettingsPage'),
               },
+              {
+                path: 'account/payments',
+                lazy: page(() => import('@/routes/account/payments-page'), 'PaymentsPage'),
+              },
+              {
+                path: 'account/support',
+                lazy: page(() => import('@/routes/account/support-page'), 'SupportPage'),
+              },
+              {
+                path: 'account/support/:ref',
+                lazy: page(() => import('@/routes/account/ticket-page'), 'TicketPage'),
+              },
+              { path: 'saved', lazy: page(() => import('@/routes/account/saved-page'), 'SavedPage') },
               // Hosting: the application, vehicle onboarding and the calendar (plan §9, Days 8–11).
               { path: 'host', lazy: page(() => import('@/routes/host/host-home-page'), 'HostHomePage') },
               {
@@ -106,6 +129,10 @@ export const routes: RouteObject[] = [
                 lazy: page(() => import('@/routes/account/notifications-page'), 'NotificationsPage'),
               },
               { path: 'trips/:ref', lazy: page(() => import('@/routes/account/trip-page'), 'TripPage') },
+              {
+                path: 'trips/:ref/receipt',
+                lazy: page(() => import('@/routes/account/receipt-page'), 'ReceiptPage'),
+              },
               {
                 path: 'host/bookings',
                 lazy: page(() => import('@/routes/bookings/host-bookings-page'), 'HostBookingsPage'),

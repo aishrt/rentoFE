@@ -232,13 +232,13 @@ Every page has its own background art, about what the page is for. The home hero
 | About                                        | `HarbourArt`: a harbour town with its lights on     |
 | Become a host                                | `StreetArt`: a street with a car under a carport    |
 | Insurance                                    | `CoverRings`: rings of cover around a shield        |
-| FAQs                                         | `ContourLines`: a contour map                       |
-| Contact                                      | `ConnectionArcs`: places linked by arcs             |
+| FAQs, the help centre and its guides         | `ContourLines`: a contour map                       |
+| Contact, Help and support, a support request | `ConnectionArcs`: places linked by arcs             |
 | Legal pages                                  | `RuledLines`: ruled paper and a seal                |
-| Browse cars, search                          | `StreetMap`: streets with cars pinned               |
-| Trips, a trip                                | `TripRoute`: a route across hill country            |
+| Browse cars, search, Saved cars              | `StreetMap`: streets with cars pinned               |
+| Trips, a trip, its receipt                   | `TripRoute`: a route across hill country            |
 | Hosting (overview, bookings, cars, apply)    | `ParkingBays`: a car park from above                |
-| Account settings                             | `DotGrid`: dots and switches                        |
+| Account, its settings and payments           | `DotGrid`: dots and switches                        |
 | Notifications                                | `SignalArcs`: a bell sending out arcs               |
 | Checkout                                     | `CalmWaves`: slow, even waves                       |
 | Log in, sign up and the other guest sign-ins | `CoastArt`: a coast road under the moon             |
@@ -297,6 +297,20 @@ toast('Saved to your cars');                                  // success · dang
 Drag and layout animations need Motion's `domMax` features. Wrap the pages that use them in `MaxMotion` (`src/features/vehicles/max-motion.tsx`), never the homepage, which keeps the small `domAnimation` set (plan §12.5).
 
 Marketplace components live in `src/features`: `VehicleCard` and the listing's parts (`features/vehicles`), `LocationAutocomplete` and the filters (`features/search`), `PriceBreakdown` (`features/booking`, used by the listing, checkout and trips).
+
+### Added in Phase 3
+
+```tsx
+<Container className="py-8 sm:py-12">
+  <PageBackdrop art={DotGrid} />
+  <AccountShell>                                  {/* the Guest dashboard's sidebar, and its tab bar on phones */}
+    <AccountPageHeader title="Payments" description="…" actions={…} />
+    …
+  </AccountShell>
+</Container>
+```
+
+`AccountShell` (`features/account/account-shell.tsx`) frames every Guest dashboard page (plan §12.6): a sidebar from tablets up, and a tab bar (Trips · Saved · Account) that sticks to the bottom of a phone while the page is in view, then scrolls away above the footer. Pages opened from a list, such as a trip, its receipt or a support request, use a `BackLink` instead. `print:hidden` keeps the header, footer and backgrounds off printed pages, such as receipts.
 
 ### Not built yet
 

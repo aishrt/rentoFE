@@ -1711,6 +1711,416 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/saved-cars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Saved cars page
+         * @description Each saved car as a card, with its estimated total for the last searched dates when it can be booked for them (spec §8, §28: comparing cars). A car its Host has taken down shows `listed: false`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Saved cars */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SavedCars"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saved cards
+         * @description The cards saved to the Guest’s Stripe customer, from checkout or added here (plan §8.1, item 7). Empty until the first one.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Saved cards */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SavedCards"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start saving a card
+         * @description A Stripe SetupIntent for the Payment Element to save one card for checkout and post-trip charges. Card details go straight to Stripe.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Ready for the Payment Element */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CardSetup"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a saved card */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The card’s id (pm_…) */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payment history
+         * @description What the Guest has paid, newest first, with refunds and whether each has a receipt (plan §8.1, item 7). Attempts that never charged anything are left out.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Payments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaymentHistory"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/account-closure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the account can be closed now
+         * @description Closing is refused while a trip or booking is requested, booked or under way, an incident is open, an extra charge is unpaid or a payout is due (plan §8.2).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Whether, and why not */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountClosure"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/privacy-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a copy or correction of personal information, or to close the account
+         * @description Opens a PRIVACY support ticket for staff to carry out, and emails its reference (NZ Privacy Act 2020, plan §14). The same request while one is open returns that one. Closing the account answers 409 CLOSURE_BLOCKED while GET /me/account-closure lists blockers.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            responses: {
+                /** @description The ticket */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrivacyRequestResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/overview": {
         parameters: {
             query?: never;
@@ -3306,7 +3716,39 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * My support requests
+         * @description The signed-in user’s own tickets, most recently active first: from the Contact form while signed in, a booking’s Contact support link or a privacy request.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Tickets */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTickets"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Contact Us
@@ -3354,6 +3796,237 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One of my support requests, with its replies
+         * @description The staff’s internal notes are never included.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ticket reference, e.g. ST-4HX8PA */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The ticket */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTicketResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ref}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply on my support request
+         * @description It goes back to the support team, reopening a resolved ticket. Rate-limited per user.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ticket reference, e.g. ST-4HX8PA */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TicketReply"];
+                };
+            };
+            responses: {
+                /** @description The ticket */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTicketResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/help/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Help centre articles
+         * @description Public. Published articles in the order admins set; with an audience, the ones for Guests or Hosts and the ones for everyone.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Also includes the articles for everyone */
+                    audience?: "GUEST" | "HOST";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Articles */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HelpArticles"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/help/articles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One help article */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The article */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HelpArticleResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6568,6 +7241,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GST receipt
+         * @description For the Guest (and staff) once the booking is paid (plan §8.1, item 18): every line, the GST included, how it was paid and any refunds. 409 NO_RECEIPT before payment; 403 for the Host.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The receipt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceiptResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/receipt.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GST receipt as a PDF
+         * @description The same receipt as an A4 PDF to download.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The PDF, as an attachment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings/{id}/cancellation-preview": {
         parameters: {
             query?: never;
@@ -7164,6 +7993,149 @@ export interface components {
             start?: string;
             end?: string;
         };
+        SavedCars: {
+            /** @description Most recently saved first */
+            cars: components["schemas"]["SavedCar"][];
+            /** @description The last search’s dates, while they are still ahead; null otherwise */
+            search: {
+                place?: string;
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+                days: number;
+            } | null;
+        };
+        /** @description A car saved with the heart. The estimate is for the last searched dates, when it can be booked */
+        SavedCar: {
+            id: string;
+            slug: string;
+            /** @description e.g. "2022 Toyota RAV4" */
+            title: string;
+            make: string;
+            model: string;
+            year: number;
+            variant?: string;
+            photo: {
+                url: string;
+                alt: string;
+            } | null;
+            suburb?: string;
+            city?: string;
+            /** @description From the searched place; null without one */
+            distanceKm: number | null;
+            rating: components["schemas"]["Rating"];
+            tripCount: number;
+            dailyCents: number;
+            /** @description Only when the search has dates */
+            estimate: {
+                days: number;
+                /** @description Every mandatory charge for the dates (rental, service fee, mandatory protection, GST), plus airport delivery for an airport search */
+                totalCents: number;
+                includesAirportDelivery: boolean;
+            } | null;
+            instantBook: boolean;
+            /** @description Delivers to an address */
+            delivery: boolean;
+            airportDelivery: boolean;
+            /** @enum {string} */
+            bodyType: "HATCHBACK" | "SEDAN" | "WAGON" | "SUV" | "UTE" | "VAN" | "PEOPLE_MOVER" | "COUPE" | "CONVERTIBLE";
+            /** @enum {string} */
+            fuelType: "PETROL" | "DIESEL" | "HYBRID" | "PHEV" | "EV";
+            /** @enum {string} */
+            transmission: "AUTOMATIC" | "MANUAL";
+            seats: number;
+            unlimitedKm: boolean;
+            petFriendly: boolean;
+            childSeat: boolean;
+            /** @description Up to three key features */
+            features: string[];
+            /** @description Still live in search; false once the Host takes it down */
+            listed: boolean;
+            /** @description Whether it can be booked for the last searched dates: free, documents current and within its trip rules. Null without dates */
+            availableForDates: boolean | null;
+        };
+        /** @description Average stars and how many reviews; count 0 shows as "New" */
+        Rating: {
+            avg: number;
+            count: number;
+        };
+        SavedCards: {
+            cards: components["schemas"]["SavedCard"][];
+        };
+        SavedCard: {
+            /** @description The Stripe PaymentMethod id (pm_…) */
+            id: string;
+            /** @description e.g. visa, mastercard, amex */
+            brand: string;
+            last4: string;
+            expMonth: number;
+            expYear: number;
+            expired: boolean;
+            /**
+             * @description Saved from Apple Pay or Google Pay
+             * @enum {string}
+             */
+            wallet?: "apple_pay" | "google_pay";
+        };
+        CardSetup: {
+            /** @description For the Payment Element to save one card. Never logged or stored. */
+            clientSecret: string;
+        };
+        PaymentHistory: {
+            /** @description Newest first, up to 100 */
+            payments: components["schemas"]["PaymentHistoryItem"][];
+        };
+        PaymentHistoryItem: {
+            id: string;
+            bookingRef: string;
+            vehicleTitle: string;
+            /** @enum {string} */
+            type: "BOOKING" | "EXTRA_CHARGE";
+            amountCents: number;
+            /**
+             * @description AUTHORISED: held on the card, not charged yet. FAILED is only listed for an extra charge still to pay
+             * @enum {string}
+             */
+            status: "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+            /** @description e.g. "Visa ending 4242" */
+            method?: string;
+            /** Format: date-time */
+            at: string;
+            refundedCents: number;
+            refunds: {
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED";
+                /** Format: date-time */
+                at: string;
+            }[];
+            /** @description GET /bookings/{id}/receipt has a receipt for it */
+            hasReceipt: boolean;
+        };
+        AccountClosure: {
+            allowed: boolean;
+            /** @description Why the account can’t be closed yet (plan §8.2): a trip or booking still to come or under way, an open incident, an unpaid charge or a payout still due */
+            blockers: {
+                /** @enum {string} */
+                code: "UPCOMING_TRIP" | "HOSTED_BOOKING" | "OPEN_INCIDENT" | "UNPAID_CHARGE" | "PAYOUT_DUE";
+                message: string;
+            }[];
+        };
+        PrivacyRequestResponse: {
+            /** @description The support ticket reference, e.g. ST-4HX8PA */
+            ref: string;
+            /** @description The same request was already open, so no new one was made */
+            alreadyOpen: boolean;
+        };
+        PrivacyRequest: {
+            /**
+             * @description ACCESS: a copy of their information. CORRECTION: something to fix (say what). CLOSE_ACCOUNT: close and anonymise the account
+             * @enum {string}
+             */
+            type: "ACCESS" | "CORRECTION" | "CLOSE_ACCOUNT";
+            message?: string;
+        };
         AdminOverview: {
             metrics: {
                 totalUsers: number;
@@ -7722,11 +8694,6 @@ export interface components {
             /** @description Up to three key features */
             features: string[];
         };
-        /** @description Average stars and how many reviews; count 0 shows as "New" */
-        Rating: {
-            avg: number;
-            count: number;
-        };
         VehicleMakes: {
             makes: {
                 make: string;
@@ -8231,6 +9198,89 @@ export interface components {
             subject: string;
             message: string;
             bookingRef?: string | "";
+        };
+        SupportTickets: {
+            tickets: components["schemas"]["SupportTicketSummary"][];
+        };
+        SupportTicketSummary: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /**
+             * @description OPEN: with the support team. PENDING: waiting for the user’s reply. RESOLVED: done
+             * @enum {string}
+             */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            bookingRef?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the last message was added
+             */
+            updatedAt: string;
+        };
+        SupportTicketResponse: {
+            ticket: components["schemas"]["SupportTicket"];
+        };
+        /** @description A user’s own ticket, without the staff’s internal notes */
+        SupportTicket: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /**
+             * @description OPEN: with the support team. PENDING: waiting for the user’s reply. RESOLVED: done
+             * @enum {string}
+             */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            bookingRef?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the last message was added
+             */
+            updatedAt: string;
+            messages: {
+                id: string;
+                /** @enum {string} */
+                from: "YOU" | "SUPPORT";
+                body: string;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        TicketReply: {
+            body: string;
+        };
+        HelpArticles: {
+            /** @description In the order admins set */
+            articles: components["schemas"]["HelpArticleSummary"][];
+        };
+        HelpArticleSummary: {
+            slug: string;
+            title: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @description The opening sentence or two, as plain text */
+            summary: string;
+        };
+        HelpArticleResponse: {
+            article: components["schemas"]["HelpArticle"];
+        };
+        HelpArticle: {
+            slug: string;
+            title: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @description Markdown */
+            body: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         HostProfileResponse: {
             host: components["schemas"]["HostProfile"];
@@ -9013,6 +10063,53 @@ export interface components {
         PreparePaymentRequest: {
             /** @enum {boolean} */
             acceptGuestAgreement: true;
+        };
+        ReceiptResponse: {
+            receipt: components["schemas"]["Receipt"];
+        };
+        /** @description The GST receipt for a paid booking (plan §8.1, item 18): every line, the GST included and the total in NZD */
+        Receipt: {
+            /** @description The booking reference, which is also the receipt number */
+            ref: string;
+            /** Format: date-time */
+            paidAt: string;
+            supplier: {
+                name: string;
+                /** @description Shown once the business is GST-registered */
+                gstNumber?: string;
+                email: string;
+            };
+            customer: {
+                name: string;
+                email: string;
+            };
+            vehicleTitle: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            days: number;
+            lines: {
+                label: string;
+                amountCents: number;
+                gstCents: number;
+            }[];
+            totalCents: number;
+            /** @description The GST included in the total */
+            gstCents: number;
+            gstRatePct: number;
+            /** @description e.g. "Visa ending 4242" or "Apple Pay (Visa ending 4242)" */
+            paidWith: string;
+            refunds: {
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED";
+                /** Format: date-time */
+                at: string;
+            }[];
+            refundedCents: number;
+            /** @description The total less refunds that went through */
+            netPaidCents: number;
         };
         CancellationPreview: {
             allowed: boolean;

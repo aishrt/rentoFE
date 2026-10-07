@@ -18,6 +18,7 @@ import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { toast } from '@/components/ui/toast';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { NotificationText } from '@/features/notifications/notification-text';
 import {
@@ -469,10 +470,16 @@ function NotificationsSkeleton() {
  */
 export function NotificationsPage() {
   return (
-    <Container className="max-w-4xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={SignalArcs} />
       <PageMeta title="Notifications" noindex />
-      <RequireSignedIn fallback={<NotificationsSkeleton />}>{() => <NotificationCentre />}</RequireSignedIn>
+      <AccountShell>
+        <div className="max-w-4xl">
+          <RequireSignedIn fallback={<NotificationsSkeleton />}>
+            {() => <NotificationCentre />}
+          </RequireSignedIn>
+        </div>
+      </AccountShell>
     </Container>
   );
 }
