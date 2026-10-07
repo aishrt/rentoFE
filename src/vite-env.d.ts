@@ -13,11 +13,6 @@ interface ImportMetaEnv {
   readonly VITE_RELEASE?: string;
   /** Stripe publishable key, pk_test_… or pk_live_…. Unset: payments show as not set up. */
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
-  /**
-   * Google Maps browser key, restricted to the site's domains, for the listing's approximate-area map
-   * (Maps Static API). Unset: the listing shows its suburb without a map.
-   */
-  readonly VITE_GOOGLE_MAPS_BROWSER_KEY?: string;
 }
 
 interface ImportMeta {
