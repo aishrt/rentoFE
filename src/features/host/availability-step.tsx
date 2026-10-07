@@ -60,7 +60,7 @@ export function AvailabilityStep({ vehicle, missing, registerSave }: StepProps) 
       ),
     )();
 
-  useEffect(() => registerSave(saveTo));
+  useEffect(() => registerSave(saveTo, isDirty));
 
   return (
     <StepFrame

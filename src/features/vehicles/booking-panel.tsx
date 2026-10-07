@@ -13,7 +13,7 @@ import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
 import { toDateInputValue } from '@/lib/dates';
-import { fullyBookedDays, upcomingBusy } from './availability';
+import { earliestPickupDay, fullyBookedDays, upcomingBusy } from './availability';
 import type { Booking } from './use-booking';
 import { useVehicleAvailability } from './vehicle-api';
 import { formatNzdPrecise, optionFee } from './vehicle-format';
@@ -38,6 +38,12 @@ interface BookingPanelProps {
 export function BookingPanel({ vehicle, booking, className }: BookingPanelProps) {
   const id = useId();
   const [today] = useState(() => toDateInputValue(new Date()));
+  const { minNoticeHours } = vehicle.rules;
+  // Days wholly inside the Host's minimum notice can't be chosen.
+  const earliest = useMemo(() => {
+    const day = earliestPickupDay(minNoticeHours);
+    return day > today ? day : today;
+  }, [minNoticeHours, today]);
   const pickupDateRef = useRef<HTMLButtonElement>(null);
   const availability = useVehicleAvailability(vehicle.id);
   const booked = upcomingBusy(availability.data?.busy ?? []);
@@ -69,7 +75,7 @@ export function BookingPanel({ vehicle, booking, className }: BookingPanelProps)
               ref={pickup ? pickupDateRef : undefined}
               value={dates[dateKey]}
               onChange={(value) => setDates(pickup ? { pickupDate: value } : { returnDate: value })}
-              min={pickup ? today : dates.pickupDate || today}
+              min={pickup ? earliest : dates.pickupDate || earliest}
               range={trip}
               isDateDisabled={(day) => fullyBooked.has(day)}
               placeholder="Add date"

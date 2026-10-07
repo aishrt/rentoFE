@@ -52,6 +52,15 @@ export function fullyBookedDays(busy: VehicleAvailability['busy']): Set<string> 
   return days;
 }
 
+/**
+ * The first NZ day a trip can start, given the Host's minimum notice: every earlier day falls wholly
+ * inside the notice period, so the pick-up pickers rule it out. On that day itself, the quote checks the
+ * time.
+ */
+export function earliestPickupDay(minNoticeHours: number, now = new Date()): string {
+  return nzDay.format(new Date(now.getTime() + minNoticeHours * 60 * 60 * 1000));
+}
+
 /** "12 Oct – 15 Oct": the next few busy times, for the booking panel. */
 export function upcomingBusy(busy: VehicleAvailability['busy'], limit = 3): string[] {
   return busy.slice(0, limit).map((range) => {

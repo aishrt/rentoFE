@@ -56,7 +56,7 @@ export function PricingStep({ vehicle, policies, missing, registerSave }: StepPr
       }),
     )();
 
-  useEffect(() => registerSave(saveTo));
+  useEffect(() => registerSave(saveTo, isDirty));
 
   const { min, max } = policies.vehicles.dailyPriceCents;
   const typical = vehicle.bodyType

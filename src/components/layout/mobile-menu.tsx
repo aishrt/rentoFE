@@ -40,7 +40,12 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
           <ul className="grid gap-1">
             {main.map((item, index) => (
               <li key={item.to} className="stagger-in" style={staggerIndex(index)}>
-                <Link to={item.to} onClick={close} className={linkClasses}>
+                <Link
+                  to={item.to}
+                  viewTransition={!item.to.includes('#')}
+                  onClick={close}
+                  className={linkClasses}
+                >
                   {item.label}
                 </Link>
               </li>
@@ -53,7 +58,7 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
             <ul className="grid gap-1">
               {account.map((item) => (
                 <li key={item.to}>
-                  <Link to={item.to} onClick={close} className={linkClasses}>
+                  <Link to={item.to} viewTransition onClick={close} className={linkClasses}>
                     {item.label}
                   </Link>
                 </li>
@@ -65,12 +70,12 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
             <Divider className="my-6" />
             <div className="grid gap-3">
               <Button asChild size="lg" block>
-                <Link to="/login" onClick={close}>
+                <Link to="/login" viewTransition onClick={close}>
                   Log in
                 </Link>
               </Button>
               <Button asChild size="lg" block variant="secondary">
-                <Link to="/signup" onClick={close}>
+                <Link to="/signup" viewTransition onClick={close}>
                   Sign up
                 </Link>
               </Button>

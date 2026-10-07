@@ -16,7 +16,9 @@ import { PricingStep } from './pricing-step';
 import { ReviewStep } from './review-step';
 import { VehicleStatusBadge } from './status-badges';
 import type { StepProps } from './step-props';
+import { UnsavedChangesDialog } from './unsaved-changes-dialog';
 import { stepPath, vehiclePath, type StepNavigationState, type StepTarget } from './use-step-save';
+import { useUnsavedChangesGuard } from './use-unsaved-changes';
 import { ONBOARDING_STEPS, STEP_COUNT, isLive, vehicleDisplayTitle } from './vehicle-labels';
 
 const STEPS = [DetailsStep, DocumentsStep, PhotosStep, PricingStep, AvailabilityStep, DeliveryStep];
@@ -50,12 +52,18 @@ export function ListingEditor({
   const location = useLocation();
   const direction = (location.state as StepNavigationState | null)?.direction ?? 1;
   const saveRef = useRef<((target: StepTarget) => void) | null>(null);
-  const registerSave = useCallback((save: (target: StepTarget) => void) => {
+  const unsavedRef = useRef(false);
+  const registerSave = useCallback((save: (target: StepTarget) => void, unsaved = false) => {
     saveRef.current = save;
+    unsavedRef.current = unsaved;
     return () => {
-      if (saveRef.current === save) saveRef.current = null;
+      if (saveRef.current === save) {
+        saveRef.current = null;
+        unsavedRef.current = false;
+      }
     };
   }, []);
+  const blocker = useUnsavedChangesGuard(unsavedRef);
 
   const stepNumber = step === 'review' ? STEP_COUNT + 1 : step;
   // A draft has been through the steps before the furthest one it reached; anything submitted, all of them.
@@ -143,6 +151,8 @@ export function ListingEditor({
           </m.div>
         </AnimatePresence>
       </div>
+
+      <UnsavedChangesDialog blocker={blocker} onSave={(to) => saveRef.current?.({ to })} />
     </div>
   );
 }
