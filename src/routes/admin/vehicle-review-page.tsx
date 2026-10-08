@@ -1,6 +1,8 @@
 import { SearchX } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
+import type { AdminVehicleSuspension } from '@/api/types';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
 import { BackLink } from '@/components/ui/back-link';
@@ -8,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SuspendedCarBookings, SuspensionAction } from '@/features/admin/bookings/vehicle-suspension';
 import { CalendarOverride } from '@/features/admin/listings/calendar-override';
 import { ChecklistPanel } from '@/features/admin/listings/checklist-panel';
 import { DocumentReview } from '@/features/admin/listings/document-review';
@@ -54,11 +57,14 @@ function ReviewSkeleton() {
 /**
  * One listing to review (plan §9, Days 8–11): everything the Host entered, its checks and flags, the
  * photos and documents to approve one by one, the Host, the calendar override (Days 10–11) and the
- * decision. Designed for a desktop, still usable on a phone (plan §12.6).
+ * decision; for a live car, suspending it (plan §8.2). Designed for a desktop, still usable on a phone
+ * (plan §12.6).
  */
 export function AdminVehicleReviewPage() {
   const { id = '' } = useParams();
   const listing = useAdminVehicle(id);
+  // After a suspension: the car's upcoming bookings, for staff to keep or cancel.
+  const [suspension, setSuspension] = useState<AdminVehicleSuspension | null>(null);
 
   if (listing.isPending) {
     return (
@@ -126,23 +132,34 @@ export function AdminVehicleReviewPage() {
       <PageMeta title={`${vehicle.title} · Vehicle review · Staff portal`} noindex />
       <QueueLink />
 
-      <header className="mt-5 animate-fade-up">
-        <p className="eyebrow text-primary">Listing review</p>
-        <h1 className="headline mt-2 text-title-3 font-medium">{vehicle.title}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
-          <VehicleStatusBadge status={vehicle.status} />
-          {vehicle.regoPlate && (
-            <span className="font-semibold tracking-wide text-ink">{vehicle.regoPlate}</span>
-          )}
-          {place && <span>{place}</span>}
-          <span>Updated {formatDateNz(vehicle.updatedAt)}</span>
+      <header className="mt-5 flex animate-fade-up flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="eyebrow text-primary">Listing review</p>
+          <h1 className="headline mt-2 text-title-3 font-medium">{vehicle.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
+            <VehicleStatusBadge status={vehicle.status} />
+            {vehicle.regoPlate && (
+              <span className="font-semibold tracking-wide text-ink">{vehicle.regoPlate}</span>
+            )}
+            {place && <span>{place}</span>}
+            <span>Updated {formatDateNz(vehicle.updatedAt)}</span>
+          </div>
         </div>
+        <SuspensionAction
+          vehicle={vehicle}
+          onSuspended={setSuspension}
+          onLifted={() => setSuspension(null)}
+        />
       </header>
 
       {vehicle.reviewNotes && (
         <Alert title="Last note to the Host" className="mt-6">
           <p className="whitespace-pre-line">{vehicle.reviewNotes}</p>
         </Alert>
+      )}
+
+      {suspension?.vehicle.id === vehicle.id && (
+        <SuspendedCarBookings result={suspension} onDone={() => setSuspension(null)} className="mt-6" />
       )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">

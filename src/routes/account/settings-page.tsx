@@ -5,6 +5,7 @@ import { PageMeta } from '@/components/layout/page-meta';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
 import { EmailSection } from '@/features/account/email-section';
+import { NotificationsSection } from '@/features/account/notifications-section';
 import { PasswordSection } from '@/features/account/password-section';
 import { PhoneSection } from '@/features/account/phone-section';
 import { PrivacySection } from '@/features/account/privacy-section';
@@ -21,8 +22,8 @@ function SettingsSkeleton() {
 }
 
 /**
- * Account settings (plan §6.1): the email address, mobile number and password, and privacy requests,
- * including closing the account (plan §8.2). Part of the Guest dashboard.
+ * Account settings (plan §6.1): the email address, mobile number and password, notification choices
+ * (plan §7), and privacy requests, including closing the account (plan §8.2). Part of the Guest dashboard.
  */
 export function AccountSettingsPage() {
   return (
@@ -35,11 +36,12 @@ export function AccountSettingsPage() {
             <div className="grid max-w-2xl gap-6">
               <AccountPageHeader
                 title="Account settings"
-                description={`Kia ora ${user.firstName}. How you log in, how we reach you, and your privacy.`}
+                description={`Kia ora ${user.firstName}. How you log in, how we reach you, what we send you, and your privacy.`}
               />
               <EmailSection user={user} />
               <PhoneSection user={user} />
               <PasswordSection />
+              <NotificationsSection />
               <PrivacySection />
             </div>
           )}

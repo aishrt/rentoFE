@@ -5,20 +5,34 @@ import { cn } from '@/lib/cn';
 const LINKS = [
   { to: '/host', label: 'Overview' },
   { to: '/host/bookings', label: 'Bookings' },
+  { to: '/host/earnings', label: 'Earnings' },
+  { to: '/messages?as=host', label: 'Inbox' },
+  { to: '/host/profile', label: 'Profile' },
 ] as const;
+
+/** The section a Host page belongs to; a car's editor and calendar belong to Overview. */
+function sectionOf(pathname: string): string {
+  if (pathname.startsWith('/host/bookings')) return '/host/bookings';
+  if (pathname.startsWith('/host/earnings')) return '/host/earnings';
+  if (pathname.startsWith('/host/profile')) return '/host/profile';
+  return '/host';
+}
 
 /**
  * The Host area's own navigation, shared by its pages (plan §12.6). A car's editor and calendar belong to
- * Overview, where My Vehicles lists them. The full Host dashboard's tabs arrive in Phase 3.
+ * Overview, where My Vehicles lists them.
  */
 export function HostSubNav({ className }: { className?: string }) {
   const { pathname } = useLocation();
-  const bookings = pathname.startsWith('/host/bookings');
+  const section = sectionOf(pathname);
 
   return (
-    <nav aria-label="Hosting" className={cn('flex gap-2 border-b border-line', className)}>
+    <nav
+      aria-label="Hosting"
+      className={cn('flex gap-1 overflow-x-auto border-b border-line sm:gap-2', className)}
+    >
       {LINKS.map((link) => {
-        const active = link.to === '/host/bookings' ? bookings : !bookings;
+        const active = link.to === section;
         return (
           <Link
             key={link.to}

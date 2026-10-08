@@ -11,6 +11,7 @@ import { eligibilityPoints } from '@/features/content/policies';
 import { PhoneVerification } from '@/features/host/phone-verification';
 import { readinessQueryKey } from './booking-api';
 import { LICENCE_CLASS_LABELS } from './booking-format';
+import { IdentityCheck } from './identity-check';
 import { LicenceForm } from './licence-form';
 
 type Problem = CheckoutReadiness['problems'][number];
@@ -40,8 +41,8 @@ interface VerificationSectionProps {
 }
 
 /**
- * Step 5 (spec §7, step 7): the mobile number by texted code, then the driver licence and date of birth,
- * with anything that stops this person driving explained in plain words (plan §3: age, licence class, years
+ * Step 5 (spec §7, step 7): the mobile number by texted code, the identity check, then the driver licence and
+ * date of birth, with anything that stops this person driving explained in plain words (plan §3: age, licence class, years
  * licensed, a licence valid until the trip ends, English proof). The rules come from the API, so they
  * always match settings. Once nothing is missing, checkout moves on to payment by itself.
  */
@@ -83,9 +84,22 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
 
   const { problems, licence } = readiness.data;
   const phoneNeeded = problems.some((problem) => problem.code === 'PHONE_REQUIRED');
-  const licenceProblems = problems.filter((problem) => problem.code !== 'PHONE_REQUIRED');
+  // The identity check has its own part of the step, below the mobile number.
+  const licenceProblems = problems.filter(
+    (problem) =>
+      problem.code !== 'PHONE_REQUIRED' &&
+      problem.code !== 'IDENTITY_REQUIRED' &&
+      problem.code !== 'IDENTITY_PROCESSING',
+  );
   const needsForm = licenceProblems.some((problem) => problem.code !== 'IDENTITY_REJECTED') || editing;
   const firstTime = licenceProblems.some((problem) => problem.code === 'LICENCE_REQUIRED');
+  // Shown when settings ask for it, or once there's a check to report on.
+  const showIdentity =
+    problems.some(
+      (problem) => problem.code === 'IDENTITY_REQUIRED' || problem.code === 'IDENTITY_PROCESSING',
+    ) ||
+    readiness.data.identityStatus === 'APPROVED' ||
+    readiness.data.identityStatus === 'PENDING';
   const points = policies.data ? eligibilityPoints(policies.data.eligibility) : [];
 
   return (
@@ -108,6 +122,15 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
           </Done>
         )}
       </section>
+
+      {showIdentity && (
+        <section aria-labelledby="checkout-identity" className="grid gap-3">
+          <h3 id="checkout-identity" className="font-semibold text-ink">
+            Your identity
+          </h3>
+          <IdentityCheck readiness={readiness.data} />
+        </section>
+      )}
 
       <section aria-labelledby="checkout-licence" className="grid gap-4">
         <h3 id="checkout-licence" className="font-semibold text-ink">

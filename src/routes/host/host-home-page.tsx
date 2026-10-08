@@ -16,6 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostProfile } from '@/features/host/host-api';
 import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostTodoList } from '@/features/host/todo-list';
+import { useCheckoutReadiness } from '@/features/booking/booking-api';
+import { IdentityCheck } from '@/features/booking/identity-check';
 import { MyVehicles } from '@/features/host/my-vehicles';
 
 type HostStatus = NonNullable<SessionUser['hostStatus']>;
@@ -145,6 +148,26 @@ function ApplicationStatus({ status }: { status: HostStatus }) {
   }
 }
 
+/**
+ * Hosts verify their identity as part of the application (plan §9, Days 19–20): an ID photo and a selfie
+ * on Stripe's page. Shown until it's verified or with our team.
+ */
+function HostIdentity() {
+  const readiness = useCheckoutReadiness(undefined, true);
+  const status = readiness.data?.identityStatus;
+  if (!readiness.data || status === 'APPROVED' || status === 'REJECTED') return null;
+  return (
+    <Card asChild className="grid gap-3 p-5 sm:p-6">
+      <section aria-labelledby="host-identity">
+        <h2 id="host-identity" className="font-semibold text-ink">
+          Verify your identity
+        </h2>
+        <IdentityCheck readiness={readiness.data} />
+      </section>
+    </Card>
+  );
+}
+
 function HostHome({ user }: { user: SessionUser }) {
   const status = user.hostStatus;
   if (!status) return <Proposition />;
@@ -170,14 +193,16 @@ function HostHome({ user }: { user: SessionUser }) {
         }
       />
       <ApplicationStatus status={status} />
+      {(status === 'APPLIED' || status === 'APPROVED') && <HostIdentity />}
+      {status === 'APPROVED' && <HostTodoList />}
       <MyVehicles canAdd={status === 'APPLIED' || status === 'APPROVED'} />
     </div>
   );
 }
 
 /**
- * The Host's home for Phase 2 (plan §9, Days 8–11): where their application stands, and My Vehicles
- * with each car's status and what's left. Someone who hasn't applied sees why to host and where to start.
+ * The Host's home (spec §9): where their application stands, the to-do list, and My Vehicles with each car's
+ * status and what's left. Someone who hasn't applied sees why to host and where to start.
  */
 export function HostHomePage() {
   return (

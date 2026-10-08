@@ -43,12 +43,16 @@ import {
   PartyDetails,
   ProtectionDetails,
   StatusBadge,
+  MessageLink,
+  ReviewLink,
   SupportLink,
   TripStops,
 } from '@/features/booking/booking-parts';
 import { CancelDialogContent } from '@/features/booking/cancel-dialog';
 import { DeclineDialogContent } from '@/features/booking/decline-dialog';
 import { useTimeLeft } from '@/features/booking/use-time-left';
+import { ActiveTripPanel } from '@/features/handover/active-trip';
+import { HandoverCard } from '@/features/handover/handover-card';
 import { HostSubNav } from '@/features/host/host-nav';
 
 /** A request's answer: Accept captures the Guest's payment and confirms the trip; Decline releases it. */
@@ -113,6 +117,26 @@ function RequestAnswer({ booking }: { booking: Booking }) {
 }
 
 /** Where the booking stands for the Host (plan §8.2). */
+const HOLD_WORDS: Record<NonNullable<NonNullable<Booking['payout']>['holdReason']>, string> = {
+  PAYOUT_SETUP: 'Held until your payout setup is finished.',
+  TRIP_NOT_STARTED: 'Sent once check-in is done.',
+  INCIDENT: 'Held while an incident on this booking is open.',
+  DISPUTE: 'Held while a card dispute is settled.',
+  SUSPENDED: 'Held while the account is suspended.',
+  MANUAL: 'Held while our team checks something. We’ll be in touch.',
+};
+
+/** Where the trip's payout stands (plan §8.1, item 19), once there is one. */
+function payoutStatusLine(payout: NonNullable<Booking['payout']>): string | null {
+  if (payout.status === 'PAID' && payout.paidAt)
+    return `Paid ${formatNzDateTime(payout.paidAt)} to your Stripe account.`;
+  if (payout.status === 'HELD' && payout.holdReason) return HOLD_WORDS[payout.holdReason];
+  if (payout.status === 'FAILED') return 'The payout didn’t go through. Our team is on it.';
+  if (payout.status === 'SCHEDULED' && payout.scheduledFor)
+    return `Paid to your Stripe account from ${formatNzDateTime(payout.scheduledFor)}, then to your bank on Stripe’s schedule.`;
+  return null;
+}
+
 function HostStatus({ booking }: { booking: Booking }) {
   const guest = booking.guest.firstName;
   const banner = (title: string, text: string, icon = CircleCheck) => {
@@ -245,9 +269,13 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
       </div>
 
       <HostStatus booking={booking} />
+      {booking.status === 'ACTIVE' && (
+        <ActiveTripPanel booking={booking} base={`/host/bookings/${booking.ref}`} />
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="grid gap-6">
+          <HandoverCard booking={booking} base={`/host/bookings/${booking.ref}`} />
           <DetailCard title="Your guest" icon={UserRound}>
             <PartyDetails
               party={booking.guest}
@@ -302,12 +330,17 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
                 </div>
               </dl>
               <p className="mt-4 text-muted">
-                Paid to your Stripe account 24 hours after the trip starts, then to your bank on Stripe’s
-                payout schedule.
+                {payoutStatusLine(booking.payout) ??
+                  'Paid to your Stripe account 24 hours after the trip starts, then to your bank on Stripe’s payout schedule.'}
               </p>
+              <Link to="/host/earnings" className="link-underline mt-2 inline-block font-medium text-primary">
+                Earnings and payouts
+              </Link>
             </DetailCard>
           )}
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
+            <ReviewLink booking={booking} base={`/host/bookings/${booking.ref}`} />
+            <MessageLink booking={booking} name={booking.guest.firstName} />
             {booking.actions.cancel && (
               <Button variant="secondary" onClick={() => setCancelling(true)}>
                 Cancel booking

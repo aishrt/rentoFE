@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, CarFront, CircleAlert, Clock, Plus } from 'lucide-react';
+import { ArrowRight, CalendarDays, CarFront, CircleAlert, Clock, Plus, Wrench } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import type { HostVehicleSummary } from '@/api/types';
@@ -152,6 +152,14 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
                 <Link to={`${editPath}/calendar`}>
                   <CalendarDays aria-hidden="true" />
                   Calendar
+                </Link>
+              </Button>
+            )}
+            {!draft && !isLocked(vehicle.status) && (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`${editPath}/maintenance`}>
+                  <Wrench aria-hidden="true" />
+                  Maintenance
                 </Link>
               </Button>
             )}

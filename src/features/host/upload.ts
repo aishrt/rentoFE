@@ -38,12 +38,15 @@ export function contentTypeOf(file: Blob & { name?: string }): string {
   return EXTENSION_TYPES[extension] ?? 'application/octet-stream';
 }
 
+/** Purposes that take photos only; documents and incident evidence can also be a PDF. */
+const PHOTO_PURPOSES: readonly UploadPurpose[] = ['VEHICLE_PHOTO', 'MESSAGE_PHOTO', 'INSPECTION_PHOTO'];
+
 /** Why a file can't be uploaded for this purpose, or null when it can. Checked before anything is sent. */
 export function uploadProblem(file: Blob & { name?: string }, purpose: UploadPurpose): string | null {
-  const allowed: readonly string[] =
-    purpose === 'VEHICLE_PHOTO' ? PHOTO_CONTENT_TYPES : DOCUMENT_CONTENT_TYPES;
+  const photosOnly = PHOTO_PURPOSES.includes(purpose);
+  const allowed: readonly string[] = photosOnly ? PHOTO_CONTENT_TYPES : DOCUMENT_CONTENT_TYPES;
   if (!allowed.includes(contentTypeOf(file))) {
-    return purpose === 'VEHICLE_PHOTO'
+    return photosOnly
       ? 'Photos can be JPEG, PNG, WebP or HEIC.'
       : 'Documents can be a PDF or a photo (JPEG, PNG, WebP or HEIC).';
   }
@@ -143,22 +146,32 @@ export async function requestUploadTarget(input: UploadRequest): Promise<UploadT
 
 interface UploadInput extends SendOptions {
   purpose: UploadPurpose;
-  vehicleId: string;
+  /** A car's photos and documents. */
+  vehicleId?: string;
+  /** A booking's message photos, inspection photos and incident evidence: its id or reference. */
+  bookingId?: string;
   file: Blob;
   /** Defaults to the file's own type. */
   contentType?: string;
 }
 
-/** Asks for a target, then sends the file there. Resolves with the reference to attach to the car. */
+/** Asks for a target, then sends the file there. Resolves with the reference to attach to the car or booking. */
 export async function uploadFile({
   purpose,
   vehicleId,
+  bookingId,
   file,
   contentType,
   ...options
 }: UploadInput): Promise<string> {
   const type = contentType ?? contentTypeOf(file);
-  const target = await requestUploadTarget({ purpose, vehicleId, contentType: type, size: file.size });
+  const target = await requestUploadTarget({
+    purpose,
+    ...(vehicleId && { vehicleId }),
+    ...(bookingId && { bookingId }),
+    contentType: type,
+    size: file.size,
+  });
   if (file.size > target.maxBytes) throw new ApiError(400, 'FILE_TOO_LARGE', 'Files can be up to 15 MB.');
   return sendFile(target, file, options);
 }

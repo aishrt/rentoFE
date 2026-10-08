@@ -19,6 +19,8 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
 import { SettingsSection } from '@/features/account/settings-section';
+import { INCIDENT_STATUS_LABELS, incidentTypeLabel } from '@/features/incidents/incident-labels';
+import { useMyIncidents } from '@/features/incidents/incidents-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatRelativeTime } from '@/features/booking/booking-format';
 import { StatusBadge } from '@/features/booking/booking-parts';
@@ -109,6 +111,54 @@ function Tickets() {
   );
 }
 
+function Incidents() {
+  const incidents = useMyIncidents();
+  return (
+    <SettingsSection
+      title="Incident reports"
+      description="Damage, accidents and other incidents on your trips, with their case numbers."
+    >
+      {incidents.isError ? (
+        <Alert variant="danger" role="alert">
+          {incidents.error.message}
+        </Alert>
+      ) : !incidents.data ? (
+        <Skeleton aria-hidden="true" className="h-12" />
+      ) : incidents.data.length === 0 ? (
+        <div className="flex flex-col gap-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>No incidents reported.</p>
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/incidents/new">Report an incident</Link>
+          </Button>
+        </div>
+      ) : (
+        <ul className="-my-4 divide-y divide-line">
+          {incidents.data.map((incident) => (
+            <li key={incident.caseRef}>
+              <Link
+                to={`/incidents/${incident.caseRef}`}
+                viewTransition
+                className="group flex items-center gap-4 rounded-control py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-ink group-hover:text-primary">
+                    {incidentTypeLabel(incident.type)}: {incident.vehicleTitle}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {incident.caseRef} · Trip {incident.bookingRef} · {formatRelativeTime(incident.updatedAt)}
+                  </p>
+                </div>
+                <StatusBadge status={INCIDENT_STATUS_LABELS[incident.status]} className="max-sm:hidden" />
+                <ChevronRight aria-hidden="true" className="nudge-right size-4 shrink-0 text-muted" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SettingsSection>
+  );
+}
+
 function Support() {
   return (
     <div className="grid max-w-3xl gap-6">
@@ -132,6 +182,7 @@ function Support() {
         ))}
       </ul>
       <Tickets />
+      <Incidents />
     </div>
   );
 }

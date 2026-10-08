@@ -100,6 +100,32 @@ export const routes: RouteObject[] = [
                 lazy: page(() => import('@/routes/account/ticket-page'), 'TicketPage'),
               },
               { path: 'saved', lazy: page(() => import('@/routes/account/saved-page'), 'SavedPage') },
+              // Damage and incident reporting (plan §9, Days 20–21).
+              {
+                path: 'incidents/new',
+                lazy: page(() => import('@/routes/incidents/new-incident-page'), 'NewIncidentPage'),
+              },
+              {
+                path: 'incidents/:ref',
+                lazy: page(() => import('@/routes/incidents/incident-page'), 'IncidentPage'),
+              },
+              {
+                path: 'account/reviews',
+                lazy: page(() => import('@/routes/account/reviews-page'), 'ReviewsPage'),
+              },
+              {
+                path: 'unsubscribe',
+                lazy: page(() => import('@/routes/account/unsubscribe-page'), 'UnsubscribePage'),
+              },
+              // Messaging (plan §9, Days 17–19): one conversation per booking.
+              {
+                path: 'messages',
+                lazy: page(() => import('@/routes/messages/messages-page'), 'MessagesPage'),
+              },
+              {
+                path: 'messages/:ref',
+                lazy: page(() => import('@/routes/messages/conversation-page'), 'ConversationPage'),
+              },
               // Hosting: the application, vehicle onboarding and the calendar (plan §9, Days 8–11).
               { path: 'host', lazy: page(() => import('@/routes/host/host-home-page'), 'HostHomePage') },
               {
@@ -113,6 +139,10 @@ export const routes: RouteObject[] = [
               {
                 path: 'host/vehicles/:id/calendar',
                 lazy: page(() => import('@/routes/host/vehicle-calendar-page'), 'VehicleCalendarPage'),
+              },
+              {
+                path: 'host/vehicles/:id/maintenance',
+                lazy: page(() => import('@/routes/host/maintenance-page'), 'MaintenancePage'),
               },
               {
                 path: 'host/vehicles/:id/:step?',
@@ -137,10 +167,41 @@ export const routes: RouteObject[] = [
                 path: 'host/bookings',
                 lazy: page(() => import('@/routes/bookings/host-bookings-page'), 'HostBookingsPage'),
               },
+              // Earnings and payouts (plan §9, Days 16–19).
+              {
+                path: 'host/earnings',
+                lazy: page(() => import('@/routes/host/earnings-page'), 'EarningsPage'),
+              },
+              // The Host's profile and settings (spec §9).
+              {
+                path: 'host/profile',
+                lazy: page(() => import('@/routes/host/host-profile-page'), 'HostProfilePage'),
+              },
+              // The Guest's link to pay a charge after the trip (plan §8.1, item 6).
+              { path: 'pay/:id', lazy: page(() => import('@/routes/account/pay-page'), 'PayPage') },
               {
                 path: 'host/bookings/:ref',
                 lazy: page(() => import('@/routes/bookings/host-booking-page'), 'HostBookingPage'),
               },
+              // The digital vehicle handover (plan §9, Days 19–21), for the Guest and the Host.
+              ...['trips/:ref', 'host/bookings/:ref'].flatMap((base) => [
+                {
+                  path: `${base}/check-in`,
+                  lazy: page(() => import('@/routes/handover/inspection-page'), 'CheckInPage'),
+                },
+                {
+                  path: `${base}/check-out`,
+                  lazy: page(() => import('@/routes/handover/inspection-page'), 'CheckOutPage'),
+                },
+                {
+                  path: `${base}/handover`,
+                  lazy: page(() => import('@/routes/handover/handover-page'), 'HandoverPage'),
+                },
+                {
+                  path: `${base}/review`,
+                  lazy: page(() => import('@/routes/reviews/write-review-page'), 'WriteReviewPage'),
+                },
+              ]),
               // Pages linked from the header, footer or forms but built in later milestones (plan §9).
               ...[...seoPages, ...backendTaggedPages]
                 .filter((planned) => planned.comingSoon)
@@ -186,6 +247,86 @@ export const routes: RouteObject[] = [
                 index: true,
                 handle: { title: 'Overview' } satisfies AdminRouteHandle,
                 lazy: page(() => import('@/routes/admin/overview-page'), 'AdminOverviewPage'),
+              },
+              {
+                path: 'users',
+                handle: { title: 'Users' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/users-page'), 'AdminUsersPage'),
+              },
+              {
+                path: 'users/:id',
+                handle: { title: 'User' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/user-page'), 'AdminUserPage'),
+              },
+              {
+                path: 'bookings',
+                handle: { title: 'Bookings' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/bookings-page'), 'AdminBookingsPage'),
+              },
+              {
+                path: 'bookings/:ref',
+                handle: { title: 'Booking' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/booking-page'), 'AdminBookingPage'),
+              },
+              {
+                path: 'bookings/:ref/thread',
+                handle: { title: 'Booking messages' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/booking-thread-page'), 'AdminBookingThreadPage'),
+              },
+              {
+                path: 'verifications',
+                handle: { title: 'Verifications' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/verifications-page'), 'AdminVerificationsPage'),
+              },
+              {
+                path: 'incidents',
+                handle: { title: 'Incidents & disputes' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/incidents-page'), 'AdminIncidentsPage'),
+              },
+              {
+                path: 'incidents/:ref',
+                handle: { title: 'Incident' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/incident-page'), 'AdminIncidentPage'),
+              },
+              {
+                path: 'support',
+                handle: { title: 'Support' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/support-page'), 'AdminSupportPage'),
+              },
+              {
+                path: 'support/:ref',
+                handle: { title: 'Support ticket' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/ticket-page'), 'AdminTicketPage'),
+              },
+              {
+                path: 'moderation',
+                handle: { title: 'Moderation' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/moderation-page'), 'AdminModerationPage'),
+              },
+              {
+                path: 'risk',
+                handle: { title: 'Risk review' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/risk-page'), 'AdminRiskPage'),
+              },
+              {
+                path: 'content',
+                handle: { title: 'Content' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/content-page'), 'AdminContentPage'),
+              },
+              {
+                path: 'reports',
+                handle: { title: 'Reports' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/reports-page'), 'AdminReportsPage'),
+              },
+              {
+                path: 'audit',
+                handle: { title: 'Audit log' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/audit-page'), 'AdminAuditPage'),
+              },
+              {
+                path: 'jobs',
+                handle: { title: 'Jobs' } satisfies AdminRouteHandle,
+                lazy: page(() => import('@/routes/admin/jobs-page'), 'AdminJobsPage'),
               },
               {
                 path: 'payments',

@@ -4,12 +4,16 @@ import {
   Heart,
   LifeBuoy,
   Luggage,
+  MessagesSquare,
   Settings,
+  Star,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { useSession } from '@/features/auth/use-session';
+import { useUnreadMessages } from '@/features/messages/messages-api';
 import { cn } from '@/lib/cn';
 
 interface NavItem {
@@ -18,18 +22,30 @@ interface NavItem {
   icon: LucideIcon;
   /** Whether a path belongs to this item; the item's own path by default. */
   owns?: (path: string) => boolean;
+  /** Shows the unread messages count. */
+  unread?: boolean;
 }
 
 const owns = (item: NavItem, path: string) => (item.owns ? item.owns(path) : path === item.to);
 
+const MESSAGES: NavItem = {
+  to: '/messages',
+  label: 'Messages',
+  icon: MessagesSquare,
+  owns: (path) => path.startsWith('/messages'),
+  unread: true,
+};
+
 const TRAVEL: NavItem[] = [
   { to: '/trips', label: 'Trips', icon: Luggage, owns: (path) => path.startsWith('/trips') },
+  MESSAGES,
   { to: '/saved', label: 'Saved cars', icon: Heart },
 ];
 
 const ACCOUNT: NavItem[] = [
   { to: '/account', label: 'Overview', icon: UserRound },
   { to: '/account/payments', label: 'Payments', icon: CreditCard },
+  { to: '/account/reviews', label: 'Reviews', icon: Star },
   { to: '/notifications', label: 'Notifications', icon: Bell },
   {
     to: '/account/support',
@@ -43,6 +59,7 @@ const ACCOUNT: NavItem[] = [
 /** The phone's tab bar: the places a Guest goes most (plan §12.6). Account holds the rest. */
 const TABS: NavItem[] = [
   TRAVEL[0]!,
+  MESSAGES,
   { to: '/saved', label: 'Saved', icon: Heart },
   {
     to: '/account',
@@ -52,7 +69,39 @@ const TABS: NavItem[] = [
   },
 ];
 
-function SidebarGroup({ title, items, path }: { title?: string; items: NavItem[]; path: string }) {
+/** How many messages wait, once someone is signed in; nothing for visitors. */
+function useUnreadCount(): number {
+  const signedIn = Boolean(useSession().data);
+  return useUnreadMessages(signedIn).data ?? 0;
+}
+
+/** The unread count beside Messages, read out with the link's name. */
+function UnreadCount({ count, className }: { count: number; className?: string }) {
+  if (count === 0) return null;
+  return (
+    <span
+      className={cn(
+        'inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs leading-5 font-semibold text-white',
+        className,
+      )}
+    >
+      {count > 99 ? '99+' : count}
+      <span className="sr-only"> unread</span>
+    </span>
+  );
+}
+
+function SidebarGroup({
+  title,
+  items,
+  path,
+  unread = 0,
+}: {
+  title?: string;
+  items: NavItem[];
+  path: string;
+  unread?: number;
+}) {
   return (
     <div className="grid gap-1">
       {title && <p className="eyebrow mb-1 px-3 text-muted">{title}</p>}
@@ -73,6 +122,7 @@ function SidebarGroup({ title, items, path }: { title?: string; items: NavItem[]
           >
             <Icon aria-hidden="true" className="size-4.5 shrink-0" />
             {item.label}
+            {item.unread && <UnreadCount count={unread} className="ml-auto" />}
           </Link>
         );
       })}
@@ -83,9 +133,10 @@ function SidebarGroup({ title, items, path }: { title?: string; items: NavItem[]
 /** The account's sidebar on tablets and desktops. */
 export function AccountSidebar({ className }: { className?: string }) {
   const { pathname } = useLocation();
+  const unread = useUnreadCount();
   return (
     <nav aria-label="Your dashboard" className={cn('grid content-start gap-6', className)}>
-      <SidebarGroup items={TRAVEL} path={pathname} />
+      <SidebarGroup items={TRAVEL} path={pathname} unread={unread} />
       <SidebarGroup title="Account" items={ACCOUNT} path={pathname} />
     </nav>
   );
@@ -97,6 +148,7 @@ export function AccountSidebar({ className }: { className?: string }) {
  */
 export function AccountTabBar({ className }: { className?: string }) {
   const { pathname } = useLocation();
+  const unread = useUnreadCount();
   return (
     <nav
       aria-label="Your dashboard, quick links"
@@ -105,7 +157,7 @@ export function AccountTabBar({ className }: { className?: string }) {
         className,
       )}
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {TABS.map((item) => {
           const active = owns(item, pathname);
           const Icon = item.icon;
@@ -121,7 +173,15 @@ export function AccountTabBar({ className }: { className?: string }) {
                   active ? 'text-primary' : 'text-muted hover:text-ink',
                 )}
               >
-                <Icon aria-hidden="true" className={cn('size-5', active && 'fill-primary/12')} />
+                <span className="relative">
+                  <Icon aria-hidden="true" className={cn('size-5', active && 'fill-primary/12')} />
+                  {item.unread && (
+                    <UnreadCount
+                      count={unread}
+                      className="absolute -top-2 left-3 min-w-4.5 px-1 text-xs leading-4.5"
+                    />
+                  )}
+                </span>
                 {item.label}
               </Link>
             </li>

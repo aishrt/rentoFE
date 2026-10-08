@@ -34,6 +34,7 @@ const aroha: HostApplication = {
   emailVerified: true,
   phone: '+64211234567',
   phoneVerified: true,
+  identityStatus: 'APPROVED',
   status: 'APPLIED',
   // 10:30 am on 28 September in New Zealand.
   appliedAt: '2026-09-27T21:30:00.000Z',
@@ -71,7 +72,8 @@ describe('AdminHostApplicationsPage', () => {
       'href',
       'mailto:aroha@example.co.nz',
     );
-    expect(first.getAllByText('(verified)')).toHaveLength(2);
+    // Email, mobile and identity.
+    expect(first.getAllByText('(verified)')).toHaveLength(3);
     expect(first.getByText('+64211234567')).toBeInTheDocument();
     expect(first.getByText('Registered, 123-456-789')).toBeInTheDocument();
     expect(first.getByText('2 cars, 1 waiting for review')).toBeInTheDocument();

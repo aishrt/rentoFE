@@ -46,6 +46,8 @@ import {
 import {
   BookingPageSkeleton,
   DetailCard,
+  MessageLink,
+  ReviewLink,
   PartyDetails,
   ProtectionDetails,
   Receipt,
@@ -58,6 +60,8 @@ import { HoldNotice } from '@/features/booking/hold-countdown';
 import { PayBooking, type PaidBooking } from '@/features/booking/pay-booking';
 import { CancellationPolicy } from '@/features/booking/trip-policies';
 import { useNow } from '@/features/booking/use-time-left';
+import { ActiveTripPanel } from '@/features/handover/active-trip';
+import { HandoverCard } from '@/features/handover/handover-card';
 import { cn } from '@/lib/cn';
 
 type Tone = 'info' | 'success' | 'danger';
@@ -365,9 +369,11 @@ function Trip({ tripRef }: { tripRef: string }) {
       </div>
 
       <TripStatus booking={booking} onPaid={paid} />
+      {booking.status === 'ACTIVE' && <ActiveTripPanel booking={booking} base={`/trips/${booking.ref}`} />}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="grid gap-6">
+          <HandoverCard booking={booking} base={`/trips/${booking.ref}`} />
           <DetailCard title="Pick-up and return" icon={CalendarClock}>
             <TripStops
               booking={booking}
@@ -426,6 +432,8 @@ function Trip({ tripRef }: { tripRef: string }) {
             )}
           </DetailCard>
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
+            <ReviewLink booking={booking} base={`/trips/${booking.ref}`} />
+            <MessageLink booking={booking} name={booking.host.firstName} />
             {cancelKind && cancelKind !== 'release' && (
               <Button variant="secondary" onClick={() => setCancelling(true)}>
                 {cancelKind === 'withdraw' ? 'Withdraw request' : 'Cancel trip'}

@@ -31,7 +31,12 @@ const PLAN_BUDGET_KB = 170;
 // help and support, a support request, the help centre and a guide), and each adds its entry to the router
 // with the chunks it preloads (0.7 KB measured with and without them). The same build without those routes
 // measures 183.4 KB.
-const LIMIT_KB = 184.3;
+// Raised from 184.3 on 8 October 2026 (184.0 → 188.2 KB locally, so about 188.35 KB in the pipeline) with
+// no new homepage code: Phase 3 adds 38 routes (messages, the handover, earnings and the Host profile,
+// reviews, incidents, a pay link and 17 staff portal pages), each with its router entry and the chunks it
+// preloads. The same build with the previous router measures 184.0 KB. Loading the staff portal's routes
+// only on the way into /admin would take back about half of it.
+const LIMIT_KB = 188.4;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

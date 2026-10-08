@@ -9,6 +9,14 @@ import { applicantName, formatDateNz, waitingFor } from './listing-format';
 import { HostStatusBadge } from './review-badge';
 import { VerifiedMark } from './verified-mark';
 
+/** The Host's identity check (plan §9, Days 19–20), in words for the queue. */
+const IDENTITY_WORDS: Record<HostApplication['identityStatus'], string> = {
+  NONE: 'Not checked yet',
+  PENDING: 'In review',
+  APPROVED: 'Verified',
+  REJECTED: 'Didn’t pass',
+};
+
 function Detail({ term, children, className }: { term: string; children: ReactNode; className?: string }) {
   return (
     <div className={className}>
@@ -100,6 +108,12 @@ export function HostApplicationCard({
             ) : (
               <span className="text-muted">Not added</span>
             )}
+          </Detail>
+          <Detail term="Identity">
+            <span className="flex items-center gap-1.5">
+              {IDENTITY_WORDS[application.identityStatus]}
+              {application.identityStatus === 'APPROVED' && <VerifiedMark verified />}
+            </span>
           </Detail>
           <Detail term="GST">
             {application.gstRegistered

@@ -3,14 +3,12 @@ export interface NavLinkItem {
   to: string;
 }
 
-/**
- * Header navigation (plan §12.6). "Help" opens the FAQs until the help centre arrives in Phase 3 (plan §9).
- */
+/** Header navigation (plan §12.6). */
 export const primaryNav: NavLinkItem[] = [
   { label: 'Browse cars', to: '/cars' },
   { label: 'How it works', to: '/how-it-works' },
   { label: 'Become a host', to: '/become-a-host' },
-  { label: 'Help', to: '/faq' },
+  { label: 'Help', to: '/help' },
 ];
 
 export const footerNav: { title: string; links: NavLinkItem[] }[] = [

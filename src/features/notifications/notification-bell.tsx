@@ -29,9 +29,9 @@ function NotificationRow({
 }
 
 /**
- * The header's bell (plan §7): the unread count, refreshed every minute until Socket.IO messaging arrives,
- * and the newest three notifications, with "Show all" to the Notifications page when there are more. Opening
- * one marks it read and goes to its page. Only signed-in visitors get it, and it loads on its own, after the
+ * The header's bell (plan §7): the unread count, updated live over Socket.IO, and the newest three
+ * notifications, with "Show all" to the Notifications page when there are more. Opening one marks it
+ * read and goes to its page. Only signed-in visitors get it, and it loads on its own, after the
  * page (plan §12.5).
  */
 export function NotificationBell() {

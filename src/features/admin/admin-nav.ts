@@ -1,10 +1,14 @@
 import {
   CalendarRange,
+  ChartColumn,
   Car,
   FileText,
+  Flag,
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
+  ListRestart,
+  Radar,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -30,28 +34,37 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
   {
     title: 'Marketplace',
     items: [
-      { label: 'Users', icon: Users },
+      { label: 'Users', icon: Users, to: '/admin/users' },
       { label: 'Host applications', icon: KeyRound, to: '/admin/host-applications' },
       { label: 'Vehicles', icon: Car, to: '/admin/vehicles' },
-      { label: 'Bookings', icon: CalendarRange },
+      { label: 'Bookings', icon: CalendarRange, to: '/admin/bookings' },
     ],
   },
   {
     title: 'Operations',
     items: [
-      { label: 'Verifications', icon: ShieldCheck },
-      { label: 'Incidents & disputes', icon: TriangleAlert },
-      { label: 'Support', icon: LifeBuoy },
+      { label: 'Verifications', icon: ShieldCheck, to: '/admin/verifications' },
+      { label: 'Incidents & disputes', icon: TriangleAlert, to: '/admin/incidents' },
+      { label: 'Support', icon: LifeBuoy, to: '/admin/support' },
+      { label: 'Moderation', icon: Flag, to: '/admin/moderation' },
+      { label: 'Risk', icon: Radar, to: '/admin/risk' },
     ],
   },
-  { title: 'Finance', items: [{ label: 'Payments & payouts', icon: Wallet, to: '/admin/payments' }] },
+  {
+    title: 'Finance',
+    items: [
+      { label: 'Payments & payouts', icon: Wallet, to: '/admin/payments' },
+      { label: 'Reports', icon: ChartColumn, to: '/admin/reports', adminOnly: true },
+    ],
+  },
   {
     title: 'Platform',
     items: [
-      { label: 'Content', icon: FileText },
+      { label: 'Content', icon: FileText, to: '/admin/content', adminOnly: true },
       { label: 'Staff', icon: UserCog, to: '/admin/staff', adminOnly: true },
       { label: 'Settings', icon: Settings, to: '/admin/settings' },
-      { label: 'Audit log', icon: ScrollText },
+      { label: 'Audit log', icon: ScrollText, to: '/admin/audit', adminOnly: true },
+      { label: 'Jobs', icon: ListRestart, to: '/admin/jobs', adminOnly: true },
     ],
   },
 ];

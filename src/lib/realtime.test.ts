@@ -111,4 +111,13 @@ describe('openRealtime', () => {
     await vi.dynamicImportSettled();
     expect(io).not.toHaveBeenCalled();
   });
+
+  it('passes each live event to its handler', async () => {
+    const message = vi.fn();
+    const close = openRealtime({ onReconnect: vi.fn(), events: { message } });
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+    sockets[0]!.fire('message', { ref: 'RV-7K2Q9M' });
+    expect(message).toHaveBeenCalledWith({ ref: 'RV-7K2Q9M' });
+    close();
+  });
 });

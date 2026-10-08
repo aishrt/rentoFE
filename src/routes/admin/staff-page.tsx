@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MailPlus, ShieldCheck, UserX, X } from 'lucide-react';
+import { KeyRound, MailPlus, ShieldCheck, UserX, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { StaffInvite, StaffMember } from '@/api/types';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -18,6 +18,7 @@ import {
   cancelInviteRequest,
   inviteStaffRequest,
   removeStaffRequest,
+  resetStaffMfaRequest,
   staffErrorMessage,
   staffName,
   staffQueryKey,
@@ -27,7 +28,10 @@ import { initials } from '@/features/auth/roles';
 import { useSession } from '@/features/auth/use-session';
 import { formatLongDateNz } from '@/lib/format';
 
-type Pending = { kind: 'remove'; member: StaffMember } | { kind: 'cancel'; invite: StaffInvite };
+type Pending =
+  | { kind: 'remove'; member: StaffMember }
+  | { kind: 'reset-mfa'; member: StaffMember }
+  | { kind: 'cancel'; invite: StaffInvite };
 
 /**
  * The staff (plan §6.2): the one admin, set on the server and not changeable here, and the support team,
@@ -100,6 +104,11 @@ function StaffSection() {
       toast(`${staffName(pending.member)} is off the support team`, {
         description: "They're signed out of the staff portal.",
       });
+    } else if (pending.kind === 'reset-mfa') {
+      await resetStaffMfaRequest(pending.member.id);
+      toast(`${staffName(pending.member)}'s authenticator is reset`, {
+        description: 'They can sign in with their password and set up a new app.',
+      });
     } else {
       await cancelInviteRequest(pending.invite.id);
       toast(`Invitation to ${pending.invite.email} cancelled`);
@@ -169,15 +178,29 @@ function StaffSection() {
                 }${member.mfaEnabled ? ' · two-factor on' : ''}`}
                 action={
                   member.role === 'SUPPORT' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Remove ${staffName(member)}`}
-                      onClick={() => ask({ kind: 'remove', member })}
-                    >
-                      <UserX aria-hidden="true" />
-                      Remove
-                    </Button>
+                    <div className="flex flex-wrap gap-1">
+                      {/* Only someone with an authenticator app can lose it. */}
+                      {member.mfaEnabled && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Reset ${staffName(member)}'s authenticator`}
+                          onClick={() => ask({ kind: 'reset-mfa', member })}
+                        >
+                          <KeyRound aria-hidden="true" />
+                          Reset authenticator
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Remove ${staffName(member)}`}
+                        onClick={() => ask({ kind: 'remove', member })}
+                      >
+                        <UserX aria-hidden="true" />
+                        Remove
+                      </Button>
+                    </div>
                   )
                 }
               />
@@ -241,14 +264,24 @@ function StaffSection() {
         title={
           pending?.kind === 'remove'
             ? `Remove ${staffName(pending.member)} from the support team?`
-            : `Cancel the invitation to ${pending?.invite.email ?? ''}?`
+            : pending?.kind === 'reset-mfa'
+              ? `Reset ${staffName(pending.member)}'s authenticator?`
+              : `Cancel the invitation to ${pending?.invite.email ?? ''}?`
         }
         description={
           pending?.kind === 'remove'
             ? "They're signed out of the staff portal straight away, and their authenticator apps are removed. Their account stays, and you can invite them again."
-            : 'The link in their email stops working. You can invite them again later.'
+            : pending?.kind === 'reset-mfa'
+              ? "For a lost phone. Their authenticator apps are removed and they're signed out everywhere. They sign in with their password, then can set up a new app in Settings."
+              : 'The link in their email stops working. You can invite them again later.'
         }
-        confirmLabel={pending?.kind === 'remove' ? 'Remove' : 'Cancel invitation'}
+        confirmLabel={
+          pending?.kind === 'remove'
+            ? 'Remove'
+            : pending?.kind === 'reset-mfa'
+              ? 'Reset authenticator'
+              : 'Cancel invitation'
+        }
         onConfirm={confirm}
       />
     </>

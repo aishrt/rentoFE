@@ -7,6 +7,7 @@ import {
   Flag,
   LifeBuoy,
   MapPin,
+  MessagesSquare,
   Phone,
   Star,
   type LucideIcon,
@@ -16,9 +17,11 @@ import { Link } from 'react-router';
 import type { Booking, LineItem } from '@/api/types';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
+import { useMyReviews } from '@/features/reviews/reviews-api';
 import { cn } from '@/lib/cn';
 import { formatNzDateTime, formatNzd, ratingText, type StatusLabel, type StatusTone } from './booking-format';
 
@@ -214,6 +217,43 @@ export function SupportLink({ bookingRef }: { bookingRef: string }) {
       <LifeBuoy aria-hidden="true" className="size-4" />
       Contact support
     </Link>
+  );
+}
+
+/** Bookings with a conversation: once a booking or request has reached the Host (spec §13). */
+const MESSAGING_STATUSES: Booking['status'][] = [
+  'PENDING',
+  'CONFIRMED',
+  'ACTIVE',
+  'COMPLETED',
+  'CANCELLED',
+  'DECLINED',
+];
+
+/** "Message Hana": the booking's conversation, once there is one. */
+export function MessageLink({ booking, name }: { booking: Pick<Booking, 'ref' | 'status'>; name: string }) {
+  if (!MESSAGING_STATUSES.includes(booking.status)) return null;
+  return (
+    <Button asChild variant="secondary">
+      <Link to={`/messages/${booking.ref}`} viewTransition>
+        <MessagesSquare aria-hidden="true" />
+        Message {name}
+      </Link>
+    </Button>
+  );
+}
+
+/** "Write a review" for a completed trip still waiting for this person's review (spec §16). */
+export function ReviewLink({ booking, base }: { booking: Pick<Booking, 'ref' | 'status'>; base: string }) {
+  const reviews = useMyReviews(booking.status === 'COMPLETED');
+  if (!reviews.data?.toWrite.some((item) => item.bookingRef === booking.ref)) return null;
+  return (
+    <Button asChild>
+      <Link to={`${base}/review`} viewTransition>
+        <Star aria-hidden="true" className="fill-current" />
+        Write a review
+      </Link>
+    </Button>
   );
 }
 

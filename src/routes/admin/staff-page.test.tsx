@@ -166,6 +166,44 @@ describe('AdminStaffPage', () => {
     expect(await screen.findAllByRole('listitem')).toHaveLength(1);
   });
 
+  it("resets a support member's lost authenticator after asking", async () => {
+    const withApp: StaffList = {
+      ...team,
+      staff: team.staff.map((member) => (member.id === 'u3' ? { ...member, mfaEnabled: true } : member)),
+    };
+    let list = withApp;
+    const reset = vi.fn();
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/staff': () => ({ status: 200, body: list }),
+      'POST /admin/staff/u3/mfa/reset': () => {
+        reset();
+        list = team;
+        return { status: 204 };
+      },
+    });
+    render();
+
+    const members = within(await screen.findByRole('list', { name: 'Staff' }));
+    const [admin] = members.getAllByRole('listitem');
+    // The admin resets their own with the server script, not here.
+    expect(within(admin!).queryByRole('button')).not.toBeInTheDocument();
+    await userEvent.click(members.getByRole('button', { name: "Reset Sam Support's authenticator" }));
+    const dialog = within(await screen.findByRole('dialog', { name: "Reset Sam Support's authenticator?" }));
+    expect(dialog.getByText(/set up a new app in Settings/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Reset authenticator' }));
+
+    expect(await screen.findByText("Sam Support's authenticator is reset")).toBeInTheDocument();
+    expect(reset).toHaveBeenCalledOnce();
+    // Without an authenticator app there's nothing left to reset.
+    expect(await screen.findByRole('button', { name: 'Remove Sam Support' })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: "Reset Sam Support's authenticator" }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
   it('cancels an open invitation, and can send it again', async () => {
     let list: StaffList = { ...team, invites: [merePending] };
     const resent = vi.fn();

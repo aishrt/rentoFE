@@ -173,9 +173,18 @@ const REVIEW_ERROR_CODES = [
   'NOT_FOUND',
 ];
 
-/** The message a review action shows for an API error, or null when it belongs to a form field. */
+/** Refusals (not allowed, not found, a conflict) whose API message explains itself to staff. */
+const EXPLAINED_STATUSES = [403, 404, 409];
+
+/** The message a staff decision shows for an API error, or null when it belongs to a form field. */
 export function reviewErrorMessage(error: unknown): string | null {
-  if (error instanceof ApiError && REVIEW_ERROR_CODES.includes(error.code)) return error.message;
+  if (
+    error instanceof ApiError &&
+    !error.fields &&
+    (REVIEW_ERROR_CODES.includes(error.code) || EXPLAINED_STATUSES.includes(error.status))
+  ) {
+    return error.message;
+  }
   return formErrorMessage(error);
 }
 

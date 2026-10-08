@@ -109,6 +109,7 @@ export function readiness(overrides: Partial<CheckoutReadiness> = {}): CheckoutR
     },
     hasDateOfBirth: true,
     identityStatus: 'NONE',
+    identityProcessing: false,
     problems: [],
     ...overrides,
   };

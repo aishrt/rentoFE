@@ -27,6 +27,7 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const account: NavLinkItem[] = user
     ? [
         { label: 'Trips', to: '/trips' },
+        { label: 'Messages', to: '/messages' },
         { label: 'Saved cars', to: '/saved' },
         ...(hosting ? [{ label: 'Hosting', to: '/host' }] : []),
         { label: 'Notifications', to: '/notifications' },

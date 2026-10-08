@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Luggage,
+  MessagesSquare,
   UserRound,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -66,6 +67,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <Link to="/trips" viewTransition>
               <Luggage aria-hidden="true" />
               Trips
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/messages" viewTransition>
+              <MessagesSquare aria-hidden="true" />
+              Messages
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

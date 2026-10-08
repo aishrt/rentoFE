@@ -28,6 +28,14 @@ export async function removeStaffRequest(id: string): Promise<void> {
   await unwrap(client.DELETE('/admin/staff/{id}', { params: { path: { id } } }));
 }
 
+/**
+ * For a staff member who lost their authenticator apps: removes them all and signs them out everywhere.
+ * They sign in with their password and can set up a new app in Settings. Admin only, never your own.
+ */
+export async function resetStaffMfaRequest(id: string): Promise<void> {
+  await unwrap(client.POST('/admin/staff/{id}/mfa/reset', { params: { path: { id } } }));
+}
+
 export const staffName = (person: Pick<StaffMember, 'firstName' | 'lastName'>) =>
   `${person.firstName} ${person.lastName}`;
 
