@@ -1,7 +1,8 @@
 /**
  * The JavaScript budget (plan §12.5): the gzipped JavaScript a visitor downloads on first load of
  * the homepage, which is the app's entry chunk plus the homepage route and everything they import.
- * Run after `npm run build`; the pipeline fails the build when it's over the limit.
+ * Run after `npm run build`, by hand: since 8 October 2026 it's no longer a step of the deploy pipeline (the
+ * owner's choice), so going over the limit only shows here.
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
