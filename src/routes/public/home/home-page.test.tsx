@@ -28,9 +28,15 @@ function mockHome({
   });
 }
 
+/**
+ * The featured cars and reviews are lazy sections: their code loads first, which on a busy machine or a CI
+ * runner can take longer than Testing Library's one second.
+ */
+const LAZY = { timeout: 5_000 };
+
 /** Waits for the featured cars' placeholder to give way to the section, or to nothing. */
 const featuredSettled = (container: HTMLElement) =>
-  waitFor(() => expect(container.querySelector('section[aria-hidden="true"]')).toBeNull());
+  waitFor(() => expect(container.querySelector('section[aria-hidden="true"]')).toBeNull(), LAZY);
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -75,7 +81,7 @@ describe('HomePage', () => {
     });
     renderWithProviders(<HomePage />);
 
-    const section = await screen.findByRole('region', { name: 'Ready when you are' });
+    const section = await screen.findByRole('region', { name: 'Ready when you are' }, LAZY);
     expect(within(section).getAllByRole('article')).toHaveLength(2);
     expect(within(section).getByRole('link', { name: 'Nissan Leaf 2021' })).toHaveAttribute(
       'href',
@@ -108,7 +114,7 @@ describe('HomePage', () => {
 
     mockHome({ reviews: { show: true, reviews: [REVIEW] } });
     renderWithProviders(<HomePage />);
-    const reviews = await screen.findByRole('region', { name: 'Trips people loved' });
+    const reviews = await screen.findByRole('region', { name: 'Trips people loved' }, LAZY);
     expect(reviews).toHaveTextContent('Spotless car and an easy pick-up at the airport.');
     expect(reviews).toHaveTextContent('Nikau');
   });
