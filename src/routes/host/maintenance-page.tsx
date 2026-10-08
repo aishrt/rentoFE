@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Wrench } from 'lucide-react';
-import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useState, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router';
 import { ApiError, client, unwrap } from '@/api/client';
 import type { MaintenanceReminders, MaintenanceRemindersRequest } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -20,7 +22,10 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { useHostVehicle } from '@/features/host/host-api';
 import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { vehiclePath } from '@/features/host/use-step-save';
+import { vehicleDisplayTitle } from '@/features/host/vehicle-labels';
 
 interface Row {
   key: string;
@@ -53,9 +58,14 @@ const rowsFrom = (data: MaintenanceReminders): Row[] =>
     done: Boolean(reminder.doneAt),
   }));
 
+/** What a list of rows would save, to tell whether anything has changed since the last save. */
+const fingerprint = (rows: Row[]) =>
+  JSON.stringify(rows.map((row) => [row.id, row.title, row.dueAt, row.dueOdometer, row.notes, row.done]));
+
 function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceReminders }) {
   const queryClient = useQueryClient();
   const [rows, setRows] = useState<Row[]>(() => rowsFrom(data));
+  const changed = fingerprint(rows) !== fingerprint(rowsFrom(data));
   const save = useMutation({
     mutationFn: (body: MaintenanceRemindersRequest) =>
       unwrap(
@@ -87,6 +97,27 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
       })),
     });
 
+  // A reminder just added takes the focus, as the button that added it may have gone with the empty state.
+  const [added, setAdded] = useState<string | null>(null);
+  const add = () => {
+    const row = blank();
+    setRows((current) => [...current, row]);
+    setAdded(row.key);
+  };
+
+  const addButton = (variant: 'primary' | 'secondary') => (
+    <Button variant={variant} onClick={add} disabled={rows.length >= 20}>
+      <Plus aria-hidden="true" />
+      Add a reminder
+    </Button>
+  );
+  // Only once there's a change to save; with no reminders and nothing removed, it's left out.
+  const saveButton = (
+    <Button loading={save.isPending} disabled={!changed} onClick={submit}>
+      Save reminders
+    </Button>
+  );
+
   return (
     <div className="grid gap-6">
       {data.latestOdometer !== null && (
@@ -103,8 +134,22 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
               <Wrench />
             </IconBadge>
           }
-          title="No reminders yet"
-          description="Add a service, a tyre change or anything else, due by a date or an odometer reading."
+          title={changed ? 'All reminders removed' : 'No reminders yet'}
+          description={
+            changed
+              ? 'Save to remove them for good, or add a new one.'
+              : 'Add a service, a tyre change or anything else, due by a date or an odometer reading.'
+          }
+          actions={
+            changed ? (
+              <>
+                {addButton('secondary')}
+                {saveButton}
+              </>
+            ) : (
+              addButton('primary')
+            )
+          }
         />
       ) : (
         <ul className="grid gap-4">
@@ -116,6 +161,7 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
                     value={row.title}
                     maxLength={120}
                     placeholder="Service"
+                    autoFocus={row.key === added}
                     onChange={(event) => update(row.key, { title: event.target.value })}
                   />
                 </Field>
@@ -163,24 +209,42 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
           {save.error.message}
         </Alert>
       )}
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          onClick={() => setRows((current) => [...current, blank()])}
-          disabled={rows.length >= 20}
-        >
-          <Plus aria-hidden="true" />
-          Add a reminder
-        </Button>
-        <Button loading={save.isPending} onClick={submit}>
-          Save reminders
-        </Button>
-      </div>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {addButton('secondary')}
+          {saveButton}
+        </div>
+      )}
     </div>
   );
 }
 
+function Header({ eyebrow }: { eyebrow: ReactNode }) {
+  return (
+    <HostPageHeader
+      back={<BackLink to="/host">My vehicles</BackLink>}
+      eyebrow={eyebrow}
+      title="Maintenance reminders"
+      description="Reminders you set for this car: we email you at 9 am when one is near."
+    />
+  );
+}
+
+/** Stands in for the car's name while it loads, at the eyebrow's height. */
+const eyebrowSkeleton = <span aria-hidden="true" className="skeleton inline-block h-3 w-40 rounded-md" />;
+
+function MaintenanceSkeleton() {
+  return (
+    <>
+      <Header eyebrow={eyebrowSkeleton} />
+      <Skeleton aria-hidden="true" className="h-64 max-w-3xl rounded-card" />
+    </>
+  );
+}
+
 function Maintenance({ vehicleId }: { vehicleId: string }) {
+  // The car names the page, as on its calendar.
+  const vehicle = useHostVehicle(vehicleId);
   const reminders = useQuery({
     queryKey: ['host', 'maintenance', vehicleId],
     queryFn: ({ signal }) =>
@@ -191,32 +255,48 @@ function Maintenance({ vehicleId }: { vehicleId: string }) {
         }),
       ),
   });
-  if (reminders.isError) {
-    return (
-      <Alert variant="danger" role="alert" title="We couldn’t load the reminders">
-        {reminders.error.message}
-      </Alert>
-    );
-  }
-  if (!reminders.data) return <Skeleton aria-hidden="true" className="h-64 rounded-card" />;
-  return <Editor vehicleId={vehicleId} data={reminders.data} />;
+  const car = vehicle.data;
+  return (
+    <>
+      <Header
+        eyebrow={
+          car ? (
+            <Link to={vehiclePath(car.id)} className="link-underline">
+              {vehicleDisplayTitle(car.title)}
+            </Link>
+          ) : vehicle.isPending ? (
+            eyebrowSkeleton
+          ) : (
+            'Hosting'
+          )
+        }
+      />
+      {/* The tabs and heading line up with the other Host pages; the reminders keep a narrower width. */}
+      <div className="max-w-3xl">
+        {reminders.isError ? (
+          <Alert variant="danger" role="alert" title="We couldn’t load the reminders">
+            {reminders.error.message}
+          </Alert>
+        ) : reminders.data ? (
+          <Editor vehicleId={vehicleId} data={reminders.data} />
+        ) : (
+          <Skeleton aria-hidden="true" className="h-64 rounded-card" />
+        )}
+      </div>
+    </>
+  );
 }
 
 /** A car's maintenance reminders (spec §9: vehicle maintenance and document reminders). */
 export function MaintenancePage() {
   const { id = '' } = useParams();
   return (
-    <Container className="max-w-3xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
+      <PageBackdrop art={ParkingBays} />
       <PageMeta title="Maintenance reminders" noindex />
       <div className="grid gap-8">
         <HostSubNav />
-        <HostPageHeader
-          back={<BackLink to="/host">My vehicles</BackLink>}
-          eyebrow="Hosting"
-          title="Maintenance reminders"
-          description="Reminders you set for this car: we email you at 9 am when one is near."
-        />
-        <RequireSignedIn fallback={<Skeleton aria-hidden="true" className="h-64 rounded-card" />}>
+        <RequireSignedIn fallback={<MaintenanceSkeleton />}>
           {() => <Maintenance vehicleId={id} />}
         </RequireSignedIn>
       </div>

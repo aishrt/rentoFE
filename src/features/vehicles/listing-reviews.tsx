@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { RatingStars } from '@/components/ui/rating-stars';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ReportReviewButton } from '@/features/reviews/report-review-button';
 import { formatNumber } from '@/lib/format';
 import { motion } from '@/styles/tokens';
 import { ListingSection } from './listing-section';
@@ -47,7 +48,10 @@ function CategoryBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-/** Published guest reviews of the car (plan §9, Days 21–22), with the category averages, ten at a time. */
+/**
+ * Published guest reviews of the car (plan §9, Days 21–22), with the category averages, ten at a time.
+ * Anyone can report one, except their own.
+ */
 export function ListingReviews({ vehicle }: { vehicle: VehicleDetail }) {
   const reviews = useVehicleReviews(vehicle.id);
   const firstPage = reviews.data?.pages[0];
@@ -121,10 +125,11 @@ export function ListingReviews({ vehicle }: { vehicle: VehicleDetail }) {
                       ) : (
                         <Avatar initials={review.author.firstName.slice(0, 1).toUpperCase()} tone="accent" />
                       )}
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-ink">{review.author.firstName}</h3>
                         <p className="text-xs text-muted">{monthYear.format(new Date(review.createdAt))}</p>
                       </div>
+                      <ReportReviewButton reviewId={review.id} author={review.author} className="-my-1" />
                     </header>
                     <RatingStars value={review.overall} size="sm" className="mt-3" />
                     {review.body && <p className="mt-2 leading-relaxed text-ink/85">{review.body}</p>}

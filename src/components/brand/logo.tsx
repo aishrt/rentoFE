@@ -38,7 +38,8 @@ export function Logo({ tone = 'dark', className }: LogoProps) {
       <LogoMark outlined={tone === 'light'} />
       <span
         className={cn(
-          'headline text-xl leading-none font-semibold',
+          // One line from 360px up; narrower phones wrap it rather than scroll sideways.
+          'headline text-xl leading-none font-semibold min-[22.5rem]:whitespace-nowrap',
           tone === 'light' ? 'text-canvas' : 'text-primary',
         )}
       >

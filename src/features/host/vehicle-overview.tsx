@@ -205,12 +205,13 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
         <StatusNote vehicle={vehicle} />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section aria-labelledby="listing-sections" className="grid content-start gap-3">
+      {/* grid-cols-1 here and below: truncated step summaries would otherwise widen a phone’s page. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <section aria-labelledby="listing-sections" className="grid grid-cols-1 content-start gap-3">
           <h2 id="listing-sections" className="text-base font-semibold text-ink">
             Your listing
           </h2>
-          <ol className="grid gap-3">
+          <ol className="grid grid-cols-1 gap-3">
             {ONBOARDING_STEPS.map(({ step, title }) => {
               const missing = groups.get(step) ?? [];
               return (

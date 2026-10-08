@@ -3,6 +3,8 @@ import { MailCheck, MailX } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { client, unwrap } from '@/api/client';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { SignalArcs } from '@/components/brand/patterns/signal-arcs';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Button } from '@/components/ui/button';
@@ -27,6 +29,7 @@ export function UnsubscribePage() {
 
   return (
     <Container className="max-w-xl py-16">
+      <PageBackdrop art={SignalArcs} />
       <PageMeta title="Unsubscribe" noindex />
       {unsubscribe.isPending ? (
         <div className="flex justify-center py-10" role="status">

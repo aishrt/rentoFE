@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MyReviews, Review } from '@/api/types';
@@ -40,6 +40,8 @@ function mockReviews(mine: MyReviews) {
         return { status: 200, body: mine };
       case `GET /bookings/${booking.ref}`:
         return { status: 200, body: { booking } };
+      case 'POST /reports':
+        return { status: 201, body: { id: 'rep1', status: 'OPEN' } };
       case 'POST /reviews':
         return {
           status: 201,
@@ -81,6 +83,38 @@ describe('ReviewsPage', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: 'By you' }));
     expect(await screen.findByRole('heading', { name: 'No reviews written yet' })).toBeInTheDocument();
+  });
+
+  it('reports a review about the user, but not one they wrote', async () => {
+    const sent = mockReviews({
+      toWrite: [],
+      written: [
+        review({
+          id: 'r2',
+          author: { id: guestUser.id, firstName: 'Kiri' },
+          subject: { id: 'h1', firstName: 'Hana' },
+        }),
+      ],
+      received: [review()],
+    });
+    const user = userEvent.setup();
+    renderWithRouter([{ path: '/account/reviews', element: <ReviewsPage /> }], '/account/reviews');
+
+    await user.click(await screen.findByRole('button', { name: 'Report Hana’s review' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Report Hana’s review' }));
+    await user.click(dialog.getByRole('radio', { name: /Abusive or harassing/ }));
+    await user.click(dialog.getByRole('button', { name: 'Send report' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sent.find((request) => request.path === '/reports')?.body).toEqual({
+      targetType: 'REVIEW',
+      targetId: 'r1',
+      reason: 'HARASSMENT',
+    });
+
+    await user.click(screen.getByRole('tab', { name: 'By you' }));
+    expect(await screen.findByText('About Hana')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Report/ })).not.toBeInTheDocument();
   });
 });
 

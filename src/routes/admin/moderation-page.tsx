@@ -16,14 +16,15 @@ const TABS = [
 ] as const satisfies readonly TabOption<Tab>[];
 
 const REPORT_STATUSES = ['OPEN', 'ACTIONED', 'DISMISSED'] as const satisfies readonly ReportStatus[];
-const REVIEW_STATES = ['HELD', 'HIDDEN'] as const satisfies readonly ReviewState[];
+const REVIEW_STATES = ['HELD', 'PUBLISHED', 'HIDDEN'] as const satisfies readonly ReviewState[];
 
 const pick = <Value extends string>(values: readonly Value[], raw: string | null) =>
   values.find((value) => value === raw?.toUpperCase());
 
 /**
- * Moderation (plan §12.6): what members reported, and reviews held back before publishing. The tabs are
- * in the address (?tab=reviews&state=hidden, ?status=dismissed), so a link opens the same list.
+ * Moderation (plan §12.6): what members reported, reviews held back before publishing, and published ones
+ * to hide. The tabs are in the address (?tab=reviews&state=published, ?status=dismissed), so a link opens
+ * the same list.
  */
 export function AdminModerationPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -45,7 +46,7 @@ export function AdminModerationPage() {
       <AdminPageHeader
         eyebrow="Operations"
         title="Moderation"
-        description="What members reported, and reviews held back before publishing. Every decision is kept in the audit log."
+        description="What members reported, and reviews to check before or after they’re published. Every decision is kept in the audit log."
       />
 
       <SegmentedTabs

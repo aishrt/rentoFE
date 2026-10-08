@@ -261,6 +261,30 @@ describe('Platform settings', () => {
     });
   });
 
+  it('gives a protection plan its own roadside number, and leaves the others on the main one', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=protection');
+
+    const protection = await card('Protection plans and roadside assistance');
+    const planNumbers = protection.getAllByLabelText('Roadside assistance number (optional)');
+    expect(planNumbers).toHaveLength(settingsFixture.protectionPlans.length);
+    await userEvent.type(planNumbers[1]!, 'roadside');
+    await userEvent.click(protection.getByRole('button', { name: 'Save changes' }));
+    expect(await protection.findByText('Enter a phone number, like 0800 123 456')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(planNumbers[1]!);
+    await userEvent.type(planNumbers[1]!, '0800 765 432');
+    await userEvent.click(protection.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Protection plans and roadside assistance saved')).toBeInTheDocument();
+    expect(sent[0]?.protectionPlans?.map((plan) => plan.roadsidePhone)).toEqual([
+      undefined,
+      '0800 765 432',
+      undefined,
+    ]);
+  });
+
   it("shows the API's reason when it refuses the change", async () => {
     mockApi({
       'POST /auth/session': { status: 200, body: { user: adminUser } },

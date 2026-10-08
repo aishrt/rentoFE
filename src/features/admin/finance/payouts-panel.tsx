@@ -12,7 +12,6 @@ import { DataTable, Pagination, Td, Th, Tr } from '@/features/admin/ops/admin-ta
 import { EmptyList, ListSkeleton, LoadError } from '@/features/admin/ops/query-feedback';
 import { adminDashboardQueryKey } from '@/features/admin/use-admin-overview';
 import { useSession } from '@/features/auth/use-session';
-import { StatusBadge } from '@/features/booking/booking-parts';
 import { formatNzDate, formatNzd } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 import {
@@ -24,6 +23,7 @@ import {
   type PayoutAction,
 } from './finance-api';
 import { PayoutActionDialog } from './payout-action-dialog';
+import { PayoutFailure, PayoutStatusBadge } from './payout-status';
 
 const ALL = 'ALL';
 
@@ -201,7 +201,7 @@ export function PayoutsPanel() {
                     <Td align="right">{formatNzd(payout.amountCents)}</Td>
                     <Td align="right">{payout.deductedCents > 0 ? formatNzd(payout.deductedCents) : '—'}</Td>
                     <Td>
-                      <StatusBadge status={PAYOUT_STATUS[payout.status]} />
+                      <PayoutStatusBadge status={payout.status} />
                       {payout.status === 'HELD' && payout.holdReason && (
                         <p className="mt-1 text-xs text-muted">{HOLD_REASON[payout.holdReason]}</p>
                       )}
@@ -212,7 +212,7 @@ export function PayoutsPanel() {
                     </Td>
                     <Td>
                       {payout.failureReason ? (
-                        <p className="max-w-64 whitespace-normal text-danger">{payout.failureReason}</p>
+                        <PayoutFailure payout={payout} className="max-w-64 whitespace-normal" />
                       ) : (
                         <span className="text-muted">—</span>
                       )}

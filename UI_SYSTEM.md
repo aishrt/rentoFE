@@ -224,26 +224,26 @@ Every page has its own background art, about what the page is for. The home hero
 - **Line patterns** ([`components/brand/patterns`](src/components/brand/patterns)) are drawn in `currentColor` (faint `primary`), for `PageHero tone="light"` and for `PageBackdrop`.
 - `PageHero` takes the page's art as `art={…}`. App pages put `<PageBackdrop art={…} />` first inside their outer `Container`. It positions itself against `<main>` and fades into the canvas before the content.
 
-| Page                                         | Art                                                 |
-| -------------------------------------------- | --------------------------------------------------- |
-| Home                                         | `LandscapeArt`: alpine road at blue hour            |
-| How it works                                 | `JourneyArt`: from a farmhouse driveway to the road |
-| Safety                                       | `LighthouseArt`: its beam sweeps (`animate-sweep`)  |
-| About                                        | `HarbourArt`: a harbour town with its lights on     |
-| Become a host                                | `StreetArt`: a street with a car under a carport    |
-| Insurance                                    | `CoverRings`: rings of cover around a shield        |
-| FAQs, the help centre and its guides         | `ContourLines`: a contour map                       |
-| Contact, Help and support, a support request | `ConnectionArcs`: places linked by arcs             |
-| Legal pages                                  | `RuledLines`: ruled paper and a seal                |
-| Browse cars, search, Saved cars              | `StreetMap`: streets with cars pinned               |
-| Trips, a trip, its receipt                   | `TripRoute`: a route across hill country            |
-| Hosting (overview, bookings, cars, apply)    | `ParkingBays`: a car park from above                |
-| Account, its settings and payments           | `DotGrid`: dots and switches                        |
-| Notifications                                | `SignalArcs`: a bell sending out arcs               |
-| Checkout                                     | `CalmWaves`: slow, even waves                       |
-| Log in, sign up and the other guest sign-ins | `CoastArt`: a coast road under the moon             |
-| Staff log-in and invitation                  | `CityArt`: the city at night                        |
-| Destinations                                 | Their `tone-*` gradients                            |
+| Page                                                                                         | Art                                                 |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Home                                                                                         | `LandscapeArt`: alpine road at blue hour            |
+| How it works                                                                                 | `JourneyArt`: from a farmhouse driveway to the road |
+| Safety                                                                                       | `LighthouseArt`: its beam sweeps (`animate-sweep`)  |
+| About                                                                                        | `HarbourArt`: a harbour town with its lights on     |
+| Become a host                                                                                | `StreetArt`: a street with a car under a carport    |
+| Insurance                                                                                    | `CoverRings`: rings of cover around a shield        |
+| FAQs, the help centre and its guides                                                         | `ContourLines`: a contour map                       |
+| Contact, Help and support, a support request, incidents                                      | `ConnectionArcs`: places linked by arcs             |
+| Legal pages                                                                                  | `RuledLines`: ruled paper and a seal                |
+| Browse cars, search, Saved cars                                                              | `StreetMap`: streets with cars pinned               |
+| Trips, a trip, its receipt, its handover, check-in and check-out, writing a review, Messages | `TripRoute`: a route across hill country            |
+| Hosting (overview, bookings, cars, apply, earnings, profile, maintenance)                    | `ParkingBays`: a car park from above                |
+| Account, its settings, payments and reviews                                                  | `DotGrid`: dots and switches                        |
+| Notifications, unsubscribe                                                                   | `SignalArcs`: a bell sending out arcs               |
+| Checkout, paying a charge after a trip                                                       | `CalmWaves`: slow, even waves                       |
+| Log in, sign up and the other guest sign-ins                                                 | `CoastArt`: a coast road under the moon             |
+| Staff log-in and invitation                                                                  | `CityArt`: the city at night                        |
+| Destinations                                                                                 | Their `tone-*` gradients                            |
 
 A new page picks a scene or pattern that suits it, or adds one. Keep it to a few KB of inline SVG, and keep focal points on the right, clear of the text.
 
@@ -310,11 +310,28 @@ Marketplace components live in `src/features`: `VehicleCard` and the listing's p
 </Container>
 ```
 
-`AccountShell` (`features/account/account-shell.tsx`) frames every Guest dashboard page (plan §12.6): a sidebar from tablets up, and a tab bar (Trips · Saved · Account) that sticks to the bottom of a phone while the page is in view, then scrolls away above the footer. Pages opened from a list, such as a trip, its receipt or a support request, use a `BackLink` instead. `print:hidden` keeps the header, footer and backgrounds off printed pages, such as receipts.
+`AccountShell` (`features/account/account-shell.tsx`) frames every Guest dashboard page (plan §12.6): a sidebar from tablets up, and a tab bar (Trips · Messages · Saved · Account) that sticks to the bottom of a phone while the page is in view, then scrolls away above the footer. Pages opened from a list, such as a trip, its receipt or a support request, use a `BackLink` instead. `print:hidden` keeps the header, footer and backgrounds off printed pages, such as receipts. Host pages use `HostPageHeader` and `HostSubNav` (`features/host/host-nav.tsx`) in one shared `Container` width, so the tabs stay put from page to page (a narrower reading width applies only below the header). On phones the tab row scrolls, with its current tab in view and a fade at an edge with more tabs past it. Staff pages use `AdminPageHeader` (`features/admin/ops`).
+
+| Component                                       | Where                                   | Use                                                                     |
+| ----------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
+| `DataTable`, `Th`, `Td`, `Tr`, `Pagination`     | `features/admin/ops/admin-table.tsx`    | The staff portal's tables: a card that scrolls sideways on a phone      |
+| `ListSkeleton`, `LoadError`, `EmptyList`        | `features/admin/ops/query-feedback.tsx` | A staff list loading, failing (with Try again) or empty                 |
+| `EarningsChart`                                 | `features/host/earnings-chart.tsx`      | Monthly bars with round axis steps, and Show as table                   |
+| `StarInput`, `ReviewCard`, `ReportReviewButton` | `features/reviews`                      | Rating a trip, showing a review, reporting one                          |
+| `CarDiagram`, `DamageEditor`, `PhotoCapture`    | `features/handover`                     | Damage pinned on a car outline, and guided photos with their time taken |
+| `Composer`, `MessageList`                       | `features/messages`                     | A conversation: photos, Enter to send on a computer, report a message   |
+| `ExtraCharges`                                  | `features/booking/extra-charges.tsx`    | Charges after a trip, on the trip and booking pages                     |
+
+Pickers inside a `DialogContent` open their list inside the dialog (`PopoverRootContext`), because a modal dialog won't let a list in the page body be clicked or focused. Two layout traps found in Phase 3's polish pass:
+
+- **Truncated text in a grid.** A grid's implicit column is `auto`, so a `truncate`d line's full width can still widen the page. Give the grid an explicit `grid-cols-1` (`minmax(0, 1fr)`), as the inbox and conversation do.
+- **A sideways scroller must be `relative`.** Absolutely positioned parts inside it, such as `sr-only` headings, are only clipped when the scroller is their containing block. Otherwise they widen the page (`DataTable` is `relative` for this reason).
+
+Actions that only appear on hover also show on touch screens (`pointer-coarse:opacity-100`), which have no hover.
 
 ### Not built yet
 
-Plan §12.3 also lists Chip, ListItem, a data table and charts. They will be built with the Phase 3 dashboards that need them, from the same tokens.
+Plan §12.3 also lists Chip and ListItem. They will be built when a screen needs them, from the same tokens.
 
 ## Motion
 

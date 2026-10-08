@@ -52,7 +52,8 @@ export function SiteHeader() {
         scrolled ? 'glass border-line/70' : 'border-transparent bg-canvas',
       )}
     >
-      <Container className="flex h-16 items-center justify-between gap-6 lg:h-[4.5rem]">
+      {/* A tighter gap on phones keeps the wordmark on one line beside a signed-in member's bell and menu. */}
+      <Container className="flex h-16 items-center justify-between gap-3 sm:gap-6 lg:h-[4.5rem]">
         <Link to="/" viewTransition aria-label="Rento Vroom home" className="rounded-control">
           <Logo />
         </Link>

@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { threadPath } from '@/features/admin/bookings/bookings-api';
 import { TICKET_CATEGORY, TICKET_STATUS } from '@/features/admin/ops/admin-labels';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import { formatNzDateTime, formatRelativeTime } from '@/features/booking/booking-format';
 import { TICKET_STATUSES, useUpdateTicket } from './support-api';
 
@@ -104,8 +105,8 @@ export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; tick
             <span className="font-medium text-ink">{ticket.from.name}</span>
           )}
           {ticket.from.email && (
-            <a href={`mailto:${ticket.from.email}`} className="link-underline w-fit break-all text-muted">
-              {ticket.from.email}
+            <a href={`mailto:${ticket.from.email}`} className="link-underline w-fit wrap-anywhere text-muted">
+              <EmailAddress email={ticket.from.email} />
             </a>
           )}
           {!ticket.from.userId && (

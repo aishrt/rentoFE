@@ -12,6 +12,7 @@ import { ROLE_LABELS, USER_STATUS, VERIFICATION_LABELS } from '@/features/admin/
 import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 import { DataTable, Pagination, Td, Th, Tr } from '@/features/admin/ops/admin-table';
 import { EmptyList, ListSkeleton, LoadError } from '@/features/admin/ops/query-feedback';
+import { formatDateNz } from '@/features/admin/listings/listing-format';
 import { hostStatusLabel } from '@/features/admin/listings/listing-labels';
 import {
   ROLES,
@@ -24,7 +25,6 @@ import {
 } from '@/features/admin/users/user-format';
 import { USERS_PAGE_SIZE, useAdminUsers } from '@/features/admin/users/users-api';
 import { StatusBadge } from '@/features/booking/booking-parts';
-import { formatNzNumericDate } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 
@@ -208,7 +208,7 @@ function UsersTable({ users, className }: { users: AdminUserRow[]; className?: s
                 <span className="text-muted">0</span>
               )}
             </Td>
-            <Td className="whitespace-nowrap">{formatNzNumericDate(user.createdAt)}</Td>
+            <Td className="whitespace-nowrap">{formatDateNz(user.createdAt)}</Td>
           </Tr>
         ))}
       </tbody>

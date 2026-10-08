@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDateNz, formatDayValue, todayNz, waitingFor } from '@/features/admin/listings/listing-format';
 import { riskFlagLabel } from '@/features/admin/ops/admin-labels';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 import {
@@ -97,7 +98,8 @@ export function VerificationCard({ item, onApprove, onReject, className, style }
               </Link>
             </h3>
             <p className="mt-1 text-sm wrap-anywhere text-muted">
-              {item.email} · Waiting since {formatDateNz(item.since)} ({waitingFor(item.since)})
+              <EmailAddress email={item.email} /> · Waiting since {formatDateNz(item.since)} (
+              {waitingFor(item.since)})
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -20,7 +20,7 @@ import {
   formatDays,
   formatNzDateTimeWithYear,
   formatNzNumericDate,
-  formatNzd,
+  formatNzdCents,
 } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 
@@ -100,12 +100,16 @@ function ReceiptDocument({ receipt }: { receipt: Receipt }) {
         <Heading id="receipt-charges">Charges</Heading>
         <dl>
           {receipt.lines.map((line, index) => (
-            <Row key={index} label={line.label} value={formatNzd(line.amountCents)} />
+            <Row key={index} label={line.label} value={formatNzdCents(line.amountCents)} />
           ))}
         </dl>
         <dl className="mt-3 border-t border-line pt-3">
-          <Row label="Total (NZD)" value={formatNzd(receipt.totalCents)} strong />
-          <Row label={`GST included (${receipt.gstRatePct}%)`} value={formatNzd(receipt.gstCents)} muted />
+          <Row label="Total (NZD)" value={formatNzdCents(receipt.totalCents)} strong />
+          <Row
+            label={`GST included (${receipt.gstRatePct}%)`}
+            value={formatNzdCents(receipt.gstCents)}
+            muted
+          />
         </dl>
       </section>
 
@@ -117,13 +121,31 @@ function ReceiptDocument({ receipt }: { receipt: Receipt }) {
               <Row
                 key={index}
                 label={`Refund, ${formatNzNumericDate(refund.at)}${refund.status === 'PENDING' ? ' (on its way)' : refund.status === 'FAILED' ? ' (failed)' : ''}`}
-                value={formatNzd(-refund.amountCents)}
+                value={formatNzdCents(-refund.amountCents)}
                 muted={refund.status === 'FAILED'}
               />
             ))}
           </dl>
           <dl className="mt-3 border-t border-line pt-3">
-            <Row label="Paid after refunds (NZD)" value={formatNzd(receipt.netPaidCents)} strong />
+            <Row label="Paid after refunds (NZD)" value={formatNzdCents(receipt.netPaidCents)} strong />
+          </dl>
+        </section>
+      )}
+
+      {receipt.extraCharges && receipt.extraCharges.length > 0 && (
+        <section aria-labelledby="receipt-extra-charges">
+          <Heading id="receipt-extra-charges">Charges after the trip</Heading>
+          <dl>
+            {receipt.extraCharges.map((charge, index) => (
+              <div key={index} className="grid grid-cols-[1fr_auto] gap-x-6 py-1">
+                <dt>{charge.description}</dt>
+                <dd className="text-right text-ink tabular-nums">{formatNzdCents(charge.amountCents)}</dd>
+                <dd className="col-span-2 text-xs text-muted">
+                  Paid {formatNzNumericDate(charge.paidAt)} with {charge.paidWith}. GST included (
+                  {receipt.gstRatePct}%) {formatNzdCents(charge.gstCents)}.
+                </dd>
+              </div>
+            ))}
           </dl>
         </section>
       )}

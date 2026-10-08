@@ -23,6 +23,7 @@ const TAB_PREFIX = 'moderation-reviews';
 
 const TABS = [
   { value: 'HELD', label: 'Held' },
+  { value: 'PUBLISHED', label: 'Published' },
   { value: 'HIDDEN', label: 'Hidden' },
 ] as const satisfies readonly TabOption<ReviewState>[];
 
@@ -30,6 +31,11 @@ const EMPTY: Record<ReviewState, { title: string; description: string }> = {
   HELD: {
     title: 'No reviews held',
     description: 'Reviews held back before publishing show here, with why they were held.',
+  },
+  PUBLISHED: {
+    title: 'No published reviews',
+    description:
+      'Reviews on Rento Vroom show here, newest first, so one that breaks the rules can be hidden.',
   },
   HIDDEN: { title: 'No hidden reviews', description: 'Reviews the team has hidden are listed here.' },
 };
@@ -41,7 +47,10 @@ interface ReviewsPanelProps {
   onStateChange: (state: ReviewState) => void;
 }
 
-/** Reviews held back before publishing, to publish or hide with a reason, and the hidden ones. */
+/**
+ * Reviews held back before publishing, to publish or hide with a reason; published ones, newest first, to
+ * hide one that breaks the rules; and the hidden ones.
+ */
 export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
   const queryClient = useQueryClient();
   const reviews = useModerationReviews(state);
@@ -94,7 +103,7 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
         />
         {count !== undefined && (
           <p aria-live="polite" className="text-sm text-muted">
-            {formatNumber(count)} {state === 'HELD' ? 'held' : 'hidden'} {count === 1 ? 'review' : 'reviews'}
+            {formatNumber(count)} {state.toLowerCase()} {count === 1 ? 'review' : 'reviews'}
           </p>
         )}
       </div>
@@ -114,7 +123,7 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
         {reviews.data?.length === 0 && <EmptyList {...EMPTY[state]} icon={<Star />} />}
 
         {reviews.data && reviews.data.length > 0 && (
-          <ul aria-label={`${state === 'HELD' ? 'Held' : 'Hidden'} reviews`} className="grid gap-4">
+          <ul aria-label={`${TABS.find((tab) => tab.value === state)?.label} reviews`} className="grid gap-4">
             {reviews.data.map((review, index) => (
               <HeldReviewCard
                 key={review.id}
@@ -124,7 +133,7 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
                 style={staggerIndex(index)}
                 // A hidden review stays hidden: clearing it wouldn't show it again.
                 onPublish={state === 'HELD' ? () => start(review, 'CLEAR') : undefined}
-                onHide={state === 'HELD' ? () => start(review, 'HIDE') : undefined}
+                onHide={state !== 'HIDDEN' ? () => start(review, 'HIDE') : undefined}
               />
             ))}
           </ul>

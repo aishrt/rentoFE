@@ -51,6 +51,8 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
   const note = vehicleNote(vehicle);
   const editPath = `/host/vehicles/${vehicle.id}`;
   const draft = vehicle.status === 'DRAFT';
+  // Submitted and still listable: its listing, calendar and maintenance.
+  const manageable = !draft && !isLocked(vehicle.status);
   const queryClient = useQueryClient();
   // Only a draft can be deleted; a listing that was submitted is switched off instead.
   const remove = useMutation({
@@ -119,12 +121,20 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
               {note.text}
             </p>
           )}
-          <div className="mt-auto flex flex-wrap gap-3">
+          {/* A listed car's three actions share one style; on a phone the listing takes the first row and
+              the calendar and maintenance share the second, rather than one wrapping on its own. */}
+          <div
+            className={cn(
+              'mt-auto gap-3',
+              manageable ? 'grid grid-cols-2 sm:flex sm:flex-wrap' : 'flex flex-wrap',
+            )}
+          >
             {!isLocked(vehicle.status) && (
               <Button
                 asChild
                 size="sm"
                 variant={draft || vehicle.status === 'CHANGES_REQUESTED' ? 'primary' : 'secondary'}
+                className={cn(manageable && 'col-span-2')}
               >
                 <Link to={editPath}>
                   {draft ? 'Continue listing' : isLive(vehicle.status) ? 'Edit listing' : 'View listing'}
@@ -147,16 +157,16 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
                 onConfirm={() => remove.mutate()}
               />
             )}
-            {!draft && !isLocked(vehicle.status) && (
-              <Button asChild size="sm" variant="ghost">
+            {manageable && (
+              <Button asChild size="sm" variant="secondary">
                 <Link to={`${editPath}/calendar`}>
                   <CalendarDays aria-hidden="true" />
                   Calendar
                 </Link>
               </Button>
             )}
-            {!draft && !isLocked(vehicle.status) && (
-              <Button asChild size="sm" variant="ghost">
+            {manageable && (
+              <Button asChild size="sm" variant="secondary">
                 <Link to={`${editPath}/maintenance`}>
                   <Wrench aria-hidden="true" />
                   Maintenance

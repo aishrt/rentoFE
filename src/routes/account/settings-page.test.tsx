@@ -156,4 +156,42 @@ describe('AccountSettingsPage', () => {
     expect(email.getByRole('button', { name: 'Send confirmation link' })).toBeInTheDocument();
     expect(email.queryByRole('button', { name: 'Change email address' })).not.toBeInTheDocument();
   });
+
+  it('lists the people blocked in messages, and unblocks one', async () => {
+    let unblocked = false;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: guestUser } },
+      'GET /me/blocked-users': () => ({
+        status: 200,
+        body: { users: unblocked ? [] : [{ id: 'u9', firstName: 'Tama' }] },
+      }),
+      'DELETE /users/u9/block': () => {
+        unblocked = true;
+        return { status: 204 };
+      },
+    });
+    render();
+
+    const blocked = within(await section('Blocked people'));
+    await userEvent.click(await blocked.findByRole('button', { name: 'Unblock Tama' }));
+
+    expect(await blocked.findByText(/You haven’t blocked anyone/)).toBeInTheDocument();
+    expect(unblocked).toBe(true);
+  });
+
+  it('shows a verified mobile number as it is, with a button to change it', async () => {
+    mockApi({
+      'POST /auth/session': {
+        status: 200,
+        body: { user: { ...guestUser, phone: '+64211234567', phoneVerified: true } },
+      },
+    });
+    render();
+
+    const mobile = within(await section('Mobile number'));
+    expect(mobile.getByText('+64211234567')).toBeInTheDocument();
+    expect(mobile.queryByRole('button', { name: 'Text me a code' })).not.toBeInTheDocument();
+    await userEvent.click(mobile.getByRole('button', { name: 'Change mobile number' }));
+    expect(mobile.getByRole('button', { name: 'Text me a code' })).toBeInTheDocument();
+  });
 });

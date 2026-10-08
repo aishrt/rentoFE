@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { formatNzDateTime, formatNzd } from '@/features/booking/booking-format';
 import { useNow } from '@/features/booking/use-time-left';
 import { usePolicies } from '@/features/content/content-api';
+import { roadsidePhone } from '@/features/content/roadside';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -30,7 +31,8 @@ const directionsUrl = (address: string) =>
 export function ActiveTripPanel({ booking, base }: { booking: Booking; base: string }) {
   const now = useNow();
   const policies = usePolicies();
-  const roadside = policies.data?.roadsideAssistance?.phone;
+  // The protection plan's own roadside number when the insurer gives one, else the platform-wide one.
+  const roadside = roadsidePhone(policies.data, booking.protectionPlan?.code);
   const guest = booking.role === 'GUEST';
   const other = guest ? booking.host : booking.guest;
   const returnAt = new Date(booking.end).getTime();

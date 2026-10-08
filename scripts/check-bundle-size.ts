@@ -36,7 +36,12 @@ const PLAN_BUDGET_KB = 170;
 // reviews, incidents, a pay link and 17 staff portal pages), each with its router entry and the chunks it
 // preloads. The same build with the previous router measures 184.0 KB. Loading the staff portal's routes
 // only on the way into /admin would take back about half of it.
-const LIMIT_KB = 188.4;
+// Lowered from 188.4 later on 8 October 2026: the staff portal's routes now join the router on the way into
+// /admin (patchAdminRoutes in router.tsx), 188.2 → 186.0 KB locally. Phase 3's polish pass then added 0.5 KB
+// (186.5 KB locally, so about 186.65 KB in the pipeline): pickers inside dialogs open their lists in the dialog
+// (PopoverRootContext, 0.2 KB with the chunks it moved), the header keeps the wordmark on one line on phones,
+// and reviews can be reported (the review card's action slot).
+const LIMIT_KB = 186.7;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

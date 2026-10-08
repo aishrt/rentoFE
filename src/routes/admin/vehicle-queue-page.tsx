@@ -152,7 +152,7 @@ export function AdminVehicleQueuePage() {
             {queue.isPending ? (
               <QueueSkeleton />
             ) : (
-              <div className="scrollbar-subtle overflow-x-auto">
+              <div className="scrollbar-subtle relative overflow-x-auto">
                 <table className="w-full min-w-[56rem] text-left text-sm">
                   <caption className="sr-only">Listings waiting for review, oldest first</caption>
                   <thead className="border-b border-line bg-ink/3">

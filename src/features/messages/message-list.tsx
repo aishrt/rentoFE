@@ -114,7 +114,8 @@ export function MessageList({ messages, otherName, onReport, names }: MessageLis
                         type="button"
                         onClick={() => onReport(message)}
                         aria-label={`Report this message from ${otherName}`}
-                        className="mb-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-opacity duration-120 group-hover/message:opacity-100 hover:bg-ink/5 hover:text-ink focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary"
+                        // Shown on hover with a mouse, and always on a touch screen, which has no hover.
+                        className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-opacity duration-120 group-hover/message:opacity-100 pointer-coarse:opacity-100 hover:bg-ink/5 hover:text-ink focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary"
                       >
                         <Flag aria-hidden="true" className="size-3.5" />
                       </button>

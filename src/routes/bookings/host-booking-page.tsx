@@ -30,6 +30,7 @@ import { useAcceptBooking, useBookingDetail } from '@/features/booking/booking-a
 import { acceptedToast } from '@/features/booking/accepted-toast';
 import {
   awaitsVerification,
+  formatNzDate,
   formatNzDateTime,
   formatNzd,
   formatTimeLeft,
@@ -50,6 +51,7 @@ import {
 } from '@/features/booking/booking-parts';
 import { CancelDialogContent } from '@/features/booking/cancel-dialog';
 import { DeclineDialogContent } from '@/features/booking/decline-dialog';
+import { ExtraCharges } from '@/features/booking/extra-charges';
 import { useTimeLeft } from '@/features/booking/use-time-left';
 import { ActiveTripPanel } from '@/features/handover/active-trip';
 import { HandoverCard } from '@/features/handover/handover-card';
@@ -129,7 +131,7 @@ const HOLD_WORDS: Record<NonNullable<NonNullable<Booking['payout']>['holdReason'
 /** Where the trip's payout stands (plan §8.1, item 19), once there is one. */
 function payoutStatusLine(payout: NonNullable<Booking['payout']>): string | null {
   if (payout.status === 'PAID' && payout.paidAt)
-    return `Paid ${formatNzDateTime(payout.paidAt)} to your Stripe account.`;
+    return `Paid ${formatNzDateTime(payout.paidAt)} to your Stripe account${payout.expectedInBankBy ? `, usually in your bank by ${formatNzDate(payout.expectedInBankBy)}` : ''}.`;
   if (payout.status === 'HELD' && payout.holdReason) return HOLD_WORDS[payout.holdReason];
   if (payout.status === 'FAILED') return 'The payout didn’t go through. Our team is on it.';
   if (payout.status === 'SCHEDULED' && payout.scheduledFor)
@@ -338,6 +340,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
               </Link>
             </DetailCard>
           )}
+          <ExtraCharges booking={booking} viewer="HOST" />
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
             <ReviewLink booking={booking} base={`/host/bookings/${booking.ref}`} />
             <MessageLink booking={booking} name={booking.guest.firstName} />

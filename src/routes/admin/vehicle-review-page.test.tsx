@@ -186,7 +186,7 @@ describe('AdminVehicleReviewPage: what staff see', () => {
     expect(details.getByText('The Host')).toBeInTheDocument();
 
     const compliance = await section('Registration and WOF');
-    expect(compliance.getByText('31/03/2099')).toBeInTheDocument();
+    expect(compliance.getByText('31 Mar 2099')).toBeInTheDocument();
     expect(compliance.getByText('Expired')).toBeInTheDocument();
 
     const pricing = await section('Pricing and trip rules');
@@ -229,7 +229,7 @@ describe('AdminVehicleReviewPage: what staff see', () => {
 
     const documents = await section('Documents');
     const rego = within(documents.getByRole('listitem', { name: 'Registration' }));
-    expect(rego.getByText('Expires 31/03/2099')).toBeInTheDocument();
+    expect(rego.getByText('Expires 31 Mar 2099')).toBeInTheDocument();
     const open = rego.getByRole('link', { name: 'Open the registration (new tab)' });
     expect(open).toHaveAttribute('href', 'https://files.test/rego?s=1');
     expect(open).toHaveAttribute('target', '_blank');

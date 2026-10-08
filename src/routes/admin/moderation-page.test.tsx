@@ -70,6 +70,32 @@ const heldReview: ModerationReview = {
   moderationReason: 'Looks like a phone number',
 };
 
+const publishedReview: ModerationReview = {
+  ...heldReview,
+  id: 'rev2',
+  overall: 1,
+  communication: 1,
+  pickupReturn: 1,
+  cleanliness: 1,
+  body: 'The worst host in Aotearoa. A liar and a cheat.',
+  status: 'PUBLISHED',
+  moderation: 'CLEAR',
+  moderationReason: '',
+};
+
+const reviewReport: AdminReport = {
+  id: 'r3',
+  targetType: 'REVIEW',
+  targetId: 'rev2',
+  reason: 'HARASSMENT',
+  status: 'OPEN',
+  reporter: { id: 'u5', name: 'Mere Walker' },
+  subject: { id: 'u2', name: 'Kiri Ngata' },
+  preview: '1★ The worst host in Aotearoa. A liar and a cheat.',
+  review: publishedReview,
+  createdAt: '2026-09-28T21:30:00.000Z',
+};
+
 /** The query of the latest request. */
 const lastQuery = (fetchMock: ReturnType<typeof mockApi>) =>
   new URL((fetchMock.mock.calls.at(-1)?.[0] as Request).url).searchParams;
@@ -193,6 +219,88 @@ describe('AdminModerationPage', () => {
     expect(router.state.location.search).toBe('?status=actioned');
   });
 
+  it('shows a reported review in full, and hides it with a reason, which resolves the report', async () => {
+    let moderated: unknown;
+    let resolved: unknown;
+    mockApi({
+      'GET /admin/moderation/reports': () => ({
+        status: 200,
+        body: { reports: resolved ? [] : [reviewReport] },
+      }),
+      'POST /admin/reviews/rev2/moderate': (init) => {
+        moderated = JSON.parse(String(init?.body));
+        return {
+          status: 200,
+          body: { review: { ...publishedReview, status: 'HIDDEN', moderation: 'HIDDEN' } },
+        };
+      },
+      'POST /admin/moderation/reports/r3/resolve': (init) => {
+        resolved = JSON.parse(String(init?.body));
+        return { status: 200, body: { report: { ...reviewReport, status: 'ACTIONED' } } };
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    const report = await card('Review reported by Mere Walker');
+    expect(report.getByText('The worst host in Aotearoa. A liar and a cheat.')).toBeInTheDocument();
+    expect(report.getByText('Published')).toBeInTheDocument();
+    expect(report.getByRole('img', { name: 'Rated 1.0 out of 5' })).toBeInTheDocument();
+    expect(report.getByRole('link', { name: 'Kiri' })).toHaveAttribute('href', '/admin/users/u2');
+    expect(report.getByRole('link', { name: 'Mere' })).toHaveAttribute('href', '/admin/users/u5');
+    expect(report.getByRole('link', { name: 'RV-7K2M9Q' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2M9Q',
+    );
+
+    await user.click(report.getByRole('button', { name: 'Hide review' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Hide Kiri’s review?' }));
+    await user.click(dialog.getByRole('button', { name: 'Hide review' }));
+    expect(await dialog.findByText('Add a short note saying why')).toBeInTheDocument();
+    expect(moderated).toBeUndefined();
+
+    await user.type(dialog.getByLabelText('Why it’s hidden'), 'Abuse aimed at the Host.');
+    await user.click(dialog.getByRole('button', { name: 'Hide review' }));
+
+    expect(await screen.findByText('Review hidden and report resolved')).toBeInTheDocument();
+    expect(moderated).toEqual({ action: 'HIDE', reason: 'Abuse aimed at the Host.' });
+    expect(resolved).toEqual({ status: 'ACTIONED', resolution: 'Hid the review. Abuse aimed at the Host.' });
+    expect(
+      screen.queryByRole('listitem', { name: 'Review reported by Mere Walker' }),
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText('No open reports')).toBeInTheDocument();
+  });
+
+  it('shows why a reported review was hidden, with nothing left to hide', async () => {
+    mockApi({
+      'GET /admin/moderation/reports': {
+        status: 200,
+        body: {
+          reports: [
+            {
+              ...reviewReport,
+              review: {
+                ...publishedReview,
+                status: 'HIDDEN',
+                moderation: 'HIDDEN',
+                moderationReason: 'Abuse aimed at the Host.',
+              },
+            },
+          ],
+        },
+      },
+    });
+    render();
+
+    const report = await card('Review reported by Mere Walker');
+    expect(report.getByText('Hidden')).toBeInTheDocument();
+    expect(report.getByText('Why the review was hidden').nextElementSibling).toHaveTextContent(
+      'Abuse aimed at the Host.',
+    );
+    expect(report.queryByRole('button', { name: 'Hide review' })).not.toBeInTheDocument();
+    expect(report.getByRole('button', { name: 'Resolve' })).toBeInTheDocument();
+  });
+
   it('lists held reviews with why they were held', async () => {
     const fetchMock = mockApi({
       'GET /admin/reviews': { status: 200, body: { reviews: [heldReview] } },
@@ -305,5 +413,45 @@ describe('AdminModerationPage', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Hidden' }));
     expect(router.state.location.search).toBe('?tab=reviews&state=hidden');
     expect(await screen.findByText('No hidden reviews')).toBeInTheDocument();
+  });
+
+  it('lists published reviews, to hide one that breaks the rules', async () => {
+    let sent: unknown;
+    const fetchMock = mockApi({
+      'GET /admin/reviews': () => ({
+        status: 200,
+        body: {
+          reviews: lastQuery(fetchMock).get('state') === 'PUBLISHED' && !sent ? [publishedReview] : [],
+        },
+      }),
+      'POST /admin/reviews/rev2/moderate': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return {
+          status: 200,
+          body: { review: { ...publishedReview, status: 'HIDDEN', moderation: 'HIDDEN' } },
+        };
+      },
+    });
+    const { router } = render('/admin/moderation?tab=reviews');
+    const user = userEvent.setup();
+
+    expect(await screen.findByText('No reviews held')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Published' }));
+    expect(router.state.location.search).toBe('?tab=reviews&state=published');
+
+    const review = await card('Review by Kiri');
+    expect(review.getByText('The worst host in Aotearoa. A liar and a cheat.')).toBeInTheDocument();
+    expect(review.queryByText(/^Why it was/)).not.toBeInTheDocument();
+    expect(review.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 published review')).toBeInTheDocument();
+
+    await user.click(review.getByRole('button', { name: 'Hide' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Hide Kiri’s review?' }));
+    await user.type(dialog.getByLabelText('Why it’s hidden'), 'Abuse aimed at the Host.');
+    await user.click(dialog.getByRole('button', { name: 'Hide review' }));
+
+    // The toast is the same as for a held review (above).
+    expect(await screen.findByText('No published reviews')).toBeInTheDocument();
+    expect(sent).toEqual({ action: 'HIDE', reason: 'Abuse aimed at the Host.' });
   });
 });

@@ -172,6 +172,8 @@ export type HostPayouts = Schemas['HostPayouts'];
 export type PayoutAccount = Schemas['PayoutAccount'];
 /** An extra charge the Guest pays from the link in their email. */
 export type PayLink = Schemas['PayLink'];
+/** A charge after the trip on a booking, such as extra kilometres or one from an incident. */
+export type BookingExtraCharge = NonNullable<Booking['extraCharges']>[number];
 export type TodoItem = Schemas['TodoItem'];
 export type MaintenanceReminders = Schemas['MaintenanceReminders'];
 export type MaintenanceRemindersRequest = Schemas['MaintenanceRemindersRequest'];
@@ -219,6 +221,8 @@ export type ModerationReview = Schemas['ModerationReviews']['reviews'][number];
 export type VerificationQueueItem = Schemas['VerificationQueueItem'];
 export type StaffIncidentUpdateRequest = Schemas['StaffIncidentUpdateRequest'];
 export type IncidentChargeRequest = Schemas['IncidentChargeRequest'];
+export type IncidentAssignee = Schemas['IncidentAssignees']['assignees'][number];
+export type IncidentAssigneeRequest = Schemas['IncidentAssigneeRequest'];
 export type AdminVehicleChoice = Schemas['AdminVehicleChoice'];
 export type AdminFeaturedVehicles = Schemas['AdminFeaturedVehicles'];
 export type LegalPageEdit = Schemas['LegalPageEdit'];

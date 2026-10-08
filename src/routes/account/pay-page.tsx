@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, LockKeyhole, ReceiptText } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { client, unwrap } from '@/api/client';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { CalmWaves } from '@/components/brand/patterns/calm-waves';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -161,6 +163,7 @@ export function PayPage() {
   const { id = '' } = useParams();
   return (
     <Container className="max-w-2xl py-8 sm:py-12">
+      <PageBackdrop art={CalmWaves} />
       <PageMeta title="Pay a charge" noindex />
       <RequireSignedIn fallback={<PaySkeleton />}>{() => <Pay key={id} paymentId={id} />}</RequireSignedIn>
     </Container>

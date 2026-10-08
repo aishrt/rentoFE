@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Quote, QuoteRequest, VehicleDetail } from '@/api/types';
 import { mockRoutes, quote, vehicleDetail } from '@/features/vehicles/test-fixtures';
-import { renderWithRouter } from '@/test/utils';
+import { guestUser, renderWithRouter } from '@/test/utils';
 import { VehiclePage } from './vehicle-page';
 
 const TRIP = 'start=2026-12-01T10:00&end=2026-12-09T10:00';
@@ -12,13 +12,20 @@ const REVIEWS = {
   reviews: [
     {
       id: 'r1',
-      author: { firstName: 'Nikau' },
+      author: { id: 'u9', firstName: 'Nikau' },
       overall: 5,
       body: 'Handled the mountain roads with ease.',
       createdAt: '2026-09-23T10:00:00.000Z',
     },
+    {
+      id: 'r2',
+      author: { id: guestUser.id, firstName: guestUser.firstName },
+      overall: 5,
+      body: 'Comfy on the motorway.',
+      createdAt: '2026-09-20T10:00:00.000Z',
+    },
   ],
-  total: 1,
+  total: 2,
   page: 1,
   pageSize: 10,
   rating: { avg: 5, count: 2 },
@@ -28,8 +35,18 @@ const REVIEWS = {
 function mockListing({
   vehicle = vehicleDetail(),
   answer = () => quote(),
-}: { vehicle?: VehicleDetail; answer?: (request: QuoteRequest) => Quote } = {}) {
+  user,
+}: {
+  vehicle?: VehicleDetail;
+  answer?: (request: QuoteRequest) => Quote;
+  /** Signed in; otherwise the session request fails, as for a visitor. */
+  user?: typeof guestUser;
+} = {}) {
   return mockRoutes(({ method, path, body }) => {
+    if (user && path === '/auth/session') return { status: 200, body: { user } };
+    if (user && path === '/me/favourites') return { status: 200, body: { vehicleIds: [] } };
+    if (user && method === 'POST' && path === '/reports')
+      return { status: 201, body: { id: 'rep1', status: 'OPEN' } };
     if (path === `/vehicles/${vehicle.slug}`) return { status: 200, body: { vehicle } };
     if (path === `/vehicles/${vehicle.id}/availability`)
       return {
@@ -56,13 +73,16 @@ const renderListing = (search = '') =>
     [
       { path: '/cars/:slug', element: <VehiclePage /> },
       { path: '/book/:slug', element: <h1>Checkout</h1> },
+      { path: '/login', element: <h1>Log in</h1> },
     ],
     `/cars/2022-toyota-rav4-queenstown${search}`,
   );
 
 const panel = () => within(screen.getByRole('complementary', { name: 'Book this car' }));
 const quotes = (sent: ReturnType<typeof mockListing>) =>
-  sent.filter((request) => request.method === 'POST').map((request) => request.body as QuoteRequest);
+  sent
+    .filter((request) => request.method === 'POST' && request.path.endsWith('/quote'))
+    .map((request) => request.body as QuoteRequest);
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -230,6 +250,45 @@ describe('VehiclePage', () => {
     expect(await panel().findByRole('link', { name: 'Request to book' })).toBeInTheDocument();
     expect(panel().getByText(/You'll add the address to deliver to at checkout/)).toBeInTheDocument();
     expect(panel().getByText(/The host has 24 hours to accept your request/)).toBeInTheDocument();
+  });
+
+  it('lets a signed-in reader report a review, but not their own', async () => {
+    const sent = mockListing({ user: guestUser });
+    const user = userEvent.setup();
+    renderListing();
+
+    const reviews = within(await screen.findByRole('region', { name: 'Reviews' }));
+    await user.click(await reviews.findByRole('button', { name: 'Report Nikau’s review' }));
+    expect(reviews.queryByRole('button', { name: 'Report Kiri’s review' })).not.toBeInTheDocument();
+
+    const dialog = within(await screen.findByRole('dialog', { name: 'Report Nikau’s review' }));
+    await user.click(dialog.getByRole('button', { name: 'Send report' }));
+    expect(await dialog.findByText('Choose a reason')).toBeInTheDocument();
+    await user.click(dialog.getByRole('radio', { name: /Fake or misleading/ }));
+    await user.type(dialog.getByLabelText(/Anything else we should know/), 'They never hired this car.');
+    await user.click(dialog.getByRole('button', { name: 'Send report' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sent.find((request) => request.path === '/reports')?.body).toEqual({
+      targetType: 'REVIEW',
+      targetId: 'r1',
+      reason: 'FAKE',
+      note: 'They never hired this car.',
+    });
+  });
+
+  it('sends visitors to log in before they report a review', async () => {
+    mockListing();
+    const user = userEvent.setup();
+    const { router } = renderListing();
+
+    const reviews = within(await screen.findByRole('region', { name: 'Reviews' }));
+    await user.click(await reviews.findByRole('button', { name: 'Report Nikau’s review' }));
+
+    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe(
+      `?next=${encodeURIComponent('/cars/2022-toyota-rav4-queenstown')}`,
+    );
   });
 
   it('says so when the car isn’t listed', async () => {

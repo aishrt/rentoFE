@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 import {
-  EVENT_ACTION_WORDS,
   EVENT_BY_LABELS,
   STAFF_INCIDENT_STATUS,
   VISIBILITY_LABELS,
+  eventActionWords,
 } from './operations-labels';
 
 const isImage = (file: Attachment) => !file.contentType || file.contentType.startsWith('image/');
@@ -87,8 +87,7 @@ function EventItem({ event, description }: { event: IncidentEvent; description: 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <p className="text-sm text-muted">
           <span className="font-semibold text-ink">{event.by === 'YOU' ? 'You' : event.byName}</span>
-          {event.by !== 'YOU' && ` (${EVENT_BY_LABELS[event.by]})`}{' '}
-          {EVENT_ACTION_WORDS[event.action] ?? 'updated the case'}
+          {event.by !== 'YOU' && ` (${EVENT_BY_LABELS[event.by]})`} {eventActionWords(event)}
           {event.status && (
             <>
               {': '}

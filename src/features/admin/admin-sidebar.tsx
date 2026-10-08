@@ -1,5 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
-import { Link, NavLink } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Link, NavLink, useLocation } from 'react-router';
 import { Logo } from '@/components/brand/logo';
 import { staggerIndex } from '@/components/motion/presets';
 import { Divider } from '@/components/ui/divider';
@@ -30,6 +31,47 @@ const tones = {
   },
 } as const;
 
+/** The share of the list that fades out at the bottom while more links are below it (`mask-b-from-90%`). */
+const FADE = 0.1;
+
+/**
+ * The list scrolls inside the full-height sidebar, as all the sections don't fit a laptop screen. On each page,
+ * and again once the admin's own links show (they can push the current one down), it brings the current page's
+ * link into view, clear of the fade, and marks the list while more links are below it.
+ */
+function useNavScroll(pathname: string, isAdmin: boolean) {
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    // Only the list scrolls, at once (no smooth scroll): the page stays where it is.
+    const link = nav.querySelector('[aria-current="page"]')?.getBoundingClientRect();
+    if (link) {
+      const box = nav.getBoundingClientRect();
+      const clearBottom = box.bottom - box.height * FADE;
+      if (link.top < box.top) nav.scrollTop -= box.top - link.top;
+      else if (link.bottom > clearBottom) nav.scrollTop += link.bottom - clearBottom;
+    }
+
+    // Set on the element rather than in state, so scrolling doesn't re-render the links.
+    const markEnd = () =>
+      nav.toggleAttribute('data-more-end', nav.scrollTop + nav.clientHeight < nav.scrollHeight - 1);
+    markEnd();
+    nav.addEventListener('scroll', markEnd, { passive: true });
+    // The list's height changes with the window; its groups' with the links the staff member can see.
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(markEnd);
+    for (const element of [nav, ...nav.children]) resize?.observe(element);
+    return () => {
+      nav.removeEventListener('scroll', markEnd);
+      resize?.disconnect();
+    };
+  }, [pathname, isAdmin]);
+
+  return navRef;
+}
+
 interface AdminSidebarProps {
   tone?: keyof typeof tones;
   /** Called after following a link, so the mobile menu can close. */
@@ -42,6 +84,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, staggered }: AdminSidebarProps) {
   const t = tones[tone];
   const isAdmin = useSession().data?.roles.includes('ADMIN') ?? false;
+  const navRef = useNavScroll(useLocation().pathname, isAdmin);
 
   return (
     <div className={cn('flex h-full flex-col', t.root)}>
@@ -59,7 +102,11 @@ export function AdminSidebar({ tone = 'dark', onNavigate, showLogo = true, stagg
         </div>
       )}
 
-      <nav aria-label="Staff portal" className="scrollbar-subtle flex-1 overflow-y-auto px-3 pb-6">
+      <nav
+        ref={navRef}
+        aria-label="Staff portal"
+        className="scrollbar-subtle min-h-0 flex-1 scroll-pb-16 overflow-y-auto px-3 pb-6 data-more-end:mask-b-from-90%"
+      >
         {adminNav.map((group, groupIndex) => (
           <div
             key={group.title ?? groupIndex}

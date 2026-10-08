@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -16,6 +18,14 @@ const GAP = 8;
 const EDGE = 8;
 
 const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), [tabindex]';
+
+/**
+ * Where popovers inside a modal dialog render: in the dialog itself, whose focus trap and pointer block would
+ * otherwise keep a list in the page body from being clicked or focused. DialogContent provides it. It lives
+ * here rather than in a file of its own, which would be one more file on the homepage's first load.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const PopoverRootContext = createContext<HTMLElement | null>(null);
 
 type PopoverProps = Omit<ComponentProps<'div'>, 'ref' | 'style'> & {
   open: boolean;
@@ -35,7 +45,7 @@ type PopoverProps = Omit<ComponentProps<'div'>, 'ref' | 'style'> & {
 
 /**
  * A floating panel for pickers and suggestion lists. It renders into the page body, so a parent with
- * `overflow: hidden` (such as the home hero) can't clip it. It opens below its anchor, or above when there
+ * `overflow: hidden` (such as the home hero) can't clip it, or into the modal dialog it's in. It opens below its anchor, or above when there
  * is more room there, stays inside the viewport and follows the anchor as the page scrolls. It closes on
  * Escape, and when you press or focus anywhere outside it and its anchor. This is a few hundred bytes,
  * where a positioning library would add about 10 KB to the homepage (plan §12.5).
@@ -54,6 +64,7 @@ export function Popover({
   ...props
 }: PopoverProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const root = useContext(PopoverRootContext);
 
   // Positioned by writing styles directly, so scrolling doesn't re-render what's inside.
   useLayoutEffect(() => {
@@ -170,6 +181,6 @@ export function Popover({
         className,
       )}
     />,
-    document.body,
+    root ?? document.body,
   );
 }

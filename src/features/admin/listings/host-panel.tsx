@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, TriangleAlert } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AdminVehicle } from '@/api/types';
 import { Button } from '@/components/ui/button';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import { hostApplicationsLink } from './listing-format';
 import { HostStatusBadge } from './review-badge';
 import { ReviewSection } from './review-section';
@@ -23,17 +24,17 @@ export function HostPanel({ host }: { host: AdminVehicle['host'] }) {
         </div>
         <div>
           <dt className="text-muted">Email</dt>
-          <dd className="mt-0.5 flex min-w-0 items-center gap-1.5">
+          <dd className="mt-0.5">
             {host.email ? (
               <a
                 href={`mailto:${host.email}`}
-                className="min-w-0 rounded-inner text-primary wrap-anywhere hover:underline"
+                className="rounded-inner text-primary wrap-anywhere hover:underline"
               >
-                {host.email}
+                <EmailAddress email={host.email} />
               </a>
             ) : (
               <span className="text-muted">Not known</span>
-            )}
+            )}{' '}
             <VerifiedMark verified={host.emailVerified} />
           </dd>
         </div>

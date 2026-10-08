@@ -17,6 +17,7 @@ import { AccountPageHeader, AccountShell } from '@/features/account/account-shel
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDate } from '@/features/booking/booking-format';
 import { PersonAvatar } from '@/features/messages/person-avatar';
+import { ReportReviewButton } from '@/features/reviews/report-review-button';
 import { ReviewCard } from '@/features/reviews/review-card';
 import { useMyReviews } from '@/features/reviews/reviews-api';
 
@@ -127,7 +128,19 @@ function Reviews() {
                         : `Published when ${review.subject.firstName} reviews you${review.revealAt ? `, or on ${formatNzDate(review.revealAt)}` : ''}`}
                   </Badge>
                 )}
-                <ReviewCard review={review} show={tab === 'written' ? 'subject' : 'author'} />
+                <ReviewCard
+                  review={review}
+                  show={tab === 'written' ? 'subject' : 'author'}
+                  action={
+                    tab === 'received' && (
+                      <ReportReviewButton
+                        reviewId={review.id}
+                        author={review.author}
+                        className="-mt-2 -mr-2"
+                      />
+                    )
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -147,7 +160,10 @@ function ReviewsSkeleton() {
   );
 }
 
-/** Reviews (spec §8, §9, §16): trips waiting for the user's review, then reviews about them and by them. */
+/**
+ * Reviews (spec §8, §9, §16): trips waiting for the user's review, then reviews about them, which they can
+ * report, and by them.
+ */
 export function ReviewsPage() {
   return (
     <Container className="py-8 sm:py-12">

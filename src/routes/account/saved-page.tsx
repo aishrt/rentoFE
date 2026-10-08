@@ -143,13 +143,16 @@ function Saved() {
       <AccountPageHeader
         title="Saved cars"
         description={saved.data ? <SearchNote search={saved.data.search} /> : 'Your shortlist of cars.'}
+        // With nothing saved yet, the empty state's Browse cars is the one way on.
         actions={
-          <Button asChild variant="secondary">
-            <Link to="/cars" viewTransition>
-              <Search aria-hidden="true" />
-              Find more cars
-            </Link>
-          </Button>
+          saved.data?.cars.length ? (
+            <Button asChild variant="secondary">
+              <Link to="/cars" viewTransition>
+                <Search aria-hidden="true" />
+                Find more cars
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
       <SavedList />

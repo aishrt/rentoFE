@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Message, ThreadDetail } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -195,8 +197,9 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
   const current = thread.data;
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4">
+    // One column that never grows past the page, so the header's name and trip are cut off on a phone.
+    <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         <BackLink to="/messages">All messages</BackLink>
         <ConversationHeader thread={current} onReport={setReporting} />
       </div>
@@ -282,6 +285,7 @@ export function ConversationPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title="Messages" noindex />
       <AccountShell>
         <div className="max-w-3xl">

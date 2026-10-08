@@ -69,9 +69,12 @@ export function AdminIncidentsPage() {
         description="Damage, breakdowns, late returns and disagreements reported by Guests and Hosts. Open a case to update it, change its status or charge the Guest."
       />
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-        {/* Six tabs don't fit a phone, so they scroll sideways there. */}
-        <div className="scrollbar-subtle -mx-4 max-w-full overflow-x-auto px-4 py-1 sm:mx-0 sm:px-0">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-6">
+        {/*
+          Six tabs don't fit a phone, so they scroll sideways there. The padding leaves room for the tabs'
+          shadow, which the scroller would clip, and the negative margins take that room back.
+        */}
+        <div className="scrollbar-subtle relative -mx-4 -mt-2 -mb-6 min-w-0 overflow-x-auto px-4 pt-2 pb-6">
           <SegmentedTabs
             idPrefix={TAB_PREFIX}
             label="Case status"

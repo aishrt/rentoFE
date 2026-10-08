@@ -82,6 +82,16 @@ describe('TripPage', () => {
     );
   });
 
+  it('says the return is at the pick-up place, rather than repeating it', async () => {
+    const confirmed = confirmedBooking();
+    mockTrip({ ...confirmed, dropoff: { ...confirmed.pickup } });
+    render();
+
+    const stops = within(await screen.findByRole('region', { name: 'Pick-up and return' }));
+    expect(stops.getByText('Same place as pick-up')).toBeInTheDocument();
+    expect(stops.getAllByText('12 Hawthorne Drive, Frankton, Queenstown 9300')).toHaveLength(1);
+  });
+
   it('keeps the address and mobile back until the booking is confirmed', async () => {
     mockTrip(
       bookingFixture({
@@ -303,6 +313,45 @@ describe('TripPage', () => {
     // No money moves, so there are no figures and no reason to ask for.
     expect(dialog.queryByText('Refund to your card')).not.toBeInTheDocument();
     expect(dialog.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('lists charges after the trip, with a way to pay one the saved card didn’t cover', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'COMPLETED',
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+        extraCharges: [
+          {
+            id: 'xc1',
+            type: 'EXTRA_KM',
+            description: '50 km over the 750 km included, at $0.35 a km',
+            amountCents: 1750,
+            status: 'PAID',
+            addedAt: '2026-10-09T01:00:00.000Z',
+          },
+          {
+            id: 'xc2',
+            type: 'CLEANING',
+            description: 'Sand through the back seats',
+            amountCents: 6000,
+            status: 'UNPAID',
+            addedAt: '2026-10-10T01:00:00.000Z',
+            payPath: '/pay/pay123',
+          },
+        ],
+      }),
+    );
+    render();
+
+    const charges = within(await screen.findByRole('region', { name: 'Extra charges' }));
+    expect(charges.getByText('Extra kilometres')).toBeInTheDocument();
+    expect(charges.getByText('50 km over the 750 km included, at $0.35 a km')).toBeInTheDocument();
+    expect(charges.getByText('$17.50')).toBeInTheDocument();
+    expect(charges.getByText('Paid')).toBeInTheDocument();
+    expect(charges.getByText('Cleaning')).toBeInTheDocument();
+    expect(charges.getByText('Not paid yet')).toBeInTheDocument();
+    expect(charges.getByText(/Your saved card didn’t go through/)).toBeInTheDocument();
+    expect(charges.getByRole('link', { name: 'Pay $60' })).toHaveAttribute('href', '/pay/pay123');
   });
 
   it('sends the car’s Host to their own page for the booking', async () => {

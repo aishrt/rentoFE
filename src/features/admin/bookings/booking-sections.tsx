@@ -11,12 +11,13 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AdminBookingDetail, AdminPayment, AdminPayout, Booking, LineItem } from '@/api/types';
+import { PayoutFailure, PayoutStatusBadge } from '@/features/admin/finance/payout-status';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import {
   BOOKING_STATUS,
   HOLD_REASON,
   PAYMENT_STATUS,
   PAYMENT_TYPE,
-  PAYOUT_STATUS,
   PAYOUT_TYPE,
   TICKET_STATUS,
 } from '@/features/admin/ops/admin-labels';
@@ -103,7 +104,7 @@ function Party({ role, person }: { role: 'Guest' | 'Host'; person: AdminBookingD
           href={`mailto:${person.email}`}
           className="justify-self-start rounded-inner wrap-anywhere text-primary hover:underline"
         >
-          {person.email}
+          <EmailAddress email={person.email} />
         </a>
       )}
       {person.phone ? (
@@ -255,7 +256,7 @@ export function PayoutsCard({ payouts }: { payouts: AdminPayout[] }) {
                   {PAYOUT_TYPE[payout.type]} ·{' '}
                   <span className="tabular-nums">{formatNzd(payout.amountCents)}</span>
                 </h3>
-                <StatusBadge status={PAYOUT_STATUS[payout.status]} />
+                <PayoutStatusBadge status={payout.status} />
               </div>
               <p className="mt-1 text-muted">{payoutTiming(payout)}</p>
               {payout.status === 'HELD' && payout.holdReason && (
@@ -266,7 +267,7 @@ export function PayoutsCard({ payouts }: { payouts: AdminPayout[] }) {
                   Deductions <span className="tabular-nums">{formatNzd(payout.deductedCents)}</span>
                 </p>
               )}
-              {payout.failureReason && <p className="mt-1 text-danger">{payout.failureReason}</p>}
+              <PayoutFailure payout={payout} className="mt-2" />
             </li>
           ))}
         </ul>

@@ -46,7 +46,7 @@ function ConversationRow({ thread }: { thread: ThreadSummary }) {
         photoUrl={thread.otherParty.avatarUrl}
         className="size-12"
       />
-      <div className="grid min-w-0 flex-1 gap-1">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-1">
         <div className="flex items-baseline justify-between gap-3">
           <p className={cn('truncate text-ink', unread ? 'font-semibold' : 'font-medium')}>
             {thread.otherParty.firstName}
@@ -158,7 +158,7 @@ function Inbox({ isHost }: { isHost: boolean }) {
           }
         />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3">
           {shown.map((thread, index) => (
             <li key={thread.ref} className="stagger-in" style={staggerIndex(index)}>
               <ConversationRow thread={thread} />
@@ -169,7 +169,8 @@ function Inbox({ isHost }: { isHost: boolean }) {
   }
 
   return (
-    <div className="grid gap-8">
+    // One column that never grows past the page: a long last message is cut off, not widening the inbox.
+    <div className="grid grid-cols-1 gap-8">
       <AccountPageHeader
         title="Messages"
         description="One conversation for each booking. Keep it here: messages are part of the trip’s record if anything goes wrong."

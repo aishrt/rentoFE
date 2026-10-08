@@ -1,8 +1,8 @@
 import { Flag } from 'lucide-react';
 import type { RiskFlag } from '@/api/types';
 import { Button } from '@/components/ui/button';
+import { formatDateNz } from '@/features/admin/listings/listing-format';
 import { riskFlagLabel } from '@/features/admin/ops/admin-labels';
-import { formatNzNumericDate } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
 
 /**
@@ -31,8 +31,8 @@ export function RiskFlagItem({
         <p className={cn('font-medium', cleared ? 'text-muted' : 'text-ink')}>{label}</p>
         {flag.detail && <p className="mt-0.5 text-sm break-words text-muted">{flag.detail}</p>}
         <p className="mt-0.5 text-xs text-muted">
-          Raised {formatNzNumericDate(flag.createdAt)}
-          {flag.clearedAt && ` · cleared ${formatNzNumericDate(flag.clearedAt)}`}
+          Raised {formatDateNz(flag.createdAt)}
+          {flag.clearedAt && ` · cleared ${formatDateNz(flag.clearedAt)}`}
         </p>
       </div>
       {!cleared && onClear && (

@@ -144,12 +144,12 @@ describe('AdminUserPage', () => {
     expect(account.getByText('+64211234567')).toBeInTheDocument();
     expect(account.getByText('Not verified')).toBeInTheDocument();
     expect(account.getByText('Guest, Host')).toBeInTheDocument();
-    expect(account.getByText('01/03/2026')).toBeInTheDocument();
+    expect(account.getByText('Sun, 1 Mar 2026')).toBeInTheDocument();
 
     const licence = await region('Driver licence');
     expect(licence.getByText('Full NZ licence')).toBeInTheDocument();
     expect(licence.getByText('Ending 1234')).toBeInTheDocument();
-    expect(licence.getByText('01/05/2029')).toBeInTheDocument();
+    expect(licence.getByText('1 May 2029')).toBeInTheDocument();
 
     const host = await region('Host');
     expect(host.getByText('$45.50')).toBeInTheDocument();

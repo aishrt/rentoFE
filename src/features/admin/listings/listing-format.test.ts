@@ -12,10 +12,11 @@ import {
 } from './listing-format';
 
 describe('listing formatters', () => {
-  it('writes dates as New Zealanders do, in NZ time', () => {
+  it('writes dates out as New Zealanders do, in NZ time', () => {
     // 10:30 am on 28 September in New Zealand, still the 27th in UTC.
-    expect(formatDateNz('2026-09-27T21:30:00.000Z')).toBe('28/09/2026');
-    expect(formatDayValue('2027-03-31')).toBe('31/03/2027');
+    expect(formatDateNz('2026-09-27T21:30:00.000Z')).toBe('Mon, 28 Sept 2026');
+    expect(formatDayValue('2027-03-31')).toBe('31 Mar 2027');
+    expect(formatDayValue('not a date')).toBe('not a date');
     expect(todayNz(new Date('2026-09-30T12:30:00.000Z'))).toBe('2026-10-01');
   });
 

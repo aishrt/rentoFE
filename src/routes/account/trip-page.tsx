@@ -56,6 +56,7 @@ import {
   TripStops,
 } from '@/features/booking/booking-parts';
 import { CancelDialogContent } from '@/features/booking/cancel-dialog';
+import { ExtraCharges } from '@/features/booking/extra-charges';
 import { HoldNotice } from '@/features/booking/hold-countdown';
 import { PayBooking, type PaidBooking } from '@/features/booking/pay-booking';
 import { CancellationPolicy } from '@/features/booking/trip-policies';
@@ -431,6 +432,7 @@ function Trip({ tripRef }: { tripRef: string }) {
               </Link>
             )}
           </DetailCard>
+          <ExtraCharges booking={booking} viewer="GUEST" />
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
             <ReviewLink booking={booking} base={`/trips/${booking.ref}`} />
             <MessageLink booking={booking} name={booking.host.firstName} />

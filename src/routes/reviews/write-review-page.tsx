@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Booking } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -40,6 +42,7 @@ function ReviewForm({ booking }: { booking: Booking }) {
     return (
       <EmptyState
         className="mx-auto py-10"
+        titleAs="h2"
         visual={
           <IconBadge size="xl">
             <CircleCheck />
@@ -65,6 +68,7 @@ function ReviewForm({ booking }: { booking: Booking }) {
     return (
       <EmptyState
         className="mx-auto py-10"
+        titleAs="h2"
         visual={
           <IconBadge size="xl">
             <Star />
@@ -198,6 +202,7 @@ export function WriteReviewPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="max-w-3xl py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title="Write a review" noindex />
       <RequireSignedIn fallback={<ReviewSkeleton />}>
         {() => <WriteReview key={ref} bookingRef={ref.toUpperCase()} />}

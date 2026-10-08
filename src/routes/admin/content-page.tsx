@@ -54,8 +54,11 @@ export function AdminContentPage() {
         description="What the website shows: the homepage’s featured cars, the legal pages, destination pages, FAQs and help articles. Changes show on the website within a minute of saving."
       />
 
-      {/* Five tabs are wider than a phone: they scroll sideways there. */}
-      <div className="scrollbar-subtle -mx-4 mt-8 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      {/*
+        Five tabs are wider than a phone: they scroll sideways there. The padding leaves room for the tabs'
+        shadow, which the scroller would clip, and the negative margins take that room back.
+      */}
+      <div className="scrollbar-subtle relative -mx-4 mt-6 -mb-6 overflow-x-auto px-4 pt-2 pb-6">
         <SegmentedTabs
           idPrefix={TAB_PREFIX}
           label="Content"

@@ -248,7 +248,7 @@ function HostProfileView() {
 /** The Host's profile and settings (spec §9, item 10): bio, GST, and where payouts and notifications live. */
 export function HostProfilePage() {
   return (
-    <Container className="max-w-5xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Host profile" noindex />
       <div className="grid gap-8">
@@ -258,9 +258,12 @@ export function HostProfilePage() {
           title="Profile"
           description="What guests read about you, and your GST details."
         />
-        <RequireSignedIn fallback={<Skeleton className="h-96 rounded-card" />}>
-          {() => <HostProfileView />}
-        </RequireSignedIn>
+        {/* The tabs and heading line up with the other Host pages; the form keeps a narrower width. */}
+        <div className="max-w-5xl">
+          <RequireSignedIn fallback={<Skeleton className="h-96 rounded-card" />}>
+            {() => <HostProfileView />}
+          </RequireSignedIn>
+        </div>
       </div>
     </Container>
   );

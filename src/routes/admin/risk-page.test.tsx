@@ -74,7 +74,7 @@ describe('AdminRiskPage', () => {
     expect(first.getByText('2 flags')).toBeInTheDocument();
     expect(first.getByText('Repeated Host cancellations')).toBeInTheDocument();
     expect(first.getByText('3 cancellations in 30 days')).toBeInTheDocument();
-    expect(first.getByText('Raised 01/10/2026')).toBeInTheDocument();
+    expect(first.getByText('Raised Thu, 1 Oct 2026')).toBeInTheDocument();
     expect(first.getByText('Many failed payments')).toBeInTheDocument();
 
     // A check this page doesn't have words for yet still reads as words.

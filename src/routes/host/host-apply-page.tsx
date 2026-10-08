@@ -188,7 +188,7 @@ function HostApplication({ user }: { user: SessionUser }) {
  */
 export function HostApplyPage() {
   return (
-    <Container className="py-10 sm:py-14">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Become a Host" noindex />
       <RequireSignedIn fallback={<ApplySkeleton />}>

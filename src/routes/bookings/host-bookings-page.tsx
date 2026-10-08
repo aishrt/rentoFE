@@ -159,10 +159,12 @@ function HostBookings() {
         onChange={(value) => setParams(value === 'requests' ? {} : { tab: value }, { replace: true })}
         className="max-w-2xl max-sm:[&_button]:px-1 max-sm:[&_button]:text-xs"
       />
+      {/* The tabs and heading line up with the other Host pages; the list keeps a narrower width. */}
       <div
         role="tabpanel"
         id={tabPanelId('host-bookings', tab)}
         aria-labelledby={tabId('host-bookings', tab)}
+        className="max-w-4xl"
       >
         <BookingList key={tab} group={tab} />
       </div>
@@ -176,7 +178,9 @@ function HostBookingsSkeleton() {
       <Skeleton className="h-11 w-56" />
       <Skeleton className="h-12 w-48" />
       <Skeleton className="h-13 max-w-2xl rounded-full" />
-      <BookingListSkeleton />
+      <div className="max-w-4xl">
+        <BookingListSkeleton />
+      </div>
     </div>
   );
 }
@@ -188,7 +192,7 @@ function HostBookingsSkeleton() {
  */
 export function HostBookingsPage() {
   return (
-    <Container className="max-w-4xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Bookings" noindex />
       <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>

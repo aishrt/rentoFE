@@ -81,7 +81,27 @@ export function DetailCard({
   );
 }
 
-function Stop({ label, at, point }: { label: string; at: string; point: Booking['pickup'] }) {
+function Stop({
+  label,
+  at,
+  point,
+  samePlace,
+}: {
+  label: string;
+  at: string;
+  point: Booking['pickup'];
+  /** The return is where the trip started: say so, rather than repeat the place and its notes. */
+  samePlace?: boolean;
+}) {
+  if (samePlace) {
+    return (
+      <div className="grid gap-1">
+        <dt className="eyebrow text-muted">{label}</dt>
+        <dd className="font-semibold text-ink">{formatNzDateTime(at)}</dd>
+        <dd>Same place as pick-up</dd>
+      </div>
+    );
+  }
   return (
     <div className="grid gap-1">
       <dt className="eyebrow text-muted">{label}</dt>
@@ -109,7 +129,14 @@ export function TripStops({ booking, hiddenNote }: { booking: Booking; hiddenNot
     <>
       <dl className="grid gap-5 sm:grid-cols-2">
         <Stop label="Pick-up" at={booking.start} point={booking.pickup} />
-        <Stop label="Return" at={booking.end} point={booking.dropoff} />
+        <Stop
+          label="Return"
+          at={booking.end}
+          point={booking.dropoff}
+          samePlace={
+            booking.dropoff.id === booking.pickup.id && booking.dropoff.address === booking.pickup.address
+          }
+        />
       </dl>
       <p className="mt-4 text-xs text-muted">
         Times are in NZ time.{!exact && hiddenNote ? ` ${hiddenNote}` : ''}

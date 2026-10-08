@@ -97,7 +97,7 @@ export function VehicleDetailsSection({ vehicle }: { vehicle: HostVehicle }) {
   );
 }
 
-/** "12/10/2027", with "Expired" in words when it's in the past. */
+/** "12 Oct 2027", with "Expired" in words when it's in the past. */
 function ExpiryDate({ value, today }: { value: string; today: string }) {
   const expired = value < today;
   return (

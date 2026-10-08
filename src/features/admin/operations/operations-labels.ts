@@ -84,8 +84,15 @@ export const EVENT_ACTION_WORDS: Record<string, string> = {
   COMMENT: 'added an update',
   STATUS: 'changed the status',
   ASSIGNED: 'took the case',
+  UNASSIGNED: 'unassigned the case',
   CHARGE_ADDED: 'added a charge',
 };
+
+/** What an event did, as words after who did it: handing a case on names who it went to. */
+export const eventActionWords = (event: Pick<IncidentEvent, 'action' | 'assignedTo'>) =>
+  event.action === 'ASSIGNED' && event.assignedTo
+    ? `assigned it to ${event.assignedTo}`
+    : (EVENT_ACTION_WORDS[event.action] ?? 'updated the case');
 
 /** Who did something on a case, as a tag after their name. */
 export const EVENT_BY_LABELS: Record<IncidentEvent['by'], string> = {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { bookFromListing, cancelForFullRefund, demoPassword, logIn, tripQuery } from './helpers';
+import { bookFromListing, cancelForFullRefund, demoPassword, freeTripQuery, logIn } from './helpers';
 
 /*
  * A full Guest booking (plan §9, Day 15): a demo Guest opens a car with dates, goes through checkout, pays
@@ -17,7 +17,12 @@ const GUEST_EMAIL = 'guest@rentovroom.test';
 
 test('a Guest books an Instant Book car with a card, then cancels for a full refund', async ({ page }) => {
   test.setTimeout(240_000);
-  await logIn(page, GUEST_EMAIL, demoPassword(), `/cars/${INSTANT_CAR}?${tripQuery()}`);
+  await logIn(
+    page,
+    GUEST_EMAIL,
+    demoPassword(),
+    `/cars/${INSTANT_CAR}?${await freeTripQuery(page.request, INSTANT_CAR)}`,
+  );
 
   const ref = await bookFromListing(page, INSTANT_CAR, 'Book');
 
@@ -38,7 +43,12 @@ test('a Guest’s request is authorised, the Host accepts it, and the Guest is c
   browser,
 }) => {
   test.setTimeout(300_000);
-  await logIn(page, GUEST_EMAIL, demoPassword(), `/cars/${REQUEST_CAR.slug}?${tripQuery()}`);
+  await logIn(
+    page,
+    GUEST_EMAIL,
+    demoPassword(),
+    `/cars/${REQUEST_CAR.slug}?${await freeTripQuery(page.request, REQUEST_CAR.slug)}`,
+  );
 
   const ref = await bookFromListing(page, REQUEST_CAR.slug, 'Request to book');
 

@@ -141,7 +141,7 @@ export function AdminReportsPage() {
 
           <Card asChild className="mt-10 p-6 sm:p-8">
             <section aria-labelledby="downloads-heading">
-              <h2 id="downloads-heading" className="headline text-xl font-medium">
+              <h2 id="downloads-heading" className="text-base font-semibold">
                 Download as CSV
               </h2>
               <p className="mt-1 text-sm text-muted">

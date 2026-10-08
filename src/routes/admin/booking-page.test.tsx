@@ -86,7 +86,8 @@ describe('AdminBookingPage: the record', () => {
     expect(payments.getByText('$1,025.80 can still be refunded.')).toBeInTheDocument();
 
     const payouts = await section('Payouts');
-    expect(payouts.getByText('Held')).toBeInTheDocument();
+    // A hold is a wait, not a failure: not in the danger colour.
+    expect(payouts.getByText('Held')).not.toHaveClass('text-danger');
     expect(payouts.getByText('Held: Waiting for check-in')).toBeInTheDocument();
 
     const cases = await section('Incidents and tickets');
@@ -112,7 +113,7 @@ describe('AdminBookingPage: the record', () => {
     expect(cases.getByText(/Each opening is recorded in the audit log/)).toBeInTheDocument();
   });
 
-  it('shows extra charges, failures and a paid payout', async () => {
+  it('shows extra charges, failures, a paid payout and a failed one', async () => {
     mockApi({
       'GET /admin/bookings/RV-7K2Q9M': ok(
         bookingDetail({
@@ -135,6 +136,13 @@ describe('AdminBookingPage: the record', () => {
               paidAt: '2026-12-02T01:00:00.000Z',
               deductedCents: 1_500,
             }),
+            payout({
+              id: 'po2',
+              type: 'EXTRA_CHARGE',
+              status: 'FAILED',
+              holdReason: undefined,
+              failureReason: "No such destination: 'acct_1Q2w3E'",
+            }),
           ],
           incidents: [],
           tickets: [],
@@ -153,6 +161,11 @@ describe('AdminBookingPage: the record', () => {
     const payouts = await section('Payouts');
     expect(payouts.getByText(/^Paid Wed, 2 Dec 2026/)).toBeInTheDocument();
     expect(payouts.getByText('$15')).toBeInTheDocument();
+    // A plain sentence first, and Stripe's own words under it for staff to look into.
+    expect(
+      payouts.getByText('The transfer didn’t go through. Retry it, or check the Host’s payout setup.'),
+    ).toBeInTheDocument();
+    expect(payouts.getByText("No such destination: 'acct_1Q2w3E'")).not.toHaveClass('text-danger');
     expect(
       (await section('Incidents and tickets')).getByText('No incidents or support tickets.'),
     ).toBeInTheDocument();

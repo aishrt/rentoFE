@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Review } from '@/api/types';
 import { RatingStars } from '@/components/ui/rating-stars';
 import { formatNzDate } from '@/features/booking/booking-format';
@@ -10,8 +11,15 @@ const CATEGORY_LABELS: { key: 'communication' | 'pickupReturn' | 'cleanliness' |
   { key: 'care', label: 'Care of the car' },
 ];
 
+interface ReviewCardProps {
+  review: Review;
+  show: 'author' | 'subject';
+  /** Beside the name, such as Report. */
+  action?: ReactNode;
+}
+
 /** One review: who wrote it, the stars for each category and what they said. */
-export function ReviewCard({ review, show }: { review: Review; show: 'author' | 'subject' }) {
+export function ReviewCard({ review, show, action }: ReviewCardProps) {
   const person = show === 'author' ? review.author.firstName : review.subject.firstName;
   return (
     <article className="grid gap-3 rounded-card border border-line bg-surface p-5">
@@ -30,6 +38,7 @@ export function ReviewCard({ review, show }: { review: Review; show: 'author' | 
           </p>
           <RatingStars value={review.overall} size="sm" />
         </div>
+        {action}
       </header>
       {review.body && <p className="whitespace-pre-wrap text-ink/90">{review.body}</p>}
       <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">

@@ -58,7 +58,7 @@ describe('ReceiptPage', () => {
 
     const charges = within(screen.getByRole('region', { name: 'Charges' }));
     expect(charges.getByText('3 days × $89')).toBeInTheDocument();
-    expect(charges.getByText('$267')).toBeInTheDocument();
+    expect(charges.getByText('$267.00')).toBeInTheDocument();
     expect(charges.getByText('$338.70')).toBeInTheDocument();
     expect(charges.getByText('GST included (15%)')).toBeInTheDocument();
     expect(charges.getByText('$44.18')).toBeInTheDocument();
@@ -81,8 +81,32 @@ describe('ReceiptPage', () => {
 
     const refunds = within(await screen.findByRole('region', { name: 'Refunds' }));
     expect(refunds.getByText('Refund, 05/10/2026')).toBeInTheDocument();
-    expect(refunds.getByText('-$50')).toBeInTheDocument();
+    expect(refunds.getByText('−$50.00')).toBeInTheDocument();
     expect(refunds.getByText('$288.70')).toBeInTheDocument();
+  });
+
+  it('lists the charges after the trip that were paid, with their GST', async () => {
+    mockReceipt(
+      paid({
+        extraCharges: [
+          {
+            description: '100 km over the 250 km included, at $0.35 a km',
+            amountCents: 3_500,
+            gstCents: 457,
+            paidAt: '2026-10-09T01:00:00.000Z',
+            paidWith: 'Visa ending 4242',
+          },
+        ],
+      }),
+    );
+    render();
+
+    const charges = within(await screen.findByRole('region', { name: 'Charges after the trip' }));
+    expect(charges.getByText('100 km over the 250 km included, at $0.35 a km')).toBeInTheDocument();
+    expect(charges.getByText('$35.00')).toBeInTheDocument();
+    expect(
+      charges.getByText(/Paid 09\/10\/2026 with Visa ending 4242\. GST included \(15%\) \$4\.57\./),
+    ).toBeInTheDocument();
   });
 
   it('downloads the PDF through the API', async () => {

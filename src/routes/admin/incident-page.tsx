@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { threadPath } from '@/features/admin/bookings/bookings-api';
 import { useAdminIncident } from '@/features/admin/operations/operations-api';
+import { IncidentAssignee } from '@/features/admin/operations/incident-assignee';
 import { IncidentCharges } from '@/features/admin/operations/incident-charges';
 import { AttachmentList, CaseTimeline } from '@/features/admin/operations/incident-timeline';
 import { IncidentUpdateForm } from '@/features/admin/operations/incident-update-form';
@@ -28,7 +29,7 @@ function Fact({ term, children }: { term: string; children: ReactNode }) {
   );
 }
 
-/** Status, booking, who reported it and who has it, and the way into the booking's messages. */
+/** Status, booking, who reported it, who has it (and handing it on), and the way into the booking's messages. */
 function CaseFacts({ incident }: { incident: Incident }) {
   const reporter = incident.events.find((event) => event.action === 'OPENED');
   const role = REPORTED_BY_LABELS[incident.reportedBy];
@@ -53,9 +54,6 @@ function CaseFacts({ incident }: { incident: Incident }) {
             <span className="block text-muted">{incident.vehicleTitle}</span>
           </Fact>
           <Fact term="Reported by">{reporter ? `${reporter.byName} (${role})` : role}</Fact>
-          <Fact term="Handled by">
-            {incident.assignedTo ?? <span className="text-muted">Nobody yet</span>}
-          </Fact>
           <Fact term="Reported">
             <time dateTime={incident.createdAt}>{formatNzDateTime(incident.createdAt)}</time>
           </Fact>
@@ -63,6 +61,9 @@ function CaseFacts({ incident }: { incident: Incident }) {
             <time dateTime={incident.updatedAt}>{formatNzDateTime(incident.updatedAt)}</time>
           </Fact>
         </dl>
+        <div className="mt-5 border-t border-line pt-5">
+          <IncidentAssignee incident={incident} />
+        </div>
         <div className="mt-5 border-t border-line pt-5">
           <Button asChild variant="secondary" size="sm">
             <Link to={threadPath(incident.bookingRef, 'INCIDENT', incident.caseRef)}>

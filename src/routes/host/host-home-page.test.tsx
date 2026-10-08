@@ -78,6 +78,12 @@ describe('HostHomePage', () => {
       'href',
       '/host/vehicles/v2/calendar',
     );
+    expect(within(live!).getByRole('link', { name: 'Maintenance' })).toHaveAttribute(
+      'href',
+      '/host/vehicles/v2/maintenance',
+    );
+    // A draft has no calendar or maintenance yet.
+    expect(within(draft!).queryByRole('link', { name: 'Calendar' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Add a car' })).toHaveAttribute('href', '/host/vehicles/new');
   });
 

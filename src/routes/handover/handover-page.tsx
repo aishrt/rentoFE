@@ -1,7 +1,9 @@
 import { CarFront, CircleCheck, Clock, Flag, Gauge, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import type { ConditionReport, Handover, InspectionStage } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -25,6 +27,7 @@ import { DamageEditor, type EditablePin } from '@/features/handover/damage-edito
 import { useConfirmInspection, useFlagDamage, useHandover } from '@/features/handover/handover-api';
 import { PhotoCapture } from '@/features/handover/photo-capture';
 import { useInspectionPhotos } from '@/features/handover/use-inspection-photos';
+import { useReportIncident } from '@/features/incidents/incidents-api';
 
 const WHO: Record<ConditionReport['submittedBy'], string> = {
   GUEST: 'the guest',
@@ -228,11 +231,56 @@ function ReportSection({
   );
 }
 
-function FlagDamageDialogContent({ handover, onDone }: { handover: Handover; onDone: () => void }) {
+/**
+ * After flagging: one tap opens a damage case with what's on the check-out record (its marks, notes and
+ * photos), and goes to it. The API keeps to the damage-report window and takes only damage no case has yet.
+ */
+function DamageFlaggedContent({ bookingRef }: { bookingRef: string }) {
+  const navigate = useNavigate();
+  const report = useReportIncident();
+  const open = () =>
+    report.mutate(
+      { bookingRef, type: 'DAMAGE', fromCheckOutDamage: true, attachments: [] },
+      {
+        onSuccess: (incident) => {
+          toast(`Case ${incident.caseRef} is open`, { description: 'Our support team will be in touch.' });
+          navigate(`/incidents/${incident.caseRef}`);
+        },
+      },
+    );
+
+  return (
+    <DialogContent
+      title="New damage flagged"
+      description="It’s on the check-out record, where you can both see it."
+    >
+      <p className="text-ink/85">
+        To claim for it or get help from support, open an incident with this damage. We’ll add the marks,
+        notes and photos from the check-out record, so you don’t need to describe it again.
+      </p>
+      {report.isError && (
+        <Alert variant="danger" role="alert" className="mt-4">
+          {report.error.message}
+        </Alert>
+      )}
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <DialogClose asChild>
+          <Button variant="secondary">Not now</Button>
+        </DialogClose>
+        <Button loading={report.isPending} onClick={open}>
+          Open an incident with this damage
+        </Button>
+      </div>
+    </DialogContent>
+  );
+}
+
+function FlagDamageDialogContent({ handover }: { handover: Handover }) {
   const flag = useFlagDamage(handover.ref);
   const store = useInspectionPhotos(handover.ref, 'CHECK_OUT');
   const [pins, setPins] = useState<EditablePin[]>([]);
   const [note, setNote] = useState('');
+  const [flagged, setFlagged] = useState(false);
   const damagePhotos = store.photos.filter((photo) => photo.angle === 'DAMAGE');
   const uploading = damagePhotos.some((photo) => !photo.key);
 
@@ -252,13 +300,12 @@ function FlagDamageDialogContent({ handover, onDone }: { handover: Handover; onD
       {
         onSuccess: () => {
           void store.clear();
-          toast('New damage flagged', {
-            description: 'It’s on the check-out record. To claim for it, report an incident.',
-          });
-          onDone();
+          setFlagged(true);
         },
       },
     );
+
+  if (flagged) return <DamageFlaggedContent bookingRef={handover.ref} />;
 
   return (
     <DialogContent
@@ -381,7 +428,7 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
               {km.extra > 0 && (
                 <p className="text-ink/85">
                   {km.extra.toLocaleString('en-NZ')} extra km: {formatNzd(km.extraChargeCents)}, charged to
-                  the guest’s saved card.
+                  {data.role === 'HOST' ? ' the guest’s saved card' : ' your saved card'}.
                 </p>
               )}
               {data.fuelShortfall && (
@@ -418,7 +465,7 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
       {data.checkIn && <ReportSection handover={data} report={data.checkIn} />}
 
       <Dialog open={flagging} onOpenChange={setFlagging}>
-        {flagging && <FlagDamageDialogContent handover={data} onDone={() => setFlagging(false)} />}
+        {flagging && <FlagDamageDialogContent handover={data} />}
       </Dialog>
     </div>
   );
@@ -439,6 +486,7 @@ export function HandoverPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="max-w-4xl py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title={`Handover ${ref}`} noindex />
       <RequireSignedIn fallback={<HandoverSkeleton />}>
         {() => <HandoverView key={ref} bookingRef={ref.toUpperCase()} />}

@@ -10357,11 +10357,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Staff: reviews held for moderation, or hidden ones */
+        /**
+         * Staff: reviews held for moderation, published ones, or hidden ones
+         * @description HELD (the default) oldest first; PUBLISHED and HIDDEN newest first, 100 at most. A published review that breaks the rules can be hidden with a reason.
+         */
         get: {
             parameters: {
                 query?: {
-                    state?: "HELD" | "HIDDEN";
+                    state?: "HELD" | "PUBLISHED" | "HIDDEN";
                 };
                 header?: never;
                 path?: never;
@@ -10524,7 +10527,7 @@ export interface paths {
         put?: never;
         /**
          * Report damage or an incident on a booking
-         * @description By the booking’s Guest or Host, with photos and documents uploaded first (purpose INCIDENT_FILE). Damage must be reported within the damage-report window after check-out. Holds the booking’s payouts until the case is settled.
+         * @description By the booking’s Guest or Host, with photos and documents uploaded first (purpose INCIDENT_FILE). Damage must be reported within the damage-report window after check-out. With fromCheckOutDamage, a damage report opens with the new damage flagged on the check-out record that no other case has yet: its photos as evidence and its notes in the description (409 NO_NEW_DAMAGE when there is none). Holds the booking’s payouts until the case is settled.
          */
         post: {
             parameters: {
@@ -10796,6 +10799,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/incidents/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: who a case can be assigned to
+         * @description The admin first, then the active support team by name.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Assignees */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentAssignees"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/incidents/{ref}": {
         parameters: {
             query?: never;
@@ -10929,6 +10989,97 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/{ref}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: assign the case to a staff member, or to nobody
+         * @description Any support member or the admin can hand a case to any of them (409 NOT_STAFF for anyone else). Recorded as an internal ASSIGNED or UNASSIGNED event and in the audit log; the new assignee is notified. Choosing whoever has it already changes nothing.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IncidentAssigneeRequest"];
+                };
+            };
+            responses: {
+                /** @description Assigned */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -14509,7 +14660,7 @@ export interface components {
                 /** Format: date-time */
                 at: string;
             }[];
-            /** @description GET /bookings/{id}/receipt has a receipt for it */
+            /** @description GET /bookings/{id}/receipt has a receipt for it (a paid extra charge is on its booking’s) */
             hasReceipt: boolean;
         };
         AccountClosure: {
@@ -14634,6 +14785,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             eligibility: {
                 minAge: number;
@@ -14823,6 +14976,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             eligibility?: {
                 minAge: number;
@@ -15381,6 +15536,8 @@ export interface components {
         VehicleReview: {
             id: string;
             author: {
+                /** @description Who wrote it, so readers can report a review but not their own */
+                id: string;
                 firstName: string;
                 avatarUrl?: string;
             };
@@ -15550,6 +15707,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             roadsideAssistance: {
                 /** @description The insurance partner's number; empty until it's set */
@@ -16477,6 +16636,11 @@ export interface components {
                 scheduledFor?: string;
                 /** Format: date-time */
                 paidAt?: string;
+                /**
+                 * Format: date-time
+                 * @description Once paid: usually in the Host’s bank by then
+                 */
+                expectedInBankBy?: string;
                 /** @description Everything paid out for the booking so far */
                 paidCents?: number;
             };
@@ -16535,6 +16699,25 @@ export interface components {
                 hostShareCents?: number;
                 hostFeeCents?: number;
             } | null;
+            /** @description Charges after the trip, such as extra kilometres or from an incident, oldest first */
+            extraCharges?: {
+                id: string;
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                /** @description What it’s for, e.g. "50 km over the 750 km included" */
+                description: string;
+                /** @description Including GST */
+                amountCents: number;
+                /**
+                 * @description PENDING: being charged to the saved card. UNPAID: the saved card didn’t go through, so the Guest has a link to pay it, and it’s tried again. FAILED: it couldn’t be collected. CANCELLED: taken off by support
+                 * @enum {string}
+                 */
+                status: "PENDING" | "PAID" | "UNPAID" | "FAILED" | "CANCELLED";
+                /** Format: date-time */
+                addedAt: string;
+                /** @description The Guest’s view of an UNPAID charge: /pay/{paymentId} */
+                payPath?: string;
+            }[];
             actions: {
                 pay: boolean;
                 cancel: boolean;
@@ -16670,6 +16853,16 @@ export interface components {
             refundedCents: number;
             /** @description The total less refunds that went through */
             netPaidCents: number;
+            /** @description Charges after the trip that were paid (plan §8.1, items 6 and 11), each charged on its own; left out when there are none */
+            extraCharges?: {
+                description: string;
+                amountCents: number;
+                /** @description The GST included in the charge */
+                gstCents: number;
+                /** Format: date-time */
+                paidAt: string;
+                paidWith: string;
+            }[];
         };
         CancellationPreview: {
             allowed: boolean;
@@ -17237,43 +17430,45 @@ export interface components {
             };
         };
         ModerationReviews: {
-            reviews: {
+            reviews: components["schemas"]["ModerationReview"][];
+        };
+        ModerationReview: {
+            id: string;
+            bookingRef: string;
+            /** @enum {string} */
+            direction: "GUEST_TO_HOST" | "HOST_TO_GUEST";
+            author: {
                 id: string;
-                bookingRef: string;
-                /** @enum {string} */
-                direction: "GUEST_TO_HOST" | "HOST_TO_GUEST";
-                author: {
-                    id: string;
-                    firstName: string;
-                    avatarUrl?: string;
-                };
-                subject: {
-                    id: string;
-                    firstName: string;
-                };
-                vehicleTitle: string;
-                overall: number;
-                communication?: number;
-                pickupReturn?: number;
-                cleanliness?: number;
-                care?: number;
-                body?: string;
-                /** @enum {string} */
-                status: "AWAITING_REVEAL" | "PUBLISHED" | "HIDDEN";
-                /**
-                 * @description The author’s and staff’s view only
-                 * @enum {string}
-                 */
-                moderation?: "CLEAR" | "HELD" | "HIDDEN";
-                /**
-                 * Format: date-time
-                 * @description Waiting: when it’s published at the latest
-                 */
-                revealAt?: string;
-                /** Format: date-time */
-                createdAt: string;
-                moderationReason: string;
-            }[];
+                firstName: string;
+                avatarUrl?: string;
+            };
+            subject: {
+                id: string;
+                firstName: string;
+            };
+            vehicleTitle: string;
+            overall: number;
+            communication?: number;
+            pickupReturn?: number;
+            cleanliness?: number;
+            care?: number;
+            body?: string;
+            /** @enum {string} */
+            status: "AWAITING_REVEAL" | "PUBLISHED" | "HIDDEN";
+            /**
+             * @description The author’s and staff’s view only
+             * @enum {string}
+             */
+            moderation?: "CLEAR" | "HELD" | "HIDDEN";
+            /**
+             * Format: date-time
+             * @description Waiting: when it’s published at the latest
+             */
+            revealAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Why it was held or hidden, or the moderator’s note when it was cleared */
+            moderationReason: string;
         };
         ModerateReviewRequest: {
             /** @enum {string} */
@@ -17300,6 +17495,8 @@ export interface components {
             role: "GUEST" | "HOST" | "STAFF";
             /** @description Staff only: the support member handling it */
             assignedTo?: string;
+            /** @description Staff only: their user id */
+            assignedToId?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -17320,7 +17517,7 @@ export interface components {
         };
         IncidentEvent: {
             id: string;
-            /** @description OPENED, COMMENT, STATUS, ASSIGNED, CHARGE_ADDED */
+            /** @description OPENED, COMMENT, STATUS, ASSIGNED, UNASSIGNED, CHARGE_ADDED */
             action: string;
             /** @enum {string} */
             by: "YOU" | "GUEST" | "HOST" | "SUPPORT";
@@ -17331,6 +17528,8 @@ export interface components {
             visibility: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
             /** @enum {string} */
             status?: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            /** @description Staff only, on an ASSIGNED event that handed the case to someone else: who */
+            assignedTo?: string;
             /** Format: date-time */
             createdAt: string;
         };
@@ -17338,12 +17537,15 @@ export interface components {
             bookingRef: string;
             /** @enum {string} */
             type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
-            description: string;
+            /** @description Needed unless fromCheckOutDamage is set, when the flagged damage describes it */
+            description?: string;
             /**
              * @description Photos and documents, uploaded first with purpose INCIDENT_FILE
              * @default []
              */
             attachments: components["schemas"]["AttachmentInput"][];
+            /** @description DAMAGE only: opens the case with the new damage flagged on the check-out record that no other case has yet. Its notes go into the description and its photos into the evidence. 409 NO_NEW_DAMAGE when there is none. */
+            fromCheckOutDamage?: boolean;
         };
         Incidents: {
             incidents: components["schemas"]["IncidentSummary"][];
@@ -17365,6 +17567,8 @@ export interface components {
             role: "GUEST" | "HOST" | "STAFF";
             /** @description Staff only: the support member handling it */
             assignedTo?: string;
+            /** @description Staff only: their user id */
+            assignedToId?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -17375,6 +17579,14 @@ export interface components {
             note: string;
             /** @default [] */
             attachments: components["schemas"]["AttachmentInput"][];
+        };
+        IncidentAssignees: {
+            assignees: {
+                id: string;
+                name: string;
+                /** @description The signed-in staff member */
+                you: boolean;
+            }[];
         };
         StaffIncidentUpdateRequest: {
             /** @default  */
@@ -17390,6 +17602,10 @@ export interface components {
             /** @enum {string} */
             status?: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
             assignToMe?: boolean;
+        };
+        IncidentAssigneeRequest: {
+            /** @description An active support member or the admin (from GET /admin/incidents/assignees); null for nobody */
+            userId: string | null;
         };
         IncidentChargeRequest: {
             /** @enum {string} */
@@ -17822,6 +18038,7 @@ export interface components {
             preview: string;
             /** @description A reported message’s booking, to open its thread */
             bookingRef?: string;
+            review?: components["schemas"]["ModerationReview"];
             resolution?: string;
             /** Format: date-time */
             createdAt: string;

@@ -180,8 +180,12 @@ export function PaymentsPanel() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="scrollbar-subtle -mx-1 max-w-full overflow-x-auto px-1 pb-1">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-6">
+        {/*
+          The views scroll sideways on a narrow phone. The padding leaves room for the tabs' shadow, which the
+          scroller would clip, and the negative margins take that room back.
+        */}
+        <div className="scrollbar-subtle relative -mx-4 -mt-2 -mb-6 min-w-0 overflow-x-auto px-4 pt-2 pb-6">
           <SegmentedTabs
             idPrefix={VIEW_PREFIX}
             label="Which payments"

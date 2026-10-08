@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Handover } from '@/api/types';
@@ -49,6 +49,10 @@ function mockHandover(current: () => Handover) {
             }),
           },
         };
+      case 'POST /bookings/RV-7K2Q9M/inspections/CHECK_OUT/damage':
+        return { status: 200, body: { handover: current() } };
+      case 'POST /incidents':
+        return { status: 201, body: { incident: { caseRef: 'IN-4F7K2Q' } } };
       case 'GET /bookings/RV-7K2Q9M':
         return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Not here' } } };
       default:
@@ -62,6 +66,7 @@ const render = (path: string) =>
     [
       { path: '/trips/:ref/check-in', element: <CheckInPage /> },
       { path: '/trips/:ref/handover', element: <HandoverPage /> },
+      { path: '/incidents/:ref', element: <p>Case page</p> },
     ],
     path,
   );
@@ -150,5 +155,45 @@ describe('HandoverPage', () => {
       expect(sent.some((request) => request.path.endsWith('/CHECK_IN/confirm'))).toBe(true),
     );
     expect(await within(checkIn).findByText('Guest confirmed')).toBeInTheDocument();
+  });
+
+  it('flags new damage, then opens an incident with it in one tap', async () => {
+    const sent = mockHandover(() =>
+      handover({
+        bookingStatus: 'COMPLETED',
+        checkIn: report(),
+        checkOut: report({ stage: 'CHECK_OUT', submittedBy: 'GUEST', damagePins: [] }),
+        damageWindowEndsAt: '2026-10-16T21:00:00.000Z',
+        actions: { ...handover().actions, checkIn: false, confirmCheckOut: true, flagDamage: true },
+      }),
+    );
+    const { router } = render('/trips/RV-7K2Q9M/handover');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Flag new damage' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Flag new damage' }));
+    // A tap on the diagram's rear right door, 80% across and 62% down.
+    const diagram = dialog.getByRole('img', { name: /^A car seen from above/ });
+    vi.spyOn(diagram, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 200));
+    fireEvent.click(diagram, { clientX: 80, clientY: 124 });
+    await userEvent.type(
+      dialog.getByRole('textbox', { name: 'What’s the damage at rear right (driver) door?' }),
+      'Dent',
+    );
+    await userEvent.click(dialog.getByRole('button', { name: 'Flag damage' }));
+
+    const done = within(await screen.findByRole('dialog', { name: 'New damage flagged' }));
+    expect(sent.find((request) => request.path.endsWith('/CHECK_OUT/damage'))?.body).toEqual({
+      damagePins: [{ x: 80, y: 62, note: 'Dent' }],
+      photos: [],
+    });
+    await userEvent.click(done.getByRole('button', { name: 'Open an incident with this damage' }));
+
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/incidents/IN-4F7K2Q'));
+    expect(sent.find((request) => request.path === '/incidents')?.body).toEqual({
+      bookingRef: 'RV-7K2Q9M',
+      type: 'DAMAGE',
+      fromCheckOutDamage: true,
+      attachments: [],
+    });
   });
 });

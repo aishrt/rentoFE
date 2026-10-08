@@ -3,14 +3,15 @@ import { ApiError, client, unwrap } from '@/api/client';
 import type { AdminReport } from '@/api/types';
 
 /*
- * Moderation (plan §12.6): what members reported (a person, a message, a review or a listing), and the
- * reviews held back before publishing. Staff resolve or moderate each one with a note, which the API
- * keeps in the audit log.
+ * Moderation (plan §12.6): what members reported (a person, a message, a review or a listing), the
+ * reviews held back before publishing, and published ones to hide. Staff resolve or moderate each one with
+ * a note, which the API keeps in the audit log.
  */
 
 export type ReportStatus = AdminReport['status'];
 export type ReportOutcome = Exclude<ReportStatus, 'OPEN'>;
-export type ReviewState = 'HELD' | 'HIDDEN';
+/** Held for a moderator, published (to hide one that breaks the rules), or hidden. */
+export type ReviewState = 'HELD' | 'PUBLISHED' | 'HIDDEN';
 export type ReviewAction = 'CLEAR' | 'HIDE';
 
 /** The API's limit for a resolution or a reason. */
@@ -54,7 +55,7 @@ export async function resolveReportRequest(input: {
   return response.report;
 }
 
-/** Reviews held for moderation, or hidden ones. */
+/** Reviews held for moderation, published ones, or hidden ones. */
 export function useModerationReviews(state: ReviewState) {
   return useQuery({
     queryKey: moderationReviewsQueryKey(state),
@@ -77,6 +78,23 @@ export async function moderateReviewRequest(input: {
       body: { action: input.action, reason: input.reason },
     }),
   );
+}
+
+/**
+ * Hides a reported review with the reason, then closes the report as actioned with the same note, so it's
+ * written once.
+ */
+export async function hideReportedReviewRequest(input: {
+  reportId: string;
+  reviewId: string;
+  reason: string;
+}): Promise<AdminReport> {
+  await moderateReviewRequest({ id: input.reviewId, action: 'HIDE', reason: input.reason });
+  return resolveReportRequest({
+    id: input.reportId,
+    status: 'ACTIONED',
+    resolution: `Hid the review. ${input.reason}`.slice(0, MODERATION_NOTE_MAX),
+  });
 }
 
 /**

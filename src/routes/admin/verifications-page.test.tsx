@@ -84,11 +84,11 @@ describe('AdminVerificationsPage', () => {
     const first = within(identities.getByRole('listitem', { name: 'Kiri Smith' }));
     expect(first.getByRole('link', { name: 'Kiri Smith' })).toHaveAttribute('href', '/admin/users/u20');
     expect(first.getByText('The name on the ID doesn’t match the account')).toBeInTheDocument();
-    expect(first.getByText('14/03/1995')).toBeInTheDocument();
+    expect(first.getByText('14 Mar 1995')).toBeInTheDocument();
     expect(first.getByText('Passport')).toBeInTheDocument();
     expect(first.getByText('Full NZ licence')).toBeInTheDocument();
     expect(first.getByText('4821')).toBeInTheDocument();
-    expect(first.getByText('01/05/2030')).toBeInTheDocument();
+    expect(first.getByText('1 May 2030')).toBeInTheDocument();
     expect(first.getByText('Licence used on another account')).toBeInTheDocument();
     expect(first.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
       'href',

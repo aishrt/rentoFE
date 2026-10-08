@@ -35,6 +35,7 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
   reportedBy: 'HOST',
   role: 'STAFF',
   assignedTo: 'Mere',
+  assignedToId: 'u2',
   createdAt: '2026-10-05T20:00:00.000Z',
   updatedAt: '2026-10-06T20:00:00.000Z',
   description: 'A deep scratch along the passenger door.',
@@ -82,9 +83,23 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
 
 const resolved = (overrides: Partial<Incident> = {}) => incident({ status: 'RESOLVED', ...overrides });
 
+// Who a case can be handed to; the signed-in staff member is Aroha.
+const team = {
+  'GET /admin/incidents/assignees': {
+    status: 200,
+    body: {
+      assignees: [
+        { id: 'u1', name: 'Aroha Admin', you: true },
+        { id: 'u2', name: 'Mere Tester', you: false },
+        { id: 'u3', name: 'Tama Tester', you: false },
+      ],
+    },
+  },
+};
+
 describe('AdminIncidentPage', () => {
   it('shows the report, its evidence and every event with who could see it', async () => {
-    mockApi({ 'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } } });
+    mockApi({ ...team, 'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } } });
     render();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Case IN-ABC123' })).toBeInTheDocument();
@@ -107,7 +122,7 @@ describe('AdminIncidentPage', () => {
       '/admin/bookings/RV-7K2Q9M',
     );
     expect(facts.getByText('Aroha (Host)')).toBeInTheDocument();
-    expect(facts.getByText('Mere')).toBeInTheDocument();
+    expect(await facts.findByRole('button', { name: 'Handled by Mere Tester' })).toBeEnabled();
     expect(facts.getByRole('link', { name: 'Messages' })).toHaveAttribute(
       'href',
       '/admin/bookings/RV-7K2Q9M/thread?context=INCIDENT:IN-ABC123',
@@ -132,6 +147,7 @@ describe('AdminIncidentPage', () => {
   it('posts an internal note, a new status and takes the case', async () => {
     let sent: unknown;
     mockApi({
+      ...team,
       'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
       'POST /admin/incidents/IN-ABC123/events': (init) => {
         sent = JSON.parse(String(init?.body));
@@ -190,8 +206,75 @@ describe('AdminIncidentPage', () => {
     expect(form.getByRole('radio', { name: /Both parties/ })).toBeChecked();
   });
 
+  it('hands the case to someone else on the team, or to nobody, straight away', async () => {
+    const sent: unknown[] = [];
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
+      'POST /admin/incidents/IN-ABC123/assignee': (init) => {
+        const body = JSON.parse(String(init?.body)) as { userId: string | null };
+        sent.push(body);
+        const current = incident();
+        const handed = body.userId === 'u3';
+        return {
+          status: 200,
+          body: {
+            incident: {
+              ...current,
+              assignedTo: handed ? 'Tama' : undefined,
+              assignedToId: handed ? 'u3' : undefined,
+              events: [
+                ...current.events,
+                {
+                  id: '3',
+                  action: handed ? 'ASSIGNED' : 'UNASSIGNED',
+                  by: 'YOU',
+                  byName: 'Aroha',
+                  ...(handed && { assignedTo: 'Tama' }),
+                  attachments: [],
+                  visibility: 'INTERNAL',
+                  createdAt: '2026-10-07T01:00:00.000Z',
+                },
+              ],
+            },
+          },
+        };
+      },
+    });
+    render();
+
+    const facts = within(await screen.findByRole('region', { name: 'The case' }));
+    await userEvent.click(await facts.findByRole('button', { name: 'Handled by Mere Tester' }));
+    const list = within(await screen.findByRole('listbox', { name: 'Support team' }));
+    expect(list.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Nobody yet',
+      'Aroha Admin (you)',
+      'Mere Tester',
+      'Tama Tester',
+    ]);
+    await userEvent.click(list.getByRole('option', { name: 'Tama Tester' }));
+
+    expect(await screen.findByText('Assigned to Tama Tester')).toBeInTheDocument();
+    expect(screen.getByText('We’ve let them know.')).toBeInTheDocument();
+    expect(sent).toEqual([{ userId: 'u3' }]);
+    expect(facts.getByRole('button', { name: 'Handled by Tama Tester' })).toBeInTheDocument();
+    const history = Array.from(screen.getByRole('list', { name: 'History' }).children);
+    expect(history.at(-1)).toHaveTextContent('You assigned it to Tama');
+    expect(history.at(-1)).toHaveTextContent('Internal note');
+
+    await userEvent.click(facts.getByRole('button', { name: 'Handled by Tama Tester' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Nobody yet' }));
+    expect(await screen.findByText('Nobody has the case now')).toBeInTheDocument();
+    expect(sent).toEqual([{ userId: 'u3' }, { userId: null }]);
+    expect(facts.getByRole('button', { name: 'Handled by Nobody yet' })).toBeInTheDocument();
+    expect(Array.from(screen.getByRole('list', { name: 'History' }).children).at(-1)).toHaveTextContent(
+      'You unassigned the case',
+    );
+  });
+
   it('needs something to post', async () => {
     const fetchMock = mockApi({
+      ...team,
       'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
     });
     render();
@@ -206,6 +289,7 @@ describe('AdminIncidentPage', () => {
   it('charges the Guest from a resolved case, in cents', async () => {
     let sent: unknown;
     mockApi({
+      ...team,
       'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
       'POST /admin/incidents/IN-ABC123/charges': (init) => {
         sent = JSON.parse(String(init?.body));
@@ -247,6 +331,7 @@ describe('AdminIncidentPage', () => {
 
   it('checks the amount before charging', async () => {
     const fetchMock = mockApi({
+      ...team,
       'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
     });
     render();
@@ -262,6 +347,7 @@ describe('AdminIncidentPage', () => {
 
   it('explains that charging needs the refunds permission', async () => {
     mockApi({
+      ...team,
       'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
       'POST /admin/incidents/IN-ABC123/charges': {
         status: 403,
@@ -280,6 +366,7 @@ describe('AdminIncidentPage', () => {
 
   it('says when there’s no such case', async () => {
     mockApi({
+      ...team,
       'GET /admin/incidents/IN-ZZZ999': {
         status: 404,
         body: { error: { code: 'NOT_FOUND', message: 'No such case.' } },

@@ -123,11 +123,16 @@ export function EarningsChart({ months, className }: { months: Month[]; classNam
       )}
       {!table && (
         <div aria-hidden="true" className="grid grid-cols-12 pl-12 text-center text-xs text-muted">
-          {months.map((month, index) => (
-            <span key={month.month} className={cn(index === current && 'font-semibold text-ink')}>
-              {monthName(month.month, 'short').slice(0, 3)}
-            </span>
-          ))}
+          {months.map((month, index) => {
+            const short = monthName(month.month, 'short');
+            return (
+              <span key={month.month} className={cn(index === current && 'font-semibold text-ink')}>
+                {/* Twelve three-letter names run together on a phone: "N D J F…" there. */}
+                <span className="sm:hidden">{short.slice(0, 1)}</span>
+                <span className="max-sm:hidden">{short.slice(0, 3)}</span>
+              </span>
+            );
+          })}
         </div>
       )}
       {/* Screen readers always get the figures, whichever view is on screen. */}

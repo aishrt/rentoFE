@@ -65,7 +65,7 @@ describe('AdminUsersPage', () => {
     expect(row.getByText('Verified')).toBeInTheDocument();
     expect(row.getByText('Approved')).toBeInTheDocument();
     expect(row.getByText('2')).toBeInTheDocument();
-    expect(row.getByText('28/09/2026')).toBeInTheDocument();
+    expect(row.getByText('Mon, 28 Sept 2026')).toBeInTheDocument();
 
     const other = within(second!);
     expect(other.getByText('Suspended')).toBeInTheDocument();

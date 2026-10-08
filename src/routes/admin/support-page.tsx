@@ -87,9 +87,12 @@ export function AdminSupportPage() {
         }
       />
 
-      <div className="mt-8 grid gap-4">
-        {/* Four tabs are wider than a phone: they scroll sideways there. */}
-        <div className="scrollbar-subtle -mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      <div className="mt-8 grid gap-6">
+        {/*
+          Four tabs are wider than a phone: they scroll sideways there. The padding leaves room for the tabs'
+          shadow, which the scroller would clip, and the negative margins take that room back.
+        */}
+        <div className="scrollbar-subtle relative -mx-4 -mt-2 -mb-6 overflow-x-auto px-4 pt-2 pb-6">
           <SegmentedTabs
             idPrefix={TAB_PREFIX}
             label="Ticket status"

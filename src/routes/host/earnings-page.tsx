@@ -3,10 +3,14 @@ import {
   Banknote,
   CalendarDays,
   CalendarRange,
+  CircleAlert,
   CircleCheck,
   Clock,
   ExternalLink,
+  History,
   Landmark,
+  MoveHorizontal,
+  Percent,
   PiggyBank,
   TrendingUp,
   Wallet,
@@ -53,6 +57,16 @@ const TYPE_WORDS: Record<HostPayout['type'], string> = {
   CANCELLATION_FEE: 'Cancellation fee',
   EXTRA_CHARGE: 'Extra charge',
 };
+
+/** "2026-10": the NZ month an instant falls in. */
+const nzMonth = (instant: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland' }).format(instant).slice(0, 7);
+
+/** "October 2026" for "2026-10". */
+const monthLabel = (key: string) =>
+  new Intl.DateTimeFormat('en-NZ', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    new Date(`${key}-01T00:00:00Z`),
+  );
 
 function PayoutSetup({ account }: { account: PayoutAccount }) {
   const start = useStartPayoutSetup();
@@ -106,14 +120,16 @@ function PayoutSetup({ account }: { account: PayoutAccount }) {
 
 function PayoutRow({ payout }: { payout: HostPayout }) {
   const deducted = payout.deductions.reduce((sum, deduction) => sum + deduction.amountCents, 0);
+  // As on the payout email: the commission with the GST in it, for GST-registered Hosts' records.
+  const commission =
+    payout.commissionCents !== undefined &&
+    `−${formatNzd(payout.commissionCents)} (incl. ${formatNzd(payout.commissionGstCents ?? 0)} GST)`;
   return (
     <li className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="font-medium text-ink">
-          {payout.booking.vehicleTitle}
-          <span className="ml-2 text-sm font-normal text-muted">
-            {TYPE_WORDS[payout.type]} · {payout.booking.ref}
-          </span>
+        <p className="font-medium text-ink">{payout.booking.vehicleTitle}</p>
+        <p className="text-sm text-muted">
+          {TYPE_WORDS[payout.type]} · <span className="whitespace-nowrap">{payout.booking.ref}</span>
         </p>
         <p className="text-sm text-muted">
           {payout.status === 'PAID' && payout.paidAt
@@ -125,6 +141,13 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
                 : `Due ${formatNzDate(payout.scheduledFor)}`}
           {deducted > 0 && ` · ${formatNzd(deducted)} deducted`}
         </p>
+        {commission && (
+          <p className="text-xs text-muted">
+            {payout.grossCents !== undefined
+              ? `Earned ${formatNzd(payout.grossCents)} · commission ${commission}`
+              : `Commission ${commission}`}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {payout.status === 'HELD' ? (
@@ -134,6 +157,11 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
           </Badge>
         ) : payout.status === 'PAID' ? (
           <Badge variant="primary">Paid</Badge>
+        ) : payout.status === 'FAILED' ? (
+          <Badge variant="outline">
+            <CircleAlert aria-hidden="true" />
+            Delayed
+          </Badge>
         ) : (
           <Badge variant="neutral">Upcoming</Badge>
         )}
@@ -146,54 +174,93 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
 function BookingsTable({ rows }: { rows: EarningsRow[] }) {
   if (rows.length === 0) return <p className="text-sm text-muted">No trips this month yet.</p>;
   return (
-    <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-      <table className="w-full min-w-[38rem] text-sm">
-        <thead>
-          <tr className="border-b border-line text-left text-muted">
-            <th scope="col" className="py-2 pr-3 font-medium">
-              Trip
-            </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
-              Earned
-            </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
-              Commission
-            </th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">
-              Deductions
-            </th>
-            <th scope="col" className="py-2 text-right font-medium">
-              Net
-            </th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
-          {rows.map((row) => {
-            const earned = row.rentalCents + row.deliveryCents + row.extraChargesCents + row.keptFeeCents;
-            const deductions = row.hostFundedRefundsCents + row.hostCancellationFeeCents;
-            return (
-              <tr key={row.ref} className="border-b border-line/60 align-top">
-                <th scope="row" className="py-3 pr-3 text-left font-normal">
-                  <Link to={`/host/bookings/${row.ref}`} className="link-underline font-medium text-ink">
-                    {row.vehicleTitle}
-                  </Link>
-                  <span className="block text-xs text-muted">
-                    {formatNzDate(row.start)} · {row.ref}
-                    {row.status === 'CANCELLED' && ' · Cancelled'}
-                  </span>
-                </th>
-                <td className="py-3 pr-3 text-right text-ink">{formatNzd(earned)}</td>
-                <td className="py-3 pr-3 text-right text-muted">−{formatNzd(row.commissionCents)}</td>
-                <td className="py-3 pr-3 text-right text-muted">
-                  {deductions > 0 ? `−${formatNzd(deductions)}` : '–'}
-                </td>
-                <td className="py-3 text-right font-semibold text-ink">{formatNzd(row.netCents)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="grid gap-2">
+      {/* On a phone the columns run past the card's edge. */}
+      <p className="flex items-center gap-1.5 text-xs text-muted sm:hidden">
+        <MoveHorizontal aria-hidden="true" className="size-3.5 shrink-0" />
+        Scroll sideways for the full breakdown
+      </p>
+      <div className="relative -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+        <table className="w-full min-w-[38rem] text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-muted">
+              <th scope="col" className="py-2 pr-3 font-medium">
+                Trip
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium">
+                Earned
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium">
+                Commission
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium">
+                Deductions
+              </th>
+              <th scope="col" className="py-2 text-right font-medium">
+                Net
+              </th>
+            </tr>
+          </thead>
+          <tbody className="tabular-nums">
+            {rows.map((row) => {
+              const earned = row.rentalCents + row.deliveryCents + row.extraChargesCents + row.keptFeeCents;
+              const deductions = row.hostFundedRefundsCents + row.hostCancellationFeeCents;
+              return (
+                <tr key={row.ref} className="border-b border-line/60 align-top">
+                  <th scope="row" className="py-3 pr-3 text-left font-normal">
+                    <Link to={`/host/bookings/${row.ref}`} className="link-underline font-medium text-ink">
+                      {row.vehicleTitle}
+                    </Link>
+                    <span className="block text-xs text-muted">
+                      {formatNzDate(row.start)} · {row.ref}
+                      {row.status === 'CANCELLED' && ' · Cancelled'}
+                    </span>
+                  </th>
+                  <td className="py-3 pr-3 text-right text-ink">{formatNzd(earned)}</td>
+                  <td className="py-3 pr-3 text-right text-muted">−{formatNzd(row.commissionCents)}</td>
+                  <td className="py-3 pr-3 text-right text-muted">
+                    {deductions > 0 ? `−${formatNzd(deductions)}` : '–'}
+                  </td>
+                  <td className="py-3 text-right font-semibold text-ink">{formatNzd(row.netCents)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
+  );
+}
+
+/** Each trip's breakdown, a month at a time: this month, or an earlier one with trips. */
+function TripsByMonth({ rows, capped }: { rows: EarningsRow[]; capped: boolean }) {
+  const current = nzMonth(new Date());
+  const [month, setMonth] = useState(current);
+  const months = [...new Set([current, ...rows.map((row) => nzMonth(new Date(row.start)))])].sort().reverse();
+  return (
+    <Card asChild className="grid gap-4 p-5 sm:p-6">
+      <section aria-labelledby="trips-by-month">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 id="trips-by-month" className="font-semibold text-ink">
+            Trips by month
+          </h2>
+          <Select
+            value={month}
+            onChange={setMonth}
+            options={months.map((key) => ({ value: key, label: monthLabel(key) }))}
+            icon={<CalendarDays aria-hidden="true" />}
+            listLabel="Months with trips"
+            className="sm:max-w-56"
+          />
+        </div>
+        <BookingsTable rows={rows.filter((row) => nzMonth(new Date(row.start)) === month)} />
+        {capped && (
+          <p className="text-xs text-muted">
+            These are your latest 100 trips. The earnings statement below has every one.
+          </p>
+        )}
+      </section>
+    </Card>
   );
 }
 
@@ -205,12 +272,7 @@ function statementChoices(now = new Date()) {
   const months = Array.from({ length: 24 }, (_, back) => {
     const index = year * 12 + (month - 1) - back;
     const key = `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
-    const label = new Intl.DateTimeFormat('en-NZ', {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${key}-01T00:00:00Z`));
-    return { value: key, label };
+    return { value: key, label: monthLabel(key) };
   });
   const currentTaxYearEnd = month >= 4 ? year + 1 : year;
   const taxYears = [0, 1, 2].map((back) => {
@@ -317,17 +379,14 @@ function Earnings() {
       : null;
   const upcoming = payouts.data.payouts.filter((payout) => payout.status !== 'PAID');
   const paid = payouts.data.payouts.filter((payout) => payout.status === 'PAID').slice(0, 12);
-  const nzMonth = (instant: Date) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland' }).format(instant).slice(0, 7);
-  const thisMonth = earnings.data.bookings.filter(
-    (row) => nzMonth(new Date(row.start)) === nzMonth(new Date()),
-  );
+  const { feesOwedCents } = payouts.data.account;
+  const lastMonth = earnings.data.months.at(-2)?.month;
 
   return (
     <div className="grid gap-8">
       <PayoutSetup account={payouts.data.account} />
 
-      <section aria-label="Your earnings" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label="Your earnings" className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Today" icon={CalendarDays} value={summary.todayCents} format={formatNzd} />
         <StatCard
           label="This week"
@@ -347,24 +406,33 @@ function Earnings() {
               : `${change >= 0 ? '+' : '−'}${Math.abs(change)}% on last month`
           }
         />
+        <StatCard
+          label="Last month"
+          icon={History}
+          value={summary.previousMonthCents}
+          format={formatNzd}
+          hint={lastMonth && monthLabel(lastMonth)}
+        />
         <StatCard label="All time" icon={PiggyBank} value={summary.lifetimeCents} format={formatNzd} />
+        <StatCard
+          label="Platform fees"
+          icon={Percent}
+          value={summary.platformFeesLifetimeCents}
+          format={formatNzd}
+          hint={`All time · ${formatNzd(summary.platformFeesMonthCents)} this month`}
+        />
       </section>
       <p className="-mt-4 text-xs text-muted">
         Earnings count on each trip’s start date (NZ time), after the platform commission, Host-funded refunds
-        and Host cancellation fees.
+        and Host cancellation fees. Platform fees are the commission, GST included.
       </p>
 
       <Card className="grid gap-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-semibold text-ink">Earnings by month</h2>
-          <p className="text-sm text-muted">
-            Platform fees this month: {formatNzd(summary.platformFeesMonthCents)}
-          </p>
-        </div>
+        <h2 className="font-semibold text-ink">Earnings by month</h2>
         <EarningsChart months={earnings.data.months} />
       </Card>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <Card className="p-5 sm:p-6">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="flex items-center gap-2 font-semibold text-ink">
@@ -373,6 +441,17 @@ function Earnings() {
             </h2>
             <p className="font-semibold text-ink tabular-nums">{formatNzd(summary.upcomingPayoutsCents)}</p>
           </div>
+          {feesOwedCents > 0 && (
+            <div className="mt-4 flex items-baseline justify-between gap-3 rounded-control bg-canvas px-4 py-3 text-sm">
+              <p>
+                <span className="font-medium text-ink">Fees owed</span>
+                <span className="block text-xs text-muted">
+                  Host cancellation fees, taken off your next payout
+                </span>
+              </p>
+              <p className="font-semibold text-ink tabular-nums">−{formatNzd(feesOwedCents)}</p>
+            </div>
+          )}
           {upcoming.length === 0 ? (
             <p className="mt-4 text-sm text-muted">
               Nothing waiting. Payouts are sent 24 hours after each trip starts.
@@ -402,10 +481,7 @@ function Earnings() {
         </Card>
       </div>
 
-      <Card className="grid gap-4 p-5 sm:p-6">
-        <h2 className="font-semibold text-ink">This month’s trips</h2>
-        <BookingsTable rows={thisMonth} />
-      </Card>
+      <TripsByMonth rows={earnings.data.bookings} capped={earnings.data.bookings.length >= 100} />
 
       <Statement />
     </div>
@@ -416,8 +492,8 @@ function EarningsSkeleton() {
   return (
     <div aria-hidden="true" className="grid gap-8">
       <Skeleton className="h-24 rounded-card" />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        {[0, 1, 2, 3, 4, 5].map((index) => (
           <StatCardSkeleton key={index} />
         ))}
       </div>
@@ -427,13 +503,13 @@ function EarningsSkeleton() {
 }
 
 /**
- * The Host's earnings (spec §9, plan §12.6): payout setup, today, this week, this month against last month
- * and all time, the monthly chart, payouts upcoming and paid with their bank dates, this month's trips and
- * the GST-ready statement.
+ * The Host's earnings (spec §9, plan §12.6): payout setup, today, this week, this month against last month,
+ * all time and platform fees, the monthly chart, fees owed, payouts upcoming and paid with their commission
+ * and bank dates, each trip's breakdown by month and the GST-ready statement.
  */
 export function EarningsPage() {
   return (
-    <Container className="max-w-5xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Earnings" noindex />
       <div className="grid gap-8">
@@ -443,7 +519,10 @@ export function EarningsPage() {
           title="Earnings"
           description="What you’ve earned, and when it’s paid."
         />
-        <RequireSignedIn fallback={<EarningsSkeleton />}>{() => <Earnings />}</RequireSignedIn>
+        {/* The tabs and heading line up with the other Host pages; the figures keep a narrower width. */}
+        <div className="max-w-5xl">
+          <RequireSignedIn fallback={<EarningsSkeleton />}>{() => <Earnings />}</RequireSignedIn>
+        </div>
       </div>
     </Container>
   );

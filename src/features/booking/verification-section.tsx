@@ -10,7 +10,7 @@ import { usePolicies } from '@/features/content/content-api';
 import { eligibilityPoints } from '@/features/content/policies';
 import { PhoneVerification } from '@/features/host/phone-verification';
 import { readinessQueryKey } from './booking-api';
-import { LICENCE_CLASS_LABELS } from './booking-format';
+import { LICENCE_CLASS_LABELS, formatCalendarDate } from './booking-format';
 import { IdentityCheck } from './identity-check';
 import { LicenceForm } from './licence-form';
 
@@ -139,7 +139,8 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
         {licence && !firstTime && (
           <p className="text-sm text-ink/85">
             {LICENCE_CLASS_LABELS[licence.class]}
-            {licence.numberEnding && <> ending {licence.numberEnding}</>}, expires {licence.expiry}.
+            {licence.numberEnding && <> ending {licence.numberEnding}</>}, expires{' '}
+            {formatCalendarDate(licence.expiry)}.
           </p>
         )}
         {licenceProblems.length > 0 && !firstTime && (

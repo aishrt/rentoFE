@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Handover, InspectionAngle, InspectionStage } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { TripRoute } from '@/components/brand/patterns/trip-route';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -57,6 +59,7 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
   }
   return (
     <EmptyState
+      titleAs="h2"
       className="mx-auto py-10"
       visual={<IconBadge size="xl">{icon}</IconBadge>}
       title={title}
@@ -75,6 +78,7 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
 function EmailFirst({ handover }: { handover: Handover }) {
   return (
     <EmptyState
+      titleAs="h2"
       className="mx-auto py-10"
       visual={
         <IconBadge size="xl">
@@ -475,6 +479,7 @@ function InspectionPage({ stage }: { stage: InspectionStage }) {
   const { pathname } = useLocation();
   return (
     <Container className="max-w-3xl py-8 sm:py-12">
+      <PageBackdrop art={TripRoute} />
       <PageMeta title={`${STAGE_WORDS[stage].title} ${ref}`} noindex />
       <RequireSignedIn fallback={<InspectionSkeleton />}>
         {() => <Inspection key={pathname} bookingRef={ref.toUpperCase()} stage={stage} />}

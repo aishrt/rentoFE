@@ -36,3 +36,12 @@ export const REVIEW_DIRECTION: Record<ModerationReview['direction'], string> = {
   GUEST_TO_HOST: 'Guest reviewing their Host',
   HOST_TO_GUEST: 'Host reviewing their Guest',
 };
+
+/** Where a review stands: published, hidden, held for a moderator, or waiting for the other side. */
+export function reviewStateLabel(review: Pick<ModerationReview, 'status' | 'moderation'>): StatusLabel {
+  if (review.status === 'PUBLISHED') return { label: 'Published', tone: 'positive' };
+  if (review.status === 'HIDDEN') return { label: 'Hidden', tone: 'ended' };
+  return review.moderation === 'HELD'
+    ? { label: 'Held for checking', tone: 'waiting' }
+    : { label: 'Not published yet', tone: 'waiting' };
+}

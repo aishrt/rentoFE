@@ -143,6 +143,8 @@ function CodeForm({ phone, onDone, onCancel }: { phone: string; onDone: () => vo
 export function PhoneSection({ user }: { user: SessionUser }) {
   const [pending, setPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // A verified number shows as it is, with a button to change it, as the email address does.
+  const [changing, setChanging] = useState(!(user.phone && user.phoneVerified));
 
   return (
     <SettingsSection
@@ -163,10 +165,15 @@ export function PhoneSection({ user }: { user: SessionUser }) {
           phone={pending}
           onDone={() => {
             setPending(null);
+            setChanging(false);
             setNotice('Your mobile number is verified.');
           }}
           onCancel={() => setPending(null)}
         />
+      ) : !changing ? (
+        <Button type="button" variant="secondary" onClick={() => setChanging(true)}>
+          Change mobile number
+        </Button>
       ) : (
         <NumberForm
           onSent={(phone, sent) => {

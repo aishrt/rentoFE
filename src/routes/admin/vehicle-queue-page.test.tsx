@@ -54,7 +54,7 @@ describe('AdminVehicleQueuePage', () => {
     expect(first.getByText('Auckland')).toBeInTheDocument();
     expect(first.getByText('8 photos, 3 documents')).toBeInTheDocument();
     expect(first.getByText('2 flags')).toBeInTheDocument();
-    expect(first.getByText('26/09/2026')).toBeInTheDocument();
+    expect(first.getByText('Sat, 26 Sept 2026')).toBeInTheDocument();
 
     const second = await row('2019 Toyota RAV4');
     expect(second.getByText('Live, new photos')).toBeInTheDocument();

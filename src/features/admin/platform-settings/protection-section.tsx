@@ -13,6 +13,12 @@ import { SettingsForm } from './settings-form';
 
 const NONE = 'NONE';
 
+/** A phone number, or empty for none yet. */
+const phoneField = z
+  .string()
+  .trim()
+  .regex(/^(\+?[\d ()-]{6,20})?$/, 'Enter a phone number, like 0800 123 456');
+
 const schema = z.object({
   plans: z.array(
     z.object({
@@ -21,14 +27,13 @@ const schema = z.object({
       dailyPrice: moneyField(),
       excess: moneyField(),
       coverSummary: textField('cover summary', 300),
+      /** The plan's own roadside number, when its insurer gives one; empty uses the platform-wide one. */
+      roadsidePhone: phoneField,
     }),
   ),
   /** The plan every booking includes unless the Guest picks another, or NONE. */
   mandatory: z.string(),
-  roadsidePhone: z
-    .string()
-    .trim()
-    .regex(/^(\+?[\d ()-]{6,20})?$/, 'Enter a phone number, like 0800 123 456'),
+  roadsidePhone: phoneField,
 });
 
 function PlanEditor({ index }: { index: number }) {
@@ -48,6 +53,20 @@ function PlanEditor({ index }: { index: number }) {
       <NumberField name={`plans.${index}.excess`} label="Excess" money />
       <Field label="Cover summary" error={error('coverSummary')} className="sm:col-span-3">
         <Input autoComplete="off" {...register(`plans.${index}.coverSummary`)} />
+      </Field>
+      <Field
+        label="Roadside assistance number (optional)"
+        description="Only if this plan’s insurer has its own. Leave it empty to use the number below."
+        error={error('roadsidePhone')}
+        className="sm:col-span-3"
+      >
+        <Input
+          type="tel"
+          autoComplete="off"
+          spellCheck={false}
+          className="sm:max-w-xs"
+          {...register(`plans.${index}.roadsidePhone`)}
+        />
       </Field>
     </div>
   );
@@ -73,6 +92,7 @@ export function ProtectionSection({ settings }: { settings: PlatformSettings }) 
           dailyPrice: fromCents(plan.dailyPriceCents),
           excess: fromCents(plan.excessCents),
           coverSummary: plan.coverSummary,
+          roadsidePhone: plan.roadsidePhone ?? '',
         })),
         mandatory: protectionPlans.find((plan) => plan.mandatory)?.code ?? NONE,
         roadsidePhone: roadsideAssistance.phone,
@@ -85,6 +105,7 @@ export function ProtectionSection({ settings }: { settings: PlatformSettings }) 
           excessCents: toCents(plan.excess),
           coverSummary: plan.coverSummary,
           mandatory: plan.code === values.mandatory,
+          ...(plan.roadsidePhone && { roadsidePhone: plan.roadsidePhone }),
         })),
         roadsideAssistance: { phone: values.roadsidePhone },
       })}
@@ -118,7 +139,7 @@ export function ProtectionSection({ settings }: { settings: PlatformSettings }) 
             name="roadsidePhone"
             label="Roadside assistance number"
             type="tel"
-            description="Shown with the protection plans on the website. Empty until the insurance partner gives it."
+            description="Shown with the protection plans on the website, and in the emergency help when reporting an accident or breakdown, unless the booking’s plan has its own. Empty until the insurance partner gives it."
           />
         </>
       )}

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { BookingSummary, IncidentType } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ConnectionArcs } from '@/components/brand/patterns/connection-arcs';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -15,21 +17,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
-import { useBookings } from '@/features/booking/booking-api';
+import { useBookingDetail, useBookings } from '@/features/booking/booking-api';
 import { formatTripSpan } from '@/features/booking/booking-format';
 import { usePolicies } from '@/features/content/content-api';
 import { EmergencyCall } from '@/features/content/emergency-call';
+import { roadsidePhone } from '@/features/content/roadside';
 import { ChoiceCards } from '@/features/host/choice-cards';
 import { EvidencePicker } from '@/features/incidents/evidence-picker';
 import { useEvidence } from '@/features/incidents/use-evidence';
 import { EMERGENCY_TYPES, INCIDENT_TYPES } from '@/features/incidents/incident-labels';
 import { useReportIncident } from '@/features/incidents/incidents-api';
+import { cn } from '@/lib/cn';
 
 const REPORTABLE: BookingSummary['status'][] = ['CONFIRMED', 'ACTIVE', 'COMPLETED'];
 
-/** Emergency help first, for an accident, theft or breakdown (plan §9, Days 20–21). */
-function EmergencyFirst({ type }: { type: IncidentType }) {
-  const roadside = usePolicies().data?.roadsideAssistance?.phone;
+/**
+ * Emergency help first, for an accident, theft or breakdown (plan §9, Days 20–21): 111, then the roadside
+ * number from the booking's protection plan, or the platform-wide one when the plan has none.
+ */
+function EmergencyFirst({ type, bookingRef }: { type: IncidentType; bookingRef: string }) {
+  const policies = usePolicies();
+  const booking = useBookingDetail(bookingRef);
+  // Waits for the booking, so the number doesn't change under the visitor's thumb.
+  const roadside = booking.isPending ? '' : roadsidePhone(policies.data, booking.data?.protectionPlan?.code);
   return (
     <div className="grid gap-3">
       <EmergencyCall />
@@ -143,7 +153,7 @@ function Report() {
         }))}
         error={tried && !type ? 'Choose what happened' : undefined}
       />
-      {type && EMERGENCY_TYPES.includes(type) && <EmergencyFirst type={type} />}
+      {type && EMERGENCY_TYPES.includes(type) && <EmergencyFirst type={type} bookingRef={bookingRef} />}
       <Field
         label="Tell us what happened"
         description="Where and when, who was involved, and anything already done about it."
@@ -191,11 +201,18 @@ export function NewIncidentPage() {
   const bookingRef = params.get('booking');
   return (
     <Container className="max-w-3xl py-8 sm:py-12">
+      <PageBackdrop art={ConnectionArcs} />
       <PageMeta title="Report an incident" noindex />
       <div className="grid gap-6">
         <div>
-          <BackLink to={bookingRef ? `/trips/${bookingRef}` : '/account/support'}>Back</BackLink>
-          <h1 className="headline mt-4 text-title-3 font-medium">Report an incident</h1>
+          {/* Guests and Hosts both come here from a booking, so Back returns to the page they came from. */}
+          <BackLink to={bookingRef ? `/trips/${bookingRef}` : '/account/support'} previous>
+            Back
+          </BackLink>
+          {bookingRef && <p className="eyebrow mt-4 text-primary">Booking {bookingRef.toUpperCase()}</p>}
+          <h1 className={cn('headline text-title-3 font-medium', bookingRef ? 'mt-2' : 'mt-4')}>
+            Report an incident
+          </h1>
           <p className="mt-2 max-w-2xl text-muted">
             Damage, an accident, a breakdown or anything else on a trip. You’ll get a case number, and our
             support team keeps you and the other side updated.

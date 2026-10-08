@@ -6,7 +6,9 @@ import { cn } from '@/lib/cn';
 
 /*
  * The staff portal's data tables (plan §12.6): a bordered card that scrolls sideways on a phone, with
- * quiet headings and a row hover. Rows usually link to a detail page.
+ * quiet headings and a row hover. Rows usually link to a detail page. The card is `relative` so it also
+ * clips its absolutely positioned parts, such as screen-reader-only headings, which would otherwise
+ * widen the whole page.
  */
 
 export function DataTable({
@@ -21,7 +23,10 @@ export function DataTable({
 }) {
   return (
     <div
-      className={cn('scrollbar-subtle overflow-x-auto rounded-card border border-line bg-surface', className)}
+      className={cn(
+        'scrollbar-subtle relative overflow-x-auto rounded-card border border-line bg-surface',
+        className,
+      )}
     >
       <table aria-label={label} className="w-full min-w-max text-sm">
         {children}

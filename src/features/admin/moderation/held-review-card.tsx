@@ -20,29 +20,20 @@ const CATEGORY_LABELS: { key: 'communication' | 'pickupReturn' | 'cleanliness' |
 
 const personLink = 'link-underline font-medium text-primary';
 
-interface HeldReviewCardProps {
-  review: ModerationReview;
-  /** Held or hidden: which list it's in. */
-  state: ReviewState;
-  /** Held reviews only: a hidden one stays hidden. */
-  onPublish?: () => void;
-  onHide?: () => void;
-  className?: string;
-  style?: CSSProperties;
-}
+const REASON_TITLE: Record<ReviewState, string> = {
+  HELD: 'Why it was held',
+  PUBLISHED: 'Why it was published',
+  HIDDEN: 'Why it was hidden',
+};
 
 /**
- * A review held back before publishing, or hidden: who wrote it about whom, the stars and words, why it
- * was held, and Publish or Hide. Laid out like the public review card (features/reviews/review-card).
+ * A review as staff see it: who wrote it about whom, on which booking, and the stars and words. Laid out
+ * like the public review card (features/reviews/review-card). Also shown in a report about the review.
  */
-export function HeldReviewCard({ review, state, onPublish, onHide, className, style }: HeldReviewCardProps) {
+export function ModerationReviewContent({ review }: { review: ModerationReview }) {
   const author = review.author.firstName;
   return (
-    <li
-      aria-label={`Review by ${author}`}
-      className={cn('grid gap-4 rounded-card border border-line bg-surface p-5 sm:p-6', className)}
-      style={style}
-    >
+    <>
       <header className="flex items-start gap-3">
         <PersonAvatar name={author} photoUrl={review.author.avatarUrl} className="size-10" />
         <div className="min-w-0 flex-1">
@@ -85,10 +76,40 @@ export function HeldReviewCard({ review, state, onPublish, onHide, className, st
           </div>
         ))}
       </dl>
+    </>
+  );
+}
 
-      <Alert title={state === 'HELD' ? 'Why it was held' : 'Why it was hidden'}>
-        <p className="whitespace-pre-line">{review.moderationReason}</p>
-      </Alert>
+interface HeldReviewCardProps {
+  review: ModerationReview;
+  /** Held, published or hidden: which list it's in. */
+  state: ReviewState;
+  /** Held reviews only: a hidden one stays hidden. */
+  onPublish?: () => void;
+  /** Held and published reviews. */
+  onHide?: () => void;
+  className?: string;
+  style?: CSSProperties;
+}
+
+/**
+ * A review held back before publishing, published, or hidden: the review, why it was held or hidden (or
+ * the note when a held one was published), and Publish or Hide.
+ */
+export function HeldReviewCard({ review, state, onPublish, onHide, className, style }: HeldReviewCardProps) {
+  return (
+    <li
+      aria-label={`Review by ${review.author.firstName}`}
+      className={cn('grid gap-4 rounded-card border border-line bg-surface p-5 sm:p-6', className)}
+      style={style}
+    >
+      <ModerationReviewContent review={review} />
+
+      {review.moderationReason && (
+        <Alert title={REASON_TITLE[state]}>
+          <p className="whitespace-pre-line">{review.moderationReason}</p>
+        </Alert>
+      )}
 
       {(onPublish || onHide) && (
         <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">

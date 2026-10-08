@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { cn } from '@/lib/cn';
 
@@ -18,24 +18,71 @@ function sectionOf(pathname: string): string {
   return '/host';
 }
 
+/** Room kept between the current tab and the faded edge when it's scrolled into view, in px. */
+const EDGE_ROOM = 40;
+
 /**
  * The Host area's own navigation, shared by its pages (plan §12.6). A car's editor and calendar belong to
  * Overview, where My Vehicles lists them.
+ *
+ * On a phone the tabs are wider than the screen, so the row runs to the screen's edges and scrolls sideways:
+ * the current tab is scrolled into view, and an edge with more tabs past it fades out (`data-more-start`,
+ * `data-more-end`).
  */
 export function HostSubNav({ className }: { className?: string }) {
   const { pathname } = useLocation();
   const section = sectionOf(pathname);
+  const navRef = useRef<HTMLElement>(null);
+  const activeRef = useRef<HTMLAnchorElement>(null);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    // Only the row scrolls, at once (no smooth scroll): the page stays where it is.
+    const link = activeRef.current?.getBoundingClientRect();
+    if (link) {
+      const start = link.left - nav.getBoundingClientRect().left + nav.scrollLeft;
+      const end = start + link.width;
+      if (start - EDGE_ROOM < nav.scrollLeft) nav.scrollLeft = Math.max(0, start - EDGE_ROOM);
+      else if (end + EDGE_ROOM > nav.scrollLeft + nav.clientWidth)
+        nav.scrollLeft = end + EDGE_ROOM - nav.clientWidth;
+    }
+
+    // Set on the element rather than in state, so scrolling doesn't re-render the tabs.
+    const markEdges = () => {
+      nav.toggleAttribute('data-more-start', nav.scrollLeft > 1);
+      nav.toggleAttribute('data-more-end', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1);
+    };
+    markEdges();
+    nav.addEventListener('scroll', markEdges, { passive: true });
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(markEdges);
+    resize?.observe(nav);
+    return () => {
+      nav.removeEventListener('scroll', markEdges);
+      resize?.disconnect();
+    };
+  }, [section]);
 
   return (
     <nav
+      ref={navRef}
       aria-label="Hosting"
-      className={cn('flex gap-1 overflow-x-auto border-b border-line sm:gap-2', className)}
+      className={cn(
+        'flex gap-1 overflow-x-auto border-b border-line sm:gap-2',
+        // Phones: edge to edge, so a tab past the edge shows in part; a tab focused by keyboard stays clear of
+        // the fade.
+        'max-sm:-mx-4 max-sm:scroll-px-10 max-sm:px-4',
+        'data-more-start:mask-l-from-85% data-more-end:mask-r-from-85%',
+        className,
+      )}
     >
       {LINKS.map((link) => {
         const active = link.to === section;
         return (
           <Link
             key={link.to}
+            ref={active ? activeRef : undefined}
             to={link.to}
             viewTransition
             aria-current={active ? 'page' : undefined}

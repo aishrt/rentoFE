@@ -6,9 +6,18 @@ import { staggerIndex } from '@/components/motion/presets';
 import { SegmentedTabs, type TabOption } from '@/components/ui/segmented-tabs';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { toast } from '@/components/ui/toast';
+import { DecisionDialog } from '@/features/admin/listings/decision-dialog';
 import { EmptyList, ListSkeleton, LoadError } from '@/features/admin/ops/query-feedback';
 import { formatNumber } from '@/lib/format';
-import { reportsQueryKey, resolveReportRequest, useReports, type ReportStatus } from './moderation-api';
+import {
+  asNotesError,
+  hideReportedReviewRequest,
+  moderationQueryKey,
+  reportsQueryKey,
+  resolveReportRequest,
+  useReports,
+  type ReportStatus,
+} from './moderation-api';
 import { REPORT_TARGET, reportReasonLabel } from './moderation-labels';
 import { ReportCard } from './report-card';
 import { ResolveReportDialog } from './resolve-report-dialog';
@@ -38,18 +47,35 @@ interface ReportsPanelProps {
   onStatusChange: (status: ReportStatus) => void;
 }
 
-/** What members reported, by status. Open reports are resolved with a note of what was done. */
+/**
+ * What members reported, by status. Open reports are resolved with a note of what was done; a reported
+ * review can be hidden with a reason, which resolves the report too.
+ */
 export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
   const queryClient = useQueryClient();
   const reports = useReports(status);
   // The report is kept while its dialog closes, so the dialog's text doesn't change as it animates out.
   const [current, setCurrent] = useState<AdminReport | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [hiding, setHiding] = useState<AdminReport | null>(null);
+  const [hideOpen, setHideOpen] = useState(false);
 
   const start = (report: AdminReport) => {
     setCurrent(report);
     setDialogOpen(true);
   };
+
+  const startHide = (report: AdminReport) => {
+    setHiding(report);
+    setHideOpen(true);
+  };
+
+  // The report leaves the open list straight away; every list then refreshes.
+  const dropFromOpen = (id: string) =>
+    queryClient.setQueryData<{ reports: AdminReport[] }>(
+      reportsQueryKey('OPEN'),
+      (previous) => previous && { reports: previous.reports.filter((report) => report.id !== id) },
+    );
 
   const resolve = async (input: { status: 'ACTIONED' | 'DISMISSED'; resolution: string }) => {
     if (!current) return;
@@ -58,12 +84,25 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
     toast(input.status === 'ACTIONED' ? 'Report resolved' : 'Report dismissed', {
       description: input.status === 'ACTIONED' ? 'It’s under Actioned now.' : 'It’s under Dismissed now.',
     });
-    // It leaves the open list straight away; every list then refreshes.
-    queryClient.setQueryData<{ reports: AdminReport[] }>(
-      reportsQueryKey('OPEN'),
-      (previous) => previous && { reports: previous.reports.filter((report) => report.id !== current.id) },
-    );
+    dropFromOpen(current.id);
     void queryClient.invalidateQueries({ queryKey: reportsQueryKey() });
+  };
+
+  const hide = async (notes: string | undefined) => {
+    const review = hiding?.review;
+    if (!hiding || !review) return;
+    try {
+      await hideReportedReviewRequest({ reportId: hiding.id, reviewId: review.id, reason: notes ?? '' });
+    } catch (error) {
+      throw asNotesError(error, 'reason');
+    }
+    setHideOpen(false);
+    toast('Review hidden and report resolved', {
+      description: `${review.author.firstName}’s review won’t be shown. The report is under Actioned now.`,
+    });
+    dropFromOpen(hiding.id);
+    // Other reports about the review, and the review lists, show it hidden.
+    void queryClient.invalidateQueries({ queryKey: moderationQueryKey });
   };
 
   const count = reports.data?.length;
@@ -113,6 +152,11 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
                 className="stagger-in"
                 style={staggerIndex(index)}
                 onResolve={report.status === 'OPEN' ? () => start(report) : undefined}
+                onHideReview={
+                  report.status === 'OPEN' && report.review && report.review.status !== 'HIDDEN'
+                    ? () => startHide(report)
+                    : undefined
+                }
               />
             ))}
           </ul>
@@ -124,6 +168,19 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
         onOpenChange={setDialogOpen}
         summary={current ? summaryOf(current) : ''}
         onConfirm={resolve}
+      />
+
+      <DecisionDialog
+        open={hideOpen}
+        onOpenChange={setHideOpen}
+        title={`Hide ${hiding?.review?.author.firstName ?? ''}’s review?`}
+        description="It won’t be shown on Rento Vroom or count towards a rating, and this report is resolved as actioned."
+        confirmLabel="Hide review"
+        tone="danger"
+        notes="required"
+        notesLabel="Why it’s hidden"
+        notesDescription="Kept with the review and the report, and in the audit log."
+        onConfirm={hide}
       />
     </div>
   );

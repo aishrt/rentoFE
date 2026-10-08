@@ -444,6 +444,9 @@ describe('AdminPaymentsPage: payouts', () => {
     render('/admin/payments?tab=payouts');
 
     const payout = await row(/RV-9P4X7Q/);
+    expect(
+      payout.getByText('The transfer didn’t go through. Retry it, or check the Host’s payout setup.'),
+    ).toBeInTheDocument();
     expect(payout.getByText('The bank account was closed.')).toBeInTheDocument();
     await userEvent.click(payout.getByRole('button', { name: 'Retry payout for RV-9P4X7Q' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Send Aroha Ngata’s payout again?' }));

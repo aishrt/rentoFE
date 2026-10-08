@@ -42,14 +42,15 @@ export function AccountMenu({ user }: { user: SessionUser }) {
       <DropdownMenu>
         {/* Fades in over the placeholder it replaces once the session and this menu have loaded. */}
         <DropdownMenuTrigger
-          className="flex h-11 animate-fade-in items-center gap-2 rounded-full border border-line bg-surface py-1 pr-3 pl-1 transition-[border-color,scale] duration-120 ease-out hover:border-ink/25 active:scale-98 data-[state=open]:border-ink/25"
+          className="flex h-11 animate-fade-in items-center gap-2 rounded-full border border-line bg-surface py-1 pr-1 pl-1 sm:pr-3 transition-[border-color,scale] duration-120 ease-out hover:border-ink/25 active:scale-98 data-[state=open]:border-ink/25"
           aria-label={`Account menu for ${user.firstName}`}
         >
           <Avatar initials={initials(user)} />
           <span className="hidden text-sm font-medium sm:inline">{user.firstName}</span>
           <ChevronDown
             aria-hidden="true"
-            className="size-4 text-muted transition-transform duration-200 ease-out in-data-[state=open]:rotate-180"
+            // On a phone the chip is just the initials, leaving room for the wordmark on one line.
+            className="size-4 text-muted transition-transform duration-200 ease-out in-data-[state=open]:rotate-180 max-sm:hidden"
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

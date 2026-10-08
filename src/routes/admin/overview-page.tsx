@@ -97,7 +97,7 @@ function WaitingCard({
   return (
     <Card asChild className="mt-8 p-6 sm:p-8">
       <section aria-labelledby="waiting-heading">
-        <h2 id="waiting-heading" className="headline text-xl font-medium">
+        <h2 id="waiting-heading" className="text-base font-semibold">
           Waiting for the team
         </h2>
         <p className="mt-1 text-sm text-muted">

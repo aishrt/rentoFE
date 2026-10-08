@@ -67,7 +67,7 @@ describe('AdminHostApplicationsPage', () => {
     render();
 
     const first = await card('Aroha Ngata');
-    expect(first.getByText(/Applied 28\/09\/2026/)).toBeInTheDocument();
+    expect(first.getByText(/Applied Mon, 28 Sept 2026/)).toBeInTheDocument();
     expect(first.getByRole('link', { name: 'aroha@example.co.nz' })).toHaveAttribute(
       'href',
       'mailto:aroha@example.co.nz',

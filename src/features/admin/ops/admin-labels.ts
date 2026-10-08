@@ -31,7 +31,8 @@ export const PAYMENT_TYPE: Record<AdminPayment['type'], string> = {
 
 export const PAYOUT_STATUS: Record<AdminPayout['status'], StatusLabel> = {
   SCHEDULED: { label: 'Scheduled', tone: 'waiting' },
-  HELD: { label: 'Held', tone: 'ended' },
+  // A wait, not a failure (PayoutStatusBadge gives it a clock).
+  HELD: { label: 'Held', tone: 'neutral' },
   PAID: { label: 'Paid', tone: 'positive' },
   FAILED: { label: 'Failed', tone: 'ended' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },

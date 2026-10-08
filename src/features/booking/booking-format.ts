@@ -64,6 +64,16 @@ export const formatNzDate = (iso: string) => nzDate.format(new Date(iso));
 /** "12/10/2026" in NZ time (plan §3: DD/MM/YYYY), for receipts and payment history, where the year matters. */
 export const formatNzNumericDate = (iso: string) => nzNumericDate.format(new Date(iso));
 
+const calendarDate = new Intl.DateTimeFormat('en-NZ', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+/** "29/09/2031" (plan §3): a date with no time of day, such as a licence's expiry ("2031-09-29"). */
+export const formatCalendarDate = (date: string) =>
+  calendarDate.format(new Date(`${date.slice(0, 10)}T00:00:00Z`));
+
 /** "Mon, 12 Oct 2026, 10:00 am" in NZ time, for a receipt kept for years. */
 export const formatNzDateTimeWithYear = (iso: string) => nzDateTimeWithYear.format(new Date(iso));
 
@@ -108,6 +118,10 @@ const nzdCents = new Intl.NumberFormat('en-NZ', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+/** "$506.50" and "$50.00": every amount with its cents, for a column of figures such as a receipt's. */
+export const formatNzdCents = (cents: number) =>
+  cents < 0 ? `−${nzdCents.format(-cents / 100)}` : nzdCents.format(cents / 100);
 
 /** "$506.50", or "$50" for whole dollars: an exact amount such as a total, a refund or a fee. */
 export function formatNzd(cents: number): string {

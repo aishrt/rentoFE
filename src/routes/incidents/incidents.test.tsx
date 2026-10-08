@@ -2,6 +2,8 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Incident } from '@/api/types';
+import { booking } from '@/features/booking/test-fixtures';
+import { policiesFixture } from '@/features/content/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
 import { IncidentPage } from './incident-page';
@@ -51,13 +53,25 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
   ...overrides,
 });
 
-function mockIncidents() {
+/** The booking is on the Basic plan; `basicRoadside` gives that plan a roadside number of its own. */
+function mockIncidents({ basicRoadside }: { basicRoadside?: string } = {}) {
   return mockRoutes((request) => {
     switch (`${request.method} ${request.path}`) {
       case 'POST /auth/session':
         return { status: 200, body: { user: guestUser } };
       case 'GET /policies':
-        return { status: 200, body: { roadsideAssistance: { phone: '0800 500 444' } } };
+        return {
+          status: 200,
+          body: {
+            ...policiesFixture,
+            protectionPlans: policiesFixture.protectionPlans.map((plan) =>
+              plan.code === 'BASIC' && basicRoadside ? { ...plan, roadsidePhone: basicRoadside } : plan,
+            ),
+            roadsideAssistance: { phone: '0800 500 444' },
+          },
+        };
+      case 'GET /bookings/RV-7K2Q9M':
+        return { status: 200, body: { booking: booking() } };
       case 'POST /incidents':
         return { status: 201, body: { incident: incident({ status: 'OPEN' }) } };
       case 'GET /incidents/IN-4F7K2Q':
@@ -123,6 +137,22 @@ describe('NewIncidentPage', () => {
       description: 'Flat battery at the lookout.',
       attachments: [],
     });
+  });
+});
+
+describe('NewIncidentPage roadside number', () => {
+  it('gives the roadside number of the booking’s protection plan when it has one', async () => {
+    mockIncidents({ basicRoadside: '0800 765 432' });
+    renderWithRouter(
+      [{ path: '/incidents/new', element: <NewIncidentPage /> }],
+      '/incidents/new?booking=RV-7K2Q9M&type=ACCIDENT',
+    );
+
+    expect(await screen.findByRole('link', { name: /Roadside assistance: 0800 765 432/ })).toHaveAttribute(
+      'href',
+      'tel:0800 765 432',
+    );
+    expect(screen.queryByText(/0800 500 444/)).not.toBeInTheDocument();
   });
 });
 

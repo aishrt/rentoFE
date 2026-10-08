@@ -262,6 +262,53 @@ describe('HostBookingPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows when a paid payout reaches the bank, and the trip’s extra charges', async () => {
+    const completed = hostConfirmed({
+      status: 'COMPLETED',
+      actions: NO_ACTIONS,
+      payout: {
+        hostPayoutCents: 80_000,
+        platformFeeCents: 12_000,
+        status: 'PAID',
+        scheduledFor: '2026-10-09T01:00:00.000Z',
+        paidAt: '2026-10-09T01:00:00.000Z',
+        expectedInBankBy: '2026-10-13T01:00:00.000Z',
+        paidCents: 80_000,
+      },
+      extraCharges: [
+        {
+          id: 'xc1',
+          type: 'CLEANING',
+          description: 'Sand through the back seats',
+          amountCents: 6_000,
+          status: 'UNPAID',
+          addedAt: '2026-10-10T01:00:00.000Z',
+        },
+      ],
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: completed } }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    const earnings = within(await screen.findByRole('region', { name: 'What you earn' }));
+    expect(
+      earnings.getByText(/to your Stripe account, usually in your bank by Tue, 13 Oct\./),
+    ).toBeInTheDocument();
+
+    const charges = within(screen.getByRole('region', { name: 'Extra charges' }));
+    expect(charges.getByText('Cleaning')).toBeInTheDocument();
+    expect(charges.getByText('$60')).toBeInTheDocument();
+    expect(charges.getByText('Not paid yet')).toBeInTheDocument();
+    expect(
+      charges.getByText(/Kiri’s card didn’t go through, so we’ve sent them a link to pay/),
+    ).toBeInTheDocument();
+    // The pay link is the Guest's.
+    expect(charges.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('records an acceptance while the Guest’s identity check is still in review', async () => {
     const waiting = hostRequest({ verificationReview: 'PENDING' });
     const accepted = hostRequest({

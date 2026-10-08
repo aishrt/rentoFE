@@ -100,7 +100,7 @@ function FeaturedCarsEditor({ saved }: { saved: AdminFeaturedVehicles }) {
   };
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
       <Card asChild className="p-6 sm:p-8">
         <section aria-labelledby={headingId}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

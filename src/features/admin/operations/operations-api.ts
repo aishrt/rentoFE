@@ -10,7 +10,7 @@ import type {
 
 /*
  * The support team's operations (spec §18, plan §12.6): the verification queue, and incident cases with
- * their updates and charges. The API writes every decision, update and charge to the audit log.
+ * their assignees, updates and charges. The API writes every decision, update and charge to the audit log.
  */
 
 // Under ['admin'], so signing out drops them from memory with the rest of the staff data.
@@ -21,6 +21,7 @@ const adminIncidentListsQueryKey = [...adminIncidentsQueryKey, 'list'] as const;
 export const adminIncidentListQueryKey = (status?: IncidentStatus) =>
   [...adminIncidentListsQueryKey, status ?? 'ALL_OPEN'] as const;
 export const adminIncidentQueryKey = (ref: string) => [...adminIncidentsQueryKey, 'case', ref] as const;
+export const incidentAssigneesQueryKey = [...adminIncidentsQueryKey, 'assignees'] as const;
 
 /** Identity checks Stripe couldn't decide first, then licences to check by hand; oldest first in each. */
 export function useVerificationQueue() {
@@ -129,6 +130,33 @@ export function useStaffIncidentUpdate(ref: string) {
     mutationFn: async (body: StaffIncidentUpdateRequest): Promise<Incident> =>
       (await unwrap(client.POST('/admin/incidents/{ref}/events', { params: { path: { ref } }, body })))
         .incident,
+    onSuccess: changed,
+  });
+}
+
+/** Who a case can be handed to: the admin, then the active support team by name. */
+export function useIncidentAssignees() {
+  return useQuery({
+    queryKey: incidentAssigneesQueryKey,
+    queryFn: async ({ signal }) =>
+      (await unwrap(client.GET('/admin/incidents/assignees', { signal }))).assignees,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Hands the case to a staff member, or to nobody (null). It's an internal event on the case and in the
+ * audit log, and the new assignee is told. 409 NOT_STAFF for someone who isn't on the team any more.
+ */
+export function useAssignIncident(ref: string) {
+  const changed = useCaseChanged(ref);
+  return useMutation({
+    mutationFn: async (userId: string | null): Promise<Incident> =>
+      (
+        await unwrap(
+          client.POST('/admin/incidents/{ref}/assignee', { params: { path: { ref } }, body: { userId } }),
+        )
+      ).incident,
     onSuccess: changed,
   });
 }

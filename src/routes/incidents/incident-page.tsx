@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Incident, IncidentEvent } from '@/api/types';
+import { PageBackdrop } from '@/components/brand/page-backdrop';
+import { ConnectionArcs } from '@/components/brand/patterns/connection-arcs';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -221,6 +223,7 @@ export function IncidentPage() {
   const { ref = '' } = useParams();
   return (
     <Container className="max-w-3xl py-8 sm:py-12">
+      <PageBackdrop art={ConnectionArcs} />
       <PageMeta title={`Case ${ref}`} noindex />
       <RequireSignedIn fallback={<CaseSkeleton />}>
         {() => <Case key={ref} caseRef={ref.toUpperCase()} />}

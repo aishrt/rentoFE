@@ -3,16 +3,16 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AdminBookingRow, AdminUserDetail } from '@/api/types';
 import { Button } from '@/components/ui/button';
-import { formatDayValue } from '@/features/admin/listings/listing-format';
+import { formatDateNz, formatDayValue } from '@/features/admin/listings/listing-format';
 import { HostStatusBadge } from '@/features/admin/listings/review-badge';
 import { Fact, FactList, ReviewSection } from '@/features/admin/listings/review-section';
 import { VerifiedMark } from '@/features/admin/listings/verified-mark';
 import { BOOKING_STATUS, ROLE_LABELS, VERIFICATION_LABELS } from '@/features/admin/ops/admin-labels';
 import { DataTable, Td, Th, Tr } from '@/features/admin/ops/admin-table';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import {
   formatNzd,
   formatNzDateTimeWithYear,
-  formatNzNumericDate,
   formatTripSpan,
   ratingText,
 } from '@/features/booking/booking-format';
@@ -30,15 +30,13 @@ export function AccountSection({ user }: { user: AdminUserDetail }) {
     <ReviewSection id="account" title="Account">
       <FactList>
         <Fact term="Email">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <a
-              href={`mailto:${user.email}`}
-              className="min-w-0 rounded-inner text-primary wrap-anywhere hover:underline"
-            >
-              {user.email}
-            </a>
-            <VerifiedMark verified={user.emailVerified} />
-          </span>
+          <a
+            href={`mailto:${user.email}`}
+            className="rounded-inner text-primary wrap-anywhere hover:underline"
+          >
+            <EmailAddress email={user.email} />
+          </a>{' '}
+          <VerifiedMark verified={user.emailVerified} />
         </Fact>
         <Fact term="Mobile">
           {user.phone ? (
@@ -61,7 +59,7 @@ export function AccountSection({ user }: { user: AdminUserDetail }) {
             <span className="text-muted">Never</span>
           )}
         </Fact>
-        <Fact term="Joined">{formatNzNumericDate(user.createdAt)}</Fact>
+        <Fact term="Joined">{formatDateNz(user.createdAt)}</Fact>
       </FactList>
     </ReviewSection>
   );
