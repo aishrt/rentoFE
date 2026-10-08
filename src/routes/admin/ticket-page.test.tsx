@@ -130,7 +130,8 @@ describe('AdminTicketPage', () => {
     await user.type(reply, 'Yes, 9 is fine.');
     await user.click(screen.getByRole('button', { name: 'Send reply' }));
 
-    expect(await screen.findByText('Reply sent')).toBeInTheDocument();
+    // Toasts outlive a test, so each test looks for its own: the description names the new status.
+    expect(await screen.findByText('We’ve emailed Kiri Ngata. Status: Waiting on them.')).toBeInTheDocument();
     expect(sent).toEqual({ body: 'Yes, 9 is fine.', internal: false, status: 'PENDING' });
     expect(screen.getByRole('article', { name: 'Reply from Aroha Admin' })).toHaveTextContent(
       'Yes, 9 is fine.',
@@ -156,7 +157,7 @@ describe('AdminTicketPage', () => {
     await user.click(screen.getByRole('option', { name: 'Resolved' }));
     await user.click(screen.getByRole('button', { name: 'Send reply' }));
 
-    expect(await screen.findByText('Reply sent')).toBeInTheDocument();
+    expect(await screen.findByText('We’ve emailed Kiri Ngata. Status: Resolved.')).toBeInTheDocument();
     expect(sent).toEqual({ body: 'All sorted.', internal: false, status: 'RESOLVED' });
   });
 
