@@ -7,15 +7,16 @@ import { bookFromListing, cancelForFullRefund, demoPassword, logIn, tripQuery } 
 /*
  * The Phase 2 deliverable from start to finish (MILESTONES.md, Day 15): "a test Host can list a car and
  * receive the booking, and a test Guest can find the car and book it." A new Host signs up, confirms their
- * email, applies, and lists a car through all six steps with its documents and photos. The admin approves
- * the Host and the car, which waits for the Host's payout setup before it goes live (plan §8.2). Once that's
+ * email, applies, verifies their identity, and lists a car through all six steps with its documents and
+ * photos. The admin approves the Host and the car, which waits for the Host's payout setup before it goes live (plan §8.2). Once that's
  * done, the demo Guest finds it in search, sends a request and pays. The Host accepts, the Guest is booked and
  * gets a receipt, then cancels for a full refund, and the Host hides the car again.
  *
  * Runs against a local API with the console mailer (its emails are read from backend/.mail), the stand-in
  * SMS driver (SMS_DRIVER=dummy, its SMS_DUMMY_CODE passed here as E2E_SMS_CODE), the seeded demo data and
- * Stripe's sandbox. Stripe's hosted payout setup can't be filled in by a test, so backend/scripts/
- * e2e-payout-setup.ts stands in for it, on the database in backend/.env (the local API's).
+ * Stripe's sandbox. Stripe's hosted identity check and payout setup can't be filled in by a test, so
+ * backend/scripts/e2e-identity-check.ts and e2e-payout-setup.ts stand in for them, on the database in
+ * backend/.env (the local API's).
  */
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
@@ -123,6 +124,11 @@ async function findInSearch(page: Page, vehicleId: string): Promise<string | und
   return (found.results as { id: string; slug: string }[]).find((car) => car.id === vehicleId)?.slug;
 }
 
+/** What a passed check leaves behind when the Host verifies their identity on Stripe's pages. */
+function passIdentityCheck(email: string) {
+  execSync(`npx tsx scripts/e2e-identity-check.ts ${email}`, { cwd: BACKEND_DIR, stdio: 'pipe' });
+}
+
 /** What Stripe's `account.updated` webhook does when the Host finishes payout setup on Stripe's pages. */
 function finishPayoutSetup(email: string) {
   execSync(`npx tsx scripts/e2e-payout-setup.ts ${email}`, { cwd: BACKEND_DIR, stdio: 'pipe' });
@@ -161,6 +167,8 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   await page.getByRole('button', { name: 'Submit application' }).click();
   await expect(page).toHaveURL(/\/host\/vehicles\/[a-f0-9]{24}/, { timeout: 30_000 });
   const vehicleId = /\/host\/vehicles\/([a-f0-9]{24})/.exec(page.url())![1]!;
+  // Hosts pass the identity check before they're approved (the identityForHosts setting).
+  passIdentityCheck(hostEmail);
 
   // 3. The six steps. Step 1: the car.
   await field(page, 'Number plate').fill(plate);

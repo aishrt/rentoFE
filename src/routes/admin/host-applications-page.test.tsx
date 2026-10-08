@@ -35,6 +35,7 @@ const aroha: HostApplication = {
   phone: '+64211234567',
   phoneVerified: true,
   identityStatus: 'APPROVED',
+  identityRequired: true,
   status: 'APPLIED',
   // 10:30 am on 28 September in New Zealand.
   appliedAt: '2026-09-27T21:30:00.000Z',
@@ -161,6 +162,55 @@ describe('AdminHostApplicationsPage', () => {
     expect(dialog.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
     await userEvent.click(dialog.getByRole('button', { name: 'Close' }));
     expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it("explains that an applicant can't be approved until their identity check passes", async () => {
+    const hemi: HostApplication = { ...aroha, userId: 'u12', firstName: 'Hemi', identityStatus: 'NONE' };
+    const mere: HostApplication = { ...aroha, userId: 'u13', firstName: 'Mere', identityStatus: 'PENDING' };
+    const fetchMock = mockApi({
+      'GET /admin/host-applications': { status: 200, body: { applications: [hemi, mere] } },
+    });
+    render();
+
+    const unchecked = await card('Hemi Ngata');
+    expect(unchecked.getByText('Not checked yet')).toBeInTheDocument();
+    expect(unchecked.getByText('Needed before approval')).toBeInTheDocument();
+    await userEvent.click(unchecked.getByRole('button', { name: 'Approve Hemi Ngata' }));
+    let dialog = within(await screen.findByRole('dialog', { name: 'Approve Hemi Ngata?' }));
+    expect(dialog.getByText("Their identity isn't verified yet")).toBeInTheDocument();
+    expect(dialog.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Close' }));
+
+    await userEvent.click((await card('Mere Ngata')).getByRole('button', { name: 'Approve Mere Ngata' }));
+    dialog = within(await screen.findByRole('dialog', { name: 'Approve Mere Ngata?' }));
+    expect(dialog.getByText('Their identity check is waiting for a review')).toBeInTheDocument();
+    expect(dialog.getByRole('link', { name: 'Open Verifications' })).toHaveAttribute(
+      'href',
+      '/admin/verifications',
+    );
+    expect(dialog.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it('approves without the identity check when the platform setting is off', async () => {
+    const hemi: HostApplication = {
+      ...aroha,
+      firstName: 'Hemi',
+      identityStatus: 'NONE',
+      identityRequired: false,
+    };
+    mockApi({
+      'GET /admin/host-applications': { status: 200, body: { applications: [hemi] } },
+      'POST /admin/host-applications/u10/approve': { status: 200, body: { status: 'APPROVED' } },
+    });
+    render();
+
+    const applicant = await card('Hemi Ngata');
+    expect(applicant.queryByText('Needed before approval')).not.toBeInTheDocument();
+    await userEvent.click(applicant.getByRole('button', { name: 'Approve Hemi Ngata' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Hemi Ngata?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve' }));
+    expect(await screen.findByText('Hemi Ngata is approved to host')).toBeInTheDocument();
   });
 
   it("shows the API's reason when the list was out of date about their email", async () => {

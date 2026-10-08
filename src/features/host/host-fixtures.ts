@@ -78,6 +78,7 @@ export function sampleVehicle(overrides: Partial<HostVehicle> = {}): HostVehicle
     slug: 'draft-v1',
     title: 'Untitled car',
     status: 'DRAFT',
+    waitingForPayouts: false,
     onboardingStep: 1,
     features: [],
     petFriendly: false,

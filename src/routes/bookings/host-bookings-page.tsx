@@ -187,8 +187,7 @@ function HostBookingsSkeleton() {
 
 /**
  * The Host's bookings (spec §9, plan §9 Days 11–13): requests to answer, with the time left and Accept and
- * Decline on each, then Upcoming, Current, Completed and Cancelled. The full Host dashboard follows in
- * Phase 3.
+ * Decline on each, then Upcoming, Current, Completed and Cancelled.
  */
 export function HostBookingsPage() {
   return (

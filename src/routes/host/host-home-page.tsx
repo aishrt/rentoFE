@@ -98,17 +98,51 @@ function Proposition() {
   );
 }
 
+/**
+ * An application waiting for us, or first for the Host's identity check while approval needs one (the
+ * identityForHosts setting, spec §22).
+ */
+function ApplicationUnderReview({ identityRequired }: { identityRequired: boolean }) {
+  const readiness = useCheckoutReadiness(undefined, identityRequired);
+  const identity = identityRequired ? readiness.data?.identityStatus : undefined;
+  if (identity === 'NONE') {
+    return (
+      <Alert title="One step left: verify your identity">
+        We review your application once your identity is verified, and email you when it’s approved. You can
+        add your car now, so it’s ready to go.
+      </Alert>
+    );
+  }
+  if (identity === 'REJECTED') {
+    return (
+      <Alert
+        variant="danger"
+        title="We couldn’t verify your identity"
+        action={
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/contact">Contact us</Link>
+          </Button>
+        }
+      >
+        Hosts pass an identity check before their application is approved. Get in touch and we’ll help sort it
+        out.
+      </Alert>
+    );
+  }
+  return (
+    <Alert title="Your application is under review">
+      We’ll email you once it’s approved. You can add your car now, so it’s ready to go.
+    </Alert>
+  );
+}
+
 /** Where the Host application stands, and what it means for their cars. */
 function ApplicationStatus({ status }: { status: HostStatus }) {
-  const profile = useHostProfile(status === 'REJECTED');
+  const profile = useHostProfile(status === 'REJECTED' || status === 'APPLIED');
 
   switch (status) {
     case 'APPLIED':
-      return (
-        <Alert title="Your application is under review">
-          We’ll email you once it’s approved. You can add your car now, so it’s ready to go.
-        </Alert>
-      );
+      return <ApplicationUnderReview identityRequired={profile.data?.identityRequired ?? false} />;
     case 'APPROVED':
       return null;
     case 'REJECTED':
@@ -150,7 +184,8 @@ function ApplicationStatus({ status }: { status: HostStatus }) {
 
 /**
  * Hosts verify their identity as part of the application (plan §9, Days 19–20): an ID photo and a selfie
- * on Stripe's page. Shown until it's verified or with our team.
+ * on Stripe's page, before the application is approved while the identityForHosts setting is on. Shown
+ * until it's verified or with our team.
  */
 function HostIdentity() {
   const readiness = useCheckoutReadiness(undefined, true);
@@ -162,7 +197,7 @@ function HostIdentity() {
         <h2 id="host-identity" className="font-semibold text-ink">
           Verify your identity
         </h2>
-        <IdentityCheck readiness={readiness.data} />
+        <IdentityCheck readiness={readiness.data} forHosting />
       </section>
     </Card>
   );

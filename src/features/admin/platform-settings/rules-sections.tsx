@@ -84,17 +84,17 @@ export function EligibilitySection({ settings }: { settings: PlatformSettings })
             <SwitchField
               name="identityBeforeFirstBooking"
               label="Guests pass an identity check before their first booking"
-              description={`${RECORDED_ONLY} the identity check is connected in Phase 3.`}
+              description="A photo of their ID and a selfie, at checkout. A check our team is reviewing can still book: the booking waits as a request until it's decided."
             />
             <SwitchField
               name="identityForHosts"
-              label="Hosts pass an identity check"
-              description={`${RECORDED_ONLY} the identity check is connected in Phase 3.`}
+              label="Hosts pass an identity check before their application is approved"
+              description="They start it from Hosting once they've applied. Approving waits until it passes."
             />
             <SwitchField
               name="emailBeforeTripStart"
               label="Guests confirm their email before the trip starts"
-              description={`${RECORDED_ONLY} trip start is built in Phase 3.`}
+              description="Check-in waits until they have."
             />
           </div>
         </>
@@ -116,7 +116,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
     <SettingsForm
       decision="reviewsAndTrips"
       title="Reviews and trips"
-      description="When reviews can be left and shown, and the windows after a trip. The review window and grace period are on the public pages now; reviews, damage reports and late returns themselves are built in Phase 3."
+      description="When reviews can be left and shown, and the windows after a trip. The review window and grace period are also on the public pages."
       settings={settings}
       schema={reviewsAndTripsSchema}
       toValues={({ reviews, trips }) => ({
@@ -168,7 +168,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             <SwitchField
               name="revealTogether"
               label="Show both reviews of a trip at the same time"
-              description="So neither side can reply in kind. Applies once reviews are built."
+              description="Once both are in, or when the time to review runs out, so neither side can reply in kind."
             />
           </div>
         </>
@@ -289,7 +289,7 @@ export function BookingRulesSection({ settings }: { settings: PlatformSettings }
             <SwitchField
               name="enquiriesBeforeBooking"
               label="Guests can message a Host before booking"
-              description={`${RECORDED_ONLY} messaging opens with a booking or request, and is built in Phase 3.`}
+              description={`${RECORDED_ONLY} messaging opens with a booking or request. Messages before booking are built if the client chooses them.`}
             />
             <SwitchField
               name="additionalDrivers"

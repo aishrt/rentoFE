@@ -102,7 +102,11 @@ export function ListingEditor({
           </BackLink>
         }
         title={draft ? 'List your car' : vehicleDisplayTitle(vehicle.title)}
-        titleAside={!draft && <VehicleStatusBadge status={vehicle.status} />}
+        titleAside={
+          !draft && (
+            <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
+          )
+        }
       />
 
       {isLive(vehicle.status) && (

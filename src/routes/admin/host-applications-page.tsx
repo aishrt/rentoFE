@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Inbox, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import type { HostApplication } from '@/api/types';
 import { PageMeta } from '@/components/layout/page-meta';
 import { staggerIndex } from '@/components/motion/presets';
@@ -52,9 +52,53 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
 
 type Decision = { application: HostApplication; kind: 'approve' | 'reject' };
 
+/** Why a Host can't be approved before their identity check passes (the identityForHosts setting). */
+function IdentityNotice({
+  application,
+  status,
+}: {
+  application: HostApplication;
+  status: Exclude<HostApplication['identityStatus'], 'APPROVED'>;
+}) {
+  switch (status) {
+    case 'NONE':
+      return (
+        <Alert variant="info" title="Their identity isn't verified yet">
+          Hosts pass an identity check before they&rsquo;re approved. {application.firstName} starts it from
+          Hosting on the website, with a photo of their ID and a selfie. Their application stays here until it
+          passes.
+        </Alert>
+      );
+    case 'PENDING':
+      return (
+        <Alert
+          variant="info"
+          title="Their identity check is waiting for a review"
+          action={
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/admin/verifications">Open Verifications</Link>
+            </Button>
+          }
+        >
+          Stripe couldn&rsquo;t decide it on its own, so someone on the team needs to look at it. Approve the
+          application once the check has passed.
+        </Alert>
+      );
+    case 'REJECTED':
+      return (
+        <Alert variant="info" title="Their identity check didn't pass">
+          Hosts pass an identity check before they&rsquo;re approved, so this application can&rsquo;t be
+          approved. Reject it with a note, or ask {application.firstName} to contact support if it was a
+          mistake.
+        </Alert>
+      );
+  }
+}
+
 /**
  * Host applications (plan §9, Days 8–11): staff approve or reject people who want to list cars.
- * Approving needs a confirmed email (plan §6.1); rejecting needs a note, which we email to them.
+ * Approving needs a confirmed email (plan §6.1) and, while the identityForHosts setting is on, a passed
+ * identity check (spec §22); rejecting needs a note, which we email to them.
  */
 export function AdminHostApplicationsPage() {
   const queryClient = useQueryClient();
@@ -80,8 +124,9 @@ export function AdminHostApplicationsPage() {
     try {
       await decideHostApplicationRequest({ userId: application.userId, decision: kind, notes });
     } catch (error) {
-      // The list was out of date: show that their email isn't confirmed.
-      if (isApiError(error, 'EMAIL_NOT_VERIFIED')) void applications.refetch();
+      // The list was out of date: show that their email isn't confirmed, or their identity not verified.
+      if (isApiError(error, 'EMAIL_NOT_VERIFIED') || isApiError(error, 'IDENTITY_NOT_VERIFIED'))
+        void applications.refetch();
       throw error;
     }
     setDialogOpen(false);
@@ -106,6 +151,11 @@ export function AdminHostApplicationsPage() {
   const current = decision?.application;
   const currentName = current ? applicantName(current) : '';
   const emailUnconfirmed = decision?.kind === 'approve' && current && !current.emailVerified;
+  const identityUnverified =
+    decision?.kind === 'approve' &&
+    current?.identityRequired &&
+    current.identityStatus !== 'APPROVED' &&
+    current.identityStatus;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -115,8 +165,8 @@ export function AdminHostApplicationsPage() {
         <p className="eyebrow text-primary">Marketplace</p>
         <h1 className="headline mt-2 text-title-3 font-medium">Host applications</h1>
         <p className="mt-2 max-w-2xl text-muted">
-          People who want to list their cars. Approve them once their email is confirmed and their details
-          look right; their listings can go live after that.
+          People who want to list their cars. Approve them once their email is confirmed, their identity check
+          has passed and their details look right; their listings can go live after that.
         </p>
       </header>
 
@@ -238,14 +288,19 @@ export function AdminHostApplicationsPage() {
             ? 'Included in the email.'
             : 'Included in the welcome email, if you add one.'
         }
-        blocked={Boolean(emailUnconfirmed)}
+        blocked={Boolean(emailUnconfirmed || identityUnverified)}
         notice={
-          emailUnconfirmed && current ? (
-            <Alert variant="info" title="Their email address isn't confirmed yet">
-              Hosts need a confirmed email before they&rsquo;re approved, so we know we can reach them.{' '}
-              {current.firstName} needs to open the link we sent to {current.email}; if it has expired, they
-              can log in and send themselves a new one. Their application stays here until then.
-            </Alert>
+          current && (emailUnconfirmed || identityUnverified) ? (
+            <div className="grid gap-3">
+              {emailUnconfirmed && (
+                <Alert variant="info" title="Their email address isn't confirmed yet">
+                  Hosts need a confirmed email before they&rsquo;re approved, so we know we can reach them.{' '}
+                  {current.firstName} needs to open the link we sent to {current.email}; if it has expired,
+                  they can log in and send themselves a new one. Their application stays here until then.
+                </Alert>
+              )}
+              {identityUnverified && <IdentityNotice application={current} status={identityUnverified} />}
+            </div>
           ) : undefined
         }
         onConfirm={decide}

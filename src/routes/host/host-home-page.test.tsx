@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicleSummary } from '@/api/types';
+import { readiness } from '@/features/booking/test-fixtures';
 import { hostUser } from '@/features/host/host-fixtures';
 import { mockApi, renderWithRouter } from '@/test/utils';
 import { HostHomePage } from './host-home-page';
@@ -17,6 +18,7 @@ const summary = (overrides: Partial<HostVehicleSummary>): HostVehicleSummary => 
   slug: 'draft-v1',
   title: 'Untitled car',
   status: 'DRAFT',
+  waitingForPayouts: false,
   onboardingStep: 2,
   photo: null,
   missingCount: 5,
@@ -85,6 +87,33 @@ describe('HostHomePage', () => {
     // A draft has no calendar or maintenance yet.
     expect(within(draft!).queryByRole('link', { name: 'Calendar' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Add a car' })).toHaveAttribute('href', '/host/vehicles/new');
+  });
+
+  it('asks an applicant to verify their identity before the application is approved', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: hostUser } },
+      'GET /me/host-profile': {
+        status: 200,
+        body: {
+          host: {
+            status: 'APPLIED',
+            appliedAt: '2026-10-08T00:00:00.000Z',
+            gstRegistered: false,
+            payoutsEnabled: false,
+            identityRequired: true,
+            rating: { avg: 0, count: 0 },
+            tripCount: 0,
+          },
+        },
+      },
+      'GET /me/checkout': { status: 200, body: readiness({ identityStatus: 'NONE' }) },
+      'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
+    });
+    render();
+
+    expect(await screen.findByText('One step left: verify your identity')).toBeInTheDocument();
+    expect(screen.queryByText('Your application is under review')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Verify your identity' })).toBeInTheDocument();
   });
 
   it("shows our team's notes when the application wasn't approved", async () => {

@@ -32,7 +32,10 @@ export function useHostApplications(status: HostStatus) {
   });
 }
 
-/** Approving needs the applicant's confirmed email (409 EMAIL_NOT_VERIFIED); rejecting needs notes. */
+/**
+ * Approving needs the applicant's confirmed email (409 EMAIL_NOT_VERIFIED) and, while the setting asks for
+ * it, their passed identity check (409 IDENTITY_NOT_VERIFIED); rejecting needs notes.
+ */
 export async function decideHostApplicationRequest(input: {
   userId: string;
   decision: 'approve' | 'reject';
@@ -167,6 +170,7 @@ export async function removeBlockRequest(input: { id: string; blockId: string })
 // These messages come from the API and are already written for people.
 const REVIEW_ERROR_CODES = [
   'EMAIL_NOT_VERIFIED',
+  'IDENTITY_NOT_VERIFIED',
   'HOST_NOT_APPROVED',
   'NOT_UNDER_REVIEW',
   'BOOKED_DATES',

@@ -24,7 +24,7 @@ const NEXT = [
   },
   {
     title: 'Set up payouts',
-    text: 'Payout setup is coming soon. Your car goes live once it’s approved and payouts are ready.',
+    text: 'Give our payment partner Stripe your bank details from Earnings. Your car goes live once it’s approved and payouts are ready.',
   },
   {
     title: 'Get your calendar ready',
@@ -119,14 +119,28 @@ function StatusNote({ vehicle }: { vehicle: HostVehicle }) {
     case 'INACTIVE':
       return (
         <div className="grid gap-3">
-          <Alert
-            variant={vehicle.status === 'ACTIVE' ? 'success' : 'info'}
-            title={vehicle.status === 'ACTIVE' ? 'Your car is live' : 'Hidden from search'}
-          >
-            {vehicle.status === 'ACTIVE'
-              ? 'Guests can find and book it. Price, rules and delivery changes apply at once.'
-              : 'Guests can’t find or book it until you show it again. Trips already booked go ahead.'}
-          </Alert>
+          {vehicle.waitingForPayouts && vehicle.status === 'ACTIVE' ? (
+            <Alert
+              title="Approved: set up payouts to go live"
+              action={
+                <Button asChild size="sm">
+                  <Link to="/host/earnings">Set up payouts</Link>
+                </Button>
+              }
+            >
+              Guests can’t find it yet. It goes live as soon as your payout setup is done, so we can pay you
+              after each trip.
+            </Alert>
+          ) : (
+            <Alert
+              variant={vehicle.status === 'ACTIVE' ? 'success' : 'info'}
+              title={vehicle.status === 'ACTIVE' ? 'Your car is live' : 'Hidden from search'}
+            >
+              {vehicle.status === 'ACTIVE'
+                ? 'Guests can find and book it. Price, rules and delivery changes apply at once.'
+                : 'Guests can’t find or book it until you show it again. Trips already booked go ahead.'}
+            </Alert>
+          )}
           {pending && (
             <Alert title="New photos or documents waiting for approval">
               Your listing shows the approved ones until our team has checked them.
@@ -166,7 +180,9 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
       <HostPageHeader
         back={<BackLink to="/host">Hosting</BackLink>}
         title={vehicleDisplayTitle(vehicle.title)}
-        titleAside={<VehicleStatusBadge status={vehicle.status} />}
+        titleAside={
+          <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
+        }
         actions={
           <>
             {!locked && (

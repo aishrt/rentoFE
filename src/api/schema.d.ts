@@ -6346,7 +6346,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a Host application
-         * @description 409 EMAIL_NOT_VERIFIED until the applicant has confirmed their email. Emails the Host.
+         * @description 409 EMAIL_NOT_VERIFIED until the applicant has confirmed their email, and 409 IDENTITY_NOT_VERIFIED until their identity check has passed (while the identityForHosts setting is on). Emails the Host.
          */
         post: {
             parameters: {
@@ -15900,8 +15900,10 @@ export interface components {
             bio?: string;
             gstRegistered: boolean;
             gstNumber?: string;
-            /** @description Payout setup (Stripe Connect) arrives in Phase 3 */
+            /** @description Whether payout setup (Stripe Connect) is finished */
             payoutsEnabled: boolean;
+            /** @description Whether approval waits for a passed identity check (the identityForHosts platform setting) */
+            identityRequired: boolean;
             rating: {
                 avg: number;
                 count: number;
@@ -15931,6 +15933,8 @@ export interface components {
             title: string;
             /** @enum {string} */
             status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description Approved, but out of search until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
             onboardingStep: number;
             photo: string | null;
             missingCount: number;
@@ -15949,6 +15953,8 @@ export interface components {
             title: string;
             /** @enum {string} */
             status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description Approved, but out of search until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
             reviewNotes?: string;
             onboardingStep: number;
             regoPlate?: string;
@@ -16405,6 +16411,8 @@ export interface components {
              * @enum {string}
              */
             identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Whether approval waits for a passed identity check (the identityForHosts platform setting) */
+            identityRequired: boolean;
             /** @enum {string} */
             status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED";
             /** Format: date-time */
@@ -16458,6 +16466,8 @@ export interface components {
                 phone?: string;
                 /** @enum {string|null} */
                 status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+                /** @description Payout setup is done, so an approved listing goes live at once (plan §8.2) */
+                payoutsEnabled: boolean;
                 emailVerified: boolean;
                 phoneVerified: boolean;
             };

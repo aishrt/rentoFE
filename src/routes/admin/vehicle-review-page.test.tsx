@@ -33,6 +33,7 @@ const vehicle: HostVehicle = {
   slug: '2021-toyota-corolla-auckland',
   title: '2021 Toyota Corolla',
   status: 'UNDER_REVIEW',
+  waitingForPayouts: false,
   onboardingStep: 6,
   regoPlate: 'ABC123',
   vin: 'JTDBR32E720123456',
@@ -122,6 +123,7 @@ const host: AdminVehicle['host'] = {
   name: 'Mere Parata',
   email: 'mere@example.co.nz',
   status: 'APPROVED',
+  payoutsEnabled: true,
   emailVerified: true,
   phoneVerified: false,
 };
@@ -396,6 +398,26 @@ describe('AdminVehicleReviewPage: the decision', () => {
     const bar = await decisionBar();
     expect(bar.getByRole('button', { name: 'Request changes' })).toBeDisabled();
     expect(bar.getByText(/A live listing can't be sent back/)).toBeInTheDocument();
+  });
+
+  it("says an approved listing waits for the Host's payout setup", async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing({}, { payoutsEnabled: false }),
+      'POST /admin/vehicles/v1/approve': {
+        status: 200,
+        body: { vehicle: { ...vehicle, status: 'ACTIVE', waitingForPayouts: true } },
+      },
+    });
+    render();
+
+    await userEvent.click((await decisionBar()).getByRole('button', { name: 'Approve listing' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve this listing?' }));
+    expect(dialog.getByText(/goes live in search once the Host has set up payouts/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve listing' }));
+
+    expect(await screen.findByText(/It goes live once the Host has set up payouts/)).toBeInTheDocument();
+    expect(screen.getAllByText('Waiting for payout setup').length).toBeGreaterThan(0);
   });
 
   it('needs a note to request changes, then shows the listing as sent back', async () => {

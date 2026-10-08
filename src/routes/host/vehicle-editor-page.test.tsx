@@ -312,6 +312,23 @@ describe('VehicleEditorPage', () => {
     );
   });
 
+  it('says an approved car waits for payout setup instead of calling it live', async () => {
+    api(
+      sampleVehicle({
+        status: 'ACTIVE',
+        waitingForPayouts: true,
+        onboardingStep: 6,
+        title: '2021 Toyota Corolla',
+      }),
+    );
+    render('/host/vehicles/v1');
+
+    expect(await screen.findByText('Approved: set up payouts to go live')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up payouts' })).toHaveAttribute('href', '/host/earnings');
+    expect(screen.getByText('Waiting for payout setup')).toBeInTheDocument();
+    expect(screen.queryByText('Your car is live')).not.toBeInTheDocument();
+  });
+
   it('asks before a key detail sends a live listing back for review', async () => {
     let sent: Record<string, unknown> | undefined;
     const live = sampleVehicle({

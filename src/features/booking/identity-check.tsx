@@ -16,7 +16,14 @@ const POLL_MS = 5_000;
  * licence, and a selfie, on Stripe's page, which brings them back here. While Stripe checks it the step waits
  * and asks again; a check that needs a person goes to support, and the booking waits for them (plan §8.2).
  */
-export function IdentityCheck({ readiness }: { readiness: CheckoutReadiness }) {
+export function IdentityCheck({
+  readiness,
+  forHosting = false,
+}: {
+  readiness: CheckoutReadiness;
+  /** On Hosting, where a check in review holds up the Host application rather than a booking. */
+  forHosting?: boolean;
+}) {
   const queryClient = useQueryClient();
   const location = useLocation();
   const start = useMutation({
@@ -52,8 +59,9 @@ export function IdentityCheck({ readiness }: { readiness: CheckoutReadiness }) {
     case 'PENDING':
       return (
         <Alert title="Our team is checking your ID">
-          It usually takes a few hours. You can still book: your card is authorised, and the booking is
-          confirmed once the check is approved.
+          {forHosting
+            ? 'It usually takes a few hours. We’ll let you know when it’s done.'
+            : 'It usually takes a few hours. You can still book: your card is authorised, and the booking is confirmed once the check is approved.'}
         </Alert>
       );
     case 'REJECTED':

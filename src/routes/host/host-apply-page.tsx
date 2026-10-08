@@ -29,7 +29,7 @@ const NEXT_STEPS = [
   },
   {
     title: 'Set up payouts, then go live',
-    text: 'Payout setup is coming soon. Your car goes live once it’s approved and payouts are ready.',
+    text: 'Once you’re approved, give our payment partner Stripe your bank details. Your car goes live when it’s approved and payouts are ready.',
   },
 ];
 

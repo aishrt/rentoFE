@@ -253,7 +253,7 @@ export function CancellationSection({ settings }: { settings: PlatformSettings }
             <SwitchField
               name="refundUnusedDaysOnEarlyReturn"
               label="Refund unused days when a Guest returns early"
-              description={`${RECORDED_ONLY} early returns are handled when trips are built (Phase 3). Placeholder: no refund.`}
+              description={`${RECORDED_ONLY} a Guest who returns early isn't refunded for the days left. The refund is built if the client chooses to give one. Placeholder: no refund.`}
             />
           </div>
           <p className="text-sm text-muted sm:col-span-2">

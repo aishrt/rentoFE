@@ -104,7 +104,7 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
                 Updated {updatedFormat.format(new Date(vehicle.updatedAt))}
               </p>
             </div>
-            <VehicleStatusBadge status={vehicle.status} />
+            <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
           </div>
           {note && (
             <p

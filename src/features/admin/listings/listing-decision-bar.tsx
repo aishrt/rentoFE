@@ -105,11 +105,13 @@ const DIALOGS: Record<
   },
 };
 
-function dialogDescription(decision: ListingDecision, live: boolean): string {
+/** `payoutsReady`: the Host has set up payouts, so an approved listing goes live at once (plan §8.2). */
+function dialogDescription(decision: ListingDecision, live: boolean, payoutsReady: boolean): string {
   if (decision === 'approve') {
-    return live
-      ? 'They go on the live listing straight away.'
-      : "It goes live in search straight away, with its waiting photos approved and documents verified. We'll email the Host.";
+    if (live) return 'They go on the live listing straight away.';
+    return payoutsReady
+      ? "It goes live in search straight away, with its waiting photos approved and documents verified. We'll email the Host."
+      : "Its waiting photos are approved and documents verified. It goes live in search once the Host has set up payouts; we'll email them to say so.";
   }
   if (decision === 'request-changes') {
     return "It goes back to the Host, and can't be booked until they submit it again and it's approved.";
@@ -117,11 +119,16 @@ function dialogDescription(decision: ListingDecision, live: boolean): string {
   return "It won't go live. We'll email the Host your note.";
 }
 
-function toastFor(decision: ListingDecision, live: boolean): [title: string, description: string] {
+function toastFor(
+  decision: ListingDecision,
+  live: boolean,
+  payoutsReady: boolean,
+): [title: string, description: string] {
   if (decision === 'approve') {
-    return live
-      ? ['New photos and documents approved', "They're on the listing now."]
-      : ['Listing approved', "It's live in search, and we've emailed the Host."];
+    if (live) return ['New photos and documents approved', "They're on the listing now."];
+    return payoutsReady
+      ? ['Listing approved', "It's live in search, and we've emailed the Host."]
+      : ['Listing approved', "It goes live once the Host has set up payouts. We've emailed them."];
   }
   return decision === 'reject'
     ? ['Listing rejected', "We've emailed the Host your note."]
@@ -161,7 +168,7 @@ export function ListingDecisionBar({ listing }: { listing: AdminVehicle }) {
     setOpen(false);
     queryClient.setQueryData(adminVehicleQueryKey(vehicle.id), withVehicle(updated));
     void queryClient.invalidateQueries({ queryKey: reviewQueueQueryKey });
-    const [title, description] = toastFor(decision, live);
+    const [title, description] = toastFor(decision, live, host.payoutsEnabled);
     toast(title, { description });
   };
 
@@ -232,7 +239,7 @@ export function ListingDecisionBar({ listing }: { listing: AdminVehicle }) {
         open={open}
         onOpenChange={setOpen}
         title={decision === 'approve' && live ? 'Approve the new photos and documents?' : dialog.title}
-        description={dialogDescription(decision, live)}
+        description={dialogDescription(decision, live, host.payoutsEnabled)}
         confirmLabel={decision === 'approve' && live ? 'Approve' : dialog.confirmLabel}
         tone={dialog.tone}
         notes={decision === 'approve' ? 'optional' : 'required'}

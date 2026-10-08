@@ -137,7 +137,7 @@ export function AdminVehicleReviewPage() {
           <p className="eyebrow text-primary">Listing review</p>
           <h1 className="headline mt-2 text-title-3 font-medium">{vehicle.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
-            <VehicleStatusBadge status={vehicle.status} />
+            <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
             {vehicle.regoPlate && (
               <span className="font-semibold tracking-wide text-ink">{vehicle.regoPlate}</span>
             )}

@@ -19,6 +19,7 @@ const profile: HostProfile = {
   bio: 'Two well-kept cars in Ponsonby.',
   gstRegistered: false,
   payoutsEnabled: false,
+  identityRequired: true,
   rating: { avg: 4.8, count: 12 },
   tripCount: 15,
   responseRate: 96,

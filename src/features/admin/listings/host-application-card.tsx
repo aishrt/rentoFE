@@ -114,6 +114,9 @@ export function HostApplicationCard({
               {IDENTITY_WORDS[application.identityStatus]}
               {application.identityStatus === 'APPROVED' && <VerifiedMark verified />}
             </span>
+            {application.identityRequired && application.identityStatus !== 'APPROVED' && (
+              <span className="mt-0.5 block text-xs text-muted">Needed before approval</span>
+            )}
           </Detail>
           <Detail term="GST">
             {application.gstRegistered
