@@ -40,6 +40,7 @@ describe('AccountPage', () => {
       [/^Trips/, '/trips'],
       [/^Saved cars/, '/saved'],
       [/^Payments/, '/account/payments'],
+      [/^Reviews/, '/account/reviews'],
       [/^Help and support/, '/account/support'],
       [/^Settings/, '/account/settings'],
     ] as const) {
@@ -47,6 +48,11 @@ describe('AccountPage', () => {
         true,
       );
     }
+    // Reviews has a card of its own, for phones, where the sidebar is hidden.
+    expect(screen.getByRole('link', { name: /Reviews to write/ })).toHaveAttribute(
+      'href',
+      '/account/reviews',
+    );
   });
 
   it('shows what a booking needs: email, mobile, licence and the identity check', async () => {
@@ -61,6 +67,22 @@ describe('AccountPage', () => {
     expect(
       details.getByText(/We’ll ask for a photo of your ID and a selfie before your first trip/),
     ).toBeInTheDocument();
+  });
+
+  it('says when support is checking the licence, and that booking still works meanwhile', async () => {
+    mockAccount(
+      readiness({
+        identityStatus: 'APPROVED',
+        licenceInReview: true,
+        licence: { ...readiness().licence!, status: 'PENDING' },
+      }),
+    );
+    render();
+
+    const details = within(await screen.findByRole('region', { name: 'Your details for booking' }));
+    expect(await details.findByText('Our team is checking your licence')).toBeInTheDocument();
+    expect(details.getByText(/You can still book: your card is authorised, not charged/)).toBeInTheDocument();
+    expect(details.queryByText('Your licence details are saved.')).not.toBeInTheDocument();
   });
 
   it('says what stops the Guest booking, and to confirm their email', async () => {

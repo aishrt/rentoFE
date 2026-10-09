@@ -46,6 +46,7 @@ describe('AccountMenu', () => {
       ['Saved cars', '/saved'],
       ['Become a host', '/become-a-host'],
       ['Notifications', '/notifications'],
+      ['Reviews', '/account/reviews'],
       ['Account', '/account'],
       ['Log out', null],
     ]);
@@ -63,6 +64,7 @@ describe('AccountMenu', () => {
       ['Saved cars', '/saved'],
       ['Hosting', '/host'],
       ['Notifications', '/notifications'],
+      ['Reviews', '/account/reviews'],
       ['Account', '/account'],
       ['Log out', null],
     ]);
@@ -100,6 +102,7 @@ describe('MobileMenu', () => {
       ['Saved cars', '/saved'],
       ['Hosting', '/host'],
       ['Notifications', '/notifications'],
+      ['Reviews', '/account/reviews'],
       ['Account', '/account'],
     ]);
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
@@ -118,6 +121,7 @@ describe('MobileMenu', () => {
       ['Messages', '/messages'],
       ['Saved cars', '/saved'],
       ['Notifications', '/notifications'],
+      ['Reviews', '/account/reviews'],
       ['Account', '/account'],
     ]);
   });

@@ -22,7 +22,7 @@ import type { ResolvedChoices } from './checkout-state';
 /**
  * "You'll be charged NZ$506.50. Your card issuer converts it." (plan §12.7): every charge is in NZD. A request
  * is authorised now and charged only when the Host accepts (plan §8.1), and a booking made while the Guest's
- * identity check is in review only once the check is approved (plan §8.2).
+ * identity check or licence is in review only once support approves it (plan §8.2).
  */
 export function ChargeNote({
   totalCents,
@@ -39,8 +39,8 @@ export function ChargeNote({
 }) {
   const condition = verificationInReview
     ? request
-      ? `once your identity check is approved and ${hostName} accepts`
-      : 'once your identity check is approved'
+      ? `once our check of your details is approved and ${hostName} accepts`
+      : 'once our check of your details is approved'
     : `if ${hostName} accepts`;
   return (
     <p className={cn('text-sm text-muted', className)}>
@@ -95,7 +95,7 @@ export interface SummaryProps {
   priced: PricedTrip | undefined;
   current: boolean;
   pricing: boolean;
-  /** The Guest's identity check is with support, so the card is only authorised for now (plan §8.2). */
+  /** The Guest's identity check or licence is with support, so the card is only authorised for now (plan §8.2). */
   verificationInReview?: boolean;
 }
 

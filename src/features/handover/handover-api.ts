@@ -11,6 +11,14 @@ import { bookingQueryKey, bookingsQueryKey } from '@/features/booking/booking-ap
 
 export const handoverQueryKey = (ref: string) => ['handover', ref] as const;
 
+/**
+ * What a finished inspection tells the handover page it goes to, in the router's state: a check-out that
+ * recorded new damage, so the page can offer to open a case with it in one tap.
+ */
+export interface HandoverState {
+  checkOutDamage?: boolean;
+}
+
 export function useHandover(ref: string, enabled = true) {
   return useQuery({
     queryKey: handoverQueryKey(ref),

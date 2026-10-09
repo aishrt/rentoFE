@@ -246,6 +246,42 @@ describe('Platform settings', () => {
     expect(sent).toEqual([]);
   });
 
+  it('changes the quiet hours for texts, checking each is a 24-hour time', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=reviewsAndTrips');
+
+    const section = await card('Reviews and trips');
+    const start = section.getByLabelText('Quiet hours for texts start at');
+    const end = section.getByLabelText('Quiet hours end at');
+    expect(start).toHaveValue('21:00');
+    expect(end).toHaveValue('07:00');
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '25:00');
+    await userEvent.clear(end);
+    await userEvent.type(end, '25:00');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+    expect(await section.findAllByText('Enter a 24-hour time, like 21:00')).toHaveLength(2);
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '7:00');
+    await userEvent.clear(end);
+    await userEvent.type(end, '07:00');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+    expect(await section.findByText('Choose an end time different from the start')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '22:30');
+    await userEvent.clear(end);
+    await userEvent.type(end, '6:45');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Reviews and trips saved')).toBeInTheDocument();
+    expect(sent[0]?.sms).toEqual({ quietHoursStart: '22:30', quietHoursEnd: '06:45' });
+    expect(sent[0]?.reviews).toEqual(settingsFixture.reviews);
+  });
+
   it('saves the roadside assistance number with the protection plans', async () => {
     const { sent } = mockSettingsApi();
     render('/admin/settings?tab=platform&section=protection');

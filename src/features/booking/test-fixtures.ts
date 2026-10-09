@@ -108,6 +108,7 @@ export function readiness(overrides: Partial<CheckoutReadiness> = {}): CheckoutR
       status: 'APPROVED',
     },
     hasDateOfBirth: true,
+    licenceInReview: false,
     identityStatus: 'NONE',
     identityProcessing: false,
     problems: [],

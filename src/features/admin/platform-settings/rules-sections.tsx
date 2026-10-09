@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { PlatformSettings } from '@/api/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LICENCE_CLASS_LABELS, type LicenceClass } from '@/features/booking/booking-format';
-import { RECORDED_ONLY, decimalField, textField, wholeField } from './field-rules';
+import { RECORDED_ONLY, decimalField, textField, timeField, wholeField } from './field-rules';
 import { NumberField, SwitchField, TextInputField } from './fields';
 import { SettingsForm } from './settings-form';
 
@@ -103,28 +103,38 @@ export function EligibilitySection({ settings }: { settings: PlatformSettings })
   );
 }
 
-const reviewsAndTripsSchema = z.object({
-  windowDays: wholeField(1, 90, ' days'),
-  revealTogether: z.boolean(),
-  homepageThreshold: wholeField(0, 1000),
-  damageReportWindowHours: wholeField(1, 720, ' hours'),
-  lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
-});
+const reviewsAndTripsSchema = z
+  .object({
+    windowDays: wholeField(1, 90, ' days'),
+    revealTogether: z.boolean(),
+    homepageThreshold: wholeField(0, 1000),
+    damageReportWindowHours: wholeField(1, 720, ' hours'),
+    lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
+    quietHoursStart: timeField(),
+    quietHoursEnd: timeField(),
+  })
+  // The same start and end would mean no quiet hours at all: texts at any hour of the night.
+  .refine((values) => values.quietHoursStart !== values.quietHoursEnd, {
+    message: 'Choose an end time different from the start',
+    path: ['quietHoursEnd'],
+  });
 
 export function ReviewsAndTripsSection({ settings }: { settings: PlatformSettings }) {
   return (
     <SettingsForm
       decision="reviewsAndTrips"
       title="Reviews and trips"
-      description="When reviews can be left and shown, and the windows after a trip. The review window and grace period are also on the public pages."
+      description="When reviews can be left and shown, the windows after a trip, and the quiet hours for text messages. The review window and grace period are also on the public pages."
       settings={settings}
       schema={reviewsAndTripsSchema}
-      toValues={({ reviews, trips }) => ({
+      toValues={({ reviews, trips, sms }) => ({
         windowDays: String(reviews.windowDays),
         revealTogether: reviews.revealTogether,
         homepageThreshold: String(reviews.homepageThreshold),
         damageReportWindowHours: String(trips.damageReportWindowHours),
         lateReturnGraceMinutes: String(trips.lateReturnGraceMinutes),
+        quietHoursStart: sms.quietHoursStart,
+        quietHoursEnd: sms.quietHoursEnd,
       })}
       toUpdate={(values, current) => ({
         reviews: {
@@ -137,6 +147,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
           damageReportWindowHours: Number(values.damageReportWindowHours),
           lateReturnGraceMinutes: Number(values.lateReturnGraceMinutes),
         },
+        sms: { quietHoursStart: values.quietHoursStart, quietHoursEnd: values.quietHoursEnd },
       })}
     >
       {() => (
@@ -171,6 +182,16 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
               description="Once both are in, or when the time to review runs out, so neither side can reply in kind."
             />
           </div>
+          <TextInputField
+            name="quietHoursStart"
+            label="Quiet hours for texts start at"
+            description="NZ time, 24-hour, like 21:00. Texts that can wait are sent when quiet hours end."
+          />
+          <TextInputField
+            name="quietHoursEnd"
+            label="Quiet hours end at"
+            description="Like 07:00. Reminders just before a pick-up or return still go at once."
+          />
         </>
       )}
     </SettingsForm>

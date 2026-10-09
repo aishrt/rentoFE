@@ -9,6 +9,14 @@ export async function changePasswordRequest(input: {
   await unwrap(client.POST('/me/password', { body: input }));
 }
 
+/** Corrects the name (PATCH /me); refused once it must match the ID (`nameLocked`). */
+export async function updateNameRequest(input: {
+  firstName: string;
+  lastName: string;
+}): Promise<SessionUser> {
+  return (await unwrap(client.PATCH('/me', { body: input }))).user;
+}
+
 /** Emails a link to the new address; returns it. The current address works until the link is opened. */
 export async function changeEmailRequest(input: {
   newEmail: string;

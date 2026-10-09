@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Phone,
   Star,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -145,7 +146,10 @@ export function TripStops({ booking, hiddenNote }: { booking: Booking; hiddenNot
   );
 }
 
-/** The other party: first name, verified, rating and trips, and their mobile once the booking is confirmed. */
+/**
+ * The other party: first name, verified, rating and trips, a link to their profile and reviews, and their
+ * mobile once the booking is confirmed.
+ */
 export function PartyDetails({
   party,
   role,
@@ -180,6 +184,16 @@ export function PartyDetails({
           </p>
         </div>
       </div>
+      {party.id && (
+        <Link
+          to={`/members/${party.id}`}
+          viewTransition
+          className="link-underline inline-flex items-center gap-2 justify-self-start font-medium text-primary"
+        >
+          <UserRound aria-hidden="true" className="size-4" />
+          {party.firstName}’s profile and reviews
+        </Link>
+      )}
       {party.phone ? (
         <a
           href={`tel:${party.phone}`}

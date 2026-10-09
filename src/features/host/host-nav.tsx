@@ -2,17 +2,24 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { cn } from '@/lib/cn';
 
+/** Inbox and Reviews open the pages Hosts share with Guests; the inbox opens on its hosting conversations. */
 const LINKS = [
   { to: '/host', label: 'Overview' },
   { to: '/host/bookings', label: 'Bookings' },
+  { to: '/host/calendar', label: 'Calendar' },
   { to: '/host/earnings', label: 'Earnings' },
   { to: '/messages?as=host', label: 'Inbox' },
+  { to: '/account/reviews', label: 'Reviews' },
   { to: '/host/profile', label: 'Profile' },
 ] as const;
 
-/** The section a Host page belongs to; a car's editor and calendar belong to Overview. */
+/** A car's own calendar page, which belongs to Calendar. */
+const CAR_CALENDAR = /^\/host\/vehicles\/[^/]+\/calendar\/?$/;
+
+/** The section a Host page belongs to: a car's calendar belongs to Calendar, and its editor to Overview. */
 function sectionOf(pathname: string): string {
   if (pathname.startsWith('/host/bookings')) return '/host/bookings';
+  if (pathname.startsWith('/host/calendar') || CAR_CALENDAR.test(pathname)) return '/host/calendar';
   if (pathname.startsWith('/host/earnings')) return '/host/earnings';
   if (pathname.startsWith('/host/profile')) return '/host/profile';
   return '/host';
@@ -22,8 +29,9 @@ function sectionOf(pathname: string): string {
 const EDGE_ROOM = 40;
 
 /**
- * The Host area's own navigation, shared by its pages (plan §12.6). A car's editor and calendar belong to
- * Overview, where My Vehicles lists them.
+ * The Host area's own navigation, shared by its pages (plan §12.6: Today, Vehicles, Calendar, Earnings and
+ * Inbox, with bookings, reviews and the profile). Overview holds the to-do list and My Vehicles, so a car's
+ * editor belongs to it; a car's calendar belongs to Calendar.
  *
  * On a phone the tabs are wider than the screen, so the row runs to the screen's edges and scrolls sideways:
  * the current tab is scrolled into view, and an edge with more tabs past it fades out (`data-more-start`,

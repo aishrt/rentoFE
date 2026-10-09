@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { DecisionDialog } from './decision-dialog';
 import {
+  adminVehicleListsQueryKey,
   adminVehicleQueryKey,
   decideListingRequest,
   isApiError,
@@ -168,6 +169,7 @@ export function ListingDecisionBar({ listing }: { listing: AdminVehicle }) {
     setOpen(false);
     queryClient.setQueryData(adminVehicleQueryKey(vehicle.id), withVehicle(updated));
     void queryClient.invalidateQueries({ queryKey: reviewQueueQueryKey });
+    void queryClient.invalidateQueries({ queryKey: adminVehicleListsQueryKey });
     const [title, description] = toastFor(decision, live, host.payoutsEnabled);
     toast(title, { description });
   };

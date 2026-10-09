@@ -87,7 +87,7 @@ describe('AdminVerificationsPage', () => {
     expect(first.getByText('14 Mar 1995')).toBeInTheDocument();
     expect(first.getByText('Passport')).toBeInTheDocument();
     expect(first.getByText('Full NZ licence')).toBeInTheDocument();
-    expect(first.getByText('4821')).toBeInTheDocument();
+    expect(first.getByText('Ending 4821')).toBeInTheDocument();
     expect(first.getByText('1 May 2030')).toBeInTheDocument();
     expect(first.getByText('Licence used on another account')).toBeInTheDocument();
     expect(first.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
@@ -166,7 +166,10 @@ describe('AdminVerificationsPage', () => {
       'GET /admin/verifications': { status: 200, body: { items: [sam] } },
       'POST /admin/users/u21/licence-review': (init) => {
         sent = JSON.parse(String(init?.body));
-        return { status: 200, body: { licenceStatus: 'REJECTED' } };
+        return {
+          status: 200,
+          body: { licenceStatus: 'REJECTED', confirmed: [], waitingForHost: [], released: [] },
+        };
       },
     });
     render();
@@ -187,23 +190,110 @@ describe('AdminVerificationsPage', () => {
     expect(sent).toEqual({ decision: 'REJECT', note: 'The licence number doesn’t match the photo.' });
   });
 
-  it('approves a licence', async () => {
+  it('approves a licence, which confirms the booking waiting on it', async () => {
     let sent: unknown;
+    const waitingSam: VerificationQueueItem = {
+      ...sam,
+      waitingBookings: [{ ref: 'RV-4H8J2K', vehicleTitle: '2021 Mazda CX-5' }],
+    };
     mockApi({
-      'GET /admin/verifications': { status: 200, body: { items: [sam] } },
+      'GET /admin/verifications': { status: 200, body: { items: [waitingSam] } },
       'POST /admin/users/u21/licence-review': (init) => {
         sent = JSON.parse(String(init?.body));
-        return { status: 200, body: { licenceStatus: 'APPROVED' } };
+        return {
+          status: 200,
+          body: { licenceStatus: 'APPROVED', confirmed: ['RV-4H8J2K'], waitingForHost: [], released: [] },
+        };
       },
     });
     render();
 
+    expect((await card('Sam Lee')).getByRole('link', { name: 'RV-4H8J2K' })).toBeInTheDocument();
     await userEvent.click((await card('Sam Lee')).getByRole('button', { name: 'Approve Sam Lee’s licence' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Approve Sam Lee’s licence?' }));
+    expect(dialog.getByText(/Bookings waiting on this licence are confirmed/)).toBeInTheDocument();
     await userEvent.click(dialog.getByRole('button', { name: 'Approve' }));
 
     expect(await screen.findByText('Sam Lee’s licence is approved')).toBeInTheDocument();
+    expect(screen.getByText('We’ve emailed them. Confirmed RV-4H8J2K.')).toBeInTheDocument();
     expect(sent).toEqual({ decision: 'APPROVE' });
+  });
+
+  it('says when a booking still waits for the licence after the identity check is approved', async () => {
+    mockApi({
+      'GET /admin/verifications': { status: 200, body: { items: [kiri] } },
+      'POST /admin/users/u20/identity-review': {
+        status: 200,
+        body: {
+          identityStatus: 'APPROVED',
+          confirmed: [],
+          waitingForHost: [],
+          released: [],
+          stillInReview: ['RV-7K2Q9M'],
+        },
+      },
+    });
+    render();
+
+    await userEvent.click(
+      (await card('Kiri Smith')).getByRole('button', { name: 'Approve Kiri Smith’s identity check' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Kiri Smith’s identity?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve' }));
+
+    expect(await screen.findByText('Kiri Smith is verified')).toBeInTheDocument();
+    expect(
+      screen.getByText('We’ve emailed them. RV-7K2Q9M still waits for the licence check.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows how the ID compared, and the full licence number only when asked', async () => {
+    let shown = 0;
+    mockApi({
+      'GET /admin/verifications': {
+        status: 200,
+        body: {
+          items: [
+            {
+              ...kiri,
+              identity: {
+                status: 'PENDING',
+                documentType: 'driving_license',
+                licenceNumberMatched: false,
+                dobMatched: true,
+              },
+            },
+            { ...sam, licence: { ...sam.licence!, englishProof: undefined, inEnglish: false } },
+          ],
+        },
+      },
+      'GET /admin/users/u20/licence-number': () => {
+        shown += 1;
+        return { status: 200, body: { number: 'DK214821' } };
+      },
+    });
+    render();
+
+    const first = await card('Kiri Smith');
+    expect(
+      within(first.getByText('Licence number on the ID').closest('div')!).getByText('Doesn’t match'),
+    ).toBeInTheDocument();
+    expect(
+      within(first.getByText('Date of birth on the ID').closest('div')!).getByText('Matches'),
+    ).toBeInTheDocument();
+    // An overseas licence not in English, with nothing to read it by.
+    expect((await card('Sam Lee')).getByText('No, and no IDP or approved translation')).toBeInTheDocument();
+
+    // Fetched only when asked (each showing is in the audit log), and forgotten when hidden.
+    expect(first.queryByText('DK214821')).not.toBeInTheDocument();
+    expect(shown).toBe(0);
+    await userEvent.click(first.getByRole('button', { name: 'Show full number' }));
+    expect(await first.findByText('DK214821')).toBeInTheDocument();
+    await userEvent.click(first.getByRole('button', { name: 'Hide number' }));
+    expect(first.queryByText('DK214821')).not.toBeInTheDocument();
+    await userEvent.click(first.getByRole('button', { name: 'Show full number' }));
+    expect(await first.findByText('DK214821')).toBeInTheDocument();
+    expect(shown).toBe(2);
   });
 
   it('takes a check someone else already decided off the queue', async () => {

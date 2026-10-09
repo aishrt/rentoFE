@@ -15,6 +15,16 @@ export function useMyReviews(enabled = true) {
   });
 }
 
+/** A member's public profile and the published reviews about them, as Guest and as Host (plan §6.2). */
+export function useMemberProfile(id: string) {
+  return useQuery({
+    queryKey: ['members', id],
+    queryFn: ({ signal }) => unwrap(client.GET('/users/{id}/reviews', { params: { path: { id } }, signal })),
+    enabled: id !== '',
+    staleTime: 60_000,
+  });
+}
+
 export function useSubmitReview() {
   const queryClient = useQueryClient();
   return useMutation({

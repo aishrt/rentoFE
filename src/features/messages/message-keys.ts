@@ -40,6 +40,12 @@ export function applyMessagingEvent(queryClient: QueryClient, event: string, pay
     addMessage(queryClient, ref, message);
     void queryClient.invalidateQueries({ queryKey: threadListQueryKey });
     void queryClient.invalidateQueries({ queryKey: unreadMessagesQueryKey });
+    if (message.from === 'SYSTEM') {
+      // A booking update (confirmed, cancelled, the trip ended): the open conversation's state may have
+      // changed with it, such as contact details now showing in the banner and in earlier messages.
+      void queryClient.invalidateQueries({ queryKey: threadQueryKey(ref) });
+      void queryClient.invalidateQueries({ queryKey: messagesQueryKey(ref) });
+    }
     return true;
   }
   if (event === 'thread:read') {

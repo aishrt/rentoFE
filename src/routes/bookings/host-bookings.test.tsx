@@ -307,6 +307,43 @@ describe('HostBookingPage', () => {
     ).toBeInTheDocument();
     // The pay link is the Guest's.
     expect(charges.queryByRole('link')).not.toBeInTheDocument();
+    // A toll or infringement notice can come weeks after the trip: the Host reports it from here.
+    expect(screen.getByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      `/incidents/new?booking=${REF}`,
+    );
+  });
+
+  it('shows the refunds on the booking, who funds each, and what the Host was paid', async () => {
+    const refunded = hostConfirmed({
+      status: 'COMPLETED',
+      actions: NO_ACTIONS,
+      payout: {
+        hostPayoutCents: 80_000,
+        platformFeeCents: 12_000,
+        status: 'PAID',
+        scheduledFor: '2026-10-09T01:00:00.000Z',
+        paidAt: '2026-10-09T01:00:00.000Z',
+        paidCents: 75_000,
+        refunds: [
+          { amountCents: 5_000, at: '2026-10-10T01:00:00.000Z', fundedBy: 'HOST' },
+          { amountCents: 2_000, at: '2026-10-11T01:00:00.000Z', fundedBy: 'PLATFORM' },
+        ],
+      },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: refunded } }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    const earnings = within(await screen.findByRole('region', { name: 'What you earn' }));
+    const yours = earnings.getByText('Funded by you: it comes off your payout').closest('div')!;
+    expect(yours).toHaveTextContent(/Refund to Kiri, .*10 Oct/);
+    expect(yours).toHaveTextContent('$50');
+    expect(earnings.getByText('Funded by Rento Vroom').closest('div')).toHaveTextContent('$20');
+    expect(earnings.getByText('Paid to you so far').nextElementSibling).toHaveTextContent('$750');
   });
 
   it('records an acceptance while the Guest’s identity check is still in review', async () => {

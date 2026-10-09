@@ -183,7 +183,15 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
           <LicenceForm hasLicence={Boolean(licence)} onSaved={() => setEditing(false)} />
         ) : (
           <div className="grid gap-3">
-            <Done>Your licence details are saved.</Done>
+            {readiness.data.licenceInReview ? (
+              // Nothing has confirmed the licence yet, so support checks it by hand (plan §8.2).
+              <Alert title="Our team is checking your licence">
+                It usually takes a few hours. You can still book: your card is authorised, not charged, and
+                the booking is confirmed once your licence is approved.
+              </Alert>
+            ) : (
+              <Done>Your licence details are saved.</Done>
+            )}
             <div>
               <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-primary">
                 Update licence details

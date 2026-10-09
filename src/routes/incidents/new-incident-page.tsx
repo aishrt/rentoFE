@@ -1,4 +1,4 @@
-import { Phone } from 'lucide-react';
+import { Phone, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
@@ -60,16 +61,42 @@ function EmergencyFirst({ type, bookingRef }: { type: IncidentType; bookingRef: 
   );
 }
 
+/** Trips shown at first, and how many more each "Show more" adds. */
+const TRIPS_PAGE = 12;
+
+/** What a search for a trip looks in: the car, the booking reference, the other person and the dates. */
+const tripText = (booking: BookingSummary) =>
+  [
+    booking.vehicle.title,
+    booking.ref,
+    booking.otherParty.firstName,
+    formatTripSpan(booking.start, booking.end),
+  ]
+    .join(' ')
+    .toLowerCase();
+
+/**
+ * The trip the report is about: trips under way first, then finished ones, newest first. A toll or
+ * infringement notice can arrive weeks after an older trip, so the list can be searched and shows more on
+ * request.
+ */
 function BookingChoice({ onChoose }: { onChoose: (ref: string) => void }) {
+  const [search, setSearch] = useState('');
+  const [shown, setShown] = useState(TRIPS_PAGE);
   const guest = useBookings('guest', 'current');
   const guestDone = useBookings('guest', 'completed');
   const host = useBookings('host', 'current');
   const hostDone = useBookings('host', 'completed');
   const loading = [guest, guestDone, host, hostDone].some((query) => query.isPending);
-  const bookings = [guest, guestDone, host, hostDone]
+  const finished = [guestDone, hostDone]
     .flatMap((query) => query.data ?? [])
-    .filter((booking) => REPORTABLE.includes(booking.status))
-    .slice(0, 12);
+    .sort((a, b) => b.end.localeCompare(a.end));
+  const bookings = [...[guest, host].flatMap((query) => query.data ?? []), ...finished].filter((booking) =>
+    REPORTABLE.includes(booking.status),
+  );
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matching = bookings.filter((booking) => words.every((word) => tripText(booking).includes(word)));
+  const visible = matching.slice(0, shown);
 
   if (loading) return <Skeleton aria-hidden="true" className="h-40 rounded-card" />;
   if (bookings.length === 0) {
@@ -88,18 +115,58 @@ function BookingChoice({ onChoose }: { onChoose: (ref: string) => void }) {
     );
   }
   return (
-    <ChoiceCards
-      legend="Which trip is it about?"
-      name="booking"
-      value=""
-      onChange={onChoose}
-      columns={1}
-      choices={bookings.map((booking) => ({
-        value: booking.ref,
-        label: booking.vehicle.title,
-        description: `${formatTripSpan(booking.start, booking.end)} · ${booking.ref} · with ${booking.otherParty.firstName}`,
-      }))}
-    />
+    <div className="grid gap-5">
+      {bookings.length > TRIPS_PAGE && (
+        <Field
+          label="Find the trip"
+          description="Search by car, booking reference, the other person’s name or the month."
+        >
+          <Input
+            type="search"
+            leadingIcon={<Search />}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setShown(TRIPS_PAGE);
+            }}
+          />
+        </Field>
+      )}
+      {visible.length > 0 ? (
+        <ChoiceCards
+          legend="Which trip is it about?"
+          name="booking"
+          value=""
+          onChange={onChoose}
+          columns={1}
+          choices={visible.map((booking) => ({
+            value: booking.ref,
+            label: booking.vehicle.title,
+            description: `${formatTripSpan(booking.start, booking.end)} · ${booking.ref} · with ${booking.otherParty.firstName}`,
+          }))}
+        />
+      ) : (
+        <p role="status" className="text-sm text-muted">
+          No trips match “{search.trim()}”.
+        </p>
+      )}
+      {matching.length > shown && (
+        <Button
+          variant="secondary"
+          className="justify-self-start"
+          onClick={() => setShown((count) => count + TRIPS_PAGE)}
+        >
+          Show more trips ({matching.length - shown} more)
+        </Button>
+      )}
+      <p className="text-sm text-muted">
+        Can’t find the trip?{' '}
+        <Link to="/contact" className="link-underline font-medium text-primary">
+          Contact support
+        </Link>
+        .
+      </p>
+    </div>
   );
 }
 

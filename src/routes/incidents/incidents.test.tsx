@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Incident } from '@/api/types';
-import { booking } from '@/features/booking/test-fixtures';
+import { booking, summary } from '@/features/booking/test-fixtures';
 import { policiesFixture } from '@/features/content/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
@@ -137,6 +137,57 @@ describe('NewIncidentPage', () => {
       description: 'Flat battery at the lookout.',
       attachments: [],
     });
+  });
+});
+
+describe('NewIncidentPage trip choice', () => {
+  /** 15 finished trips as Guest, the oldest a car whose toll notice came weeks later. */
+  const finished = Array.from({ length: 15 }, (_, index) =>
+    summary({
+      id: `bk${index}`,
+      ref: `RV-OLD${String(index).padStart(3, '0')}`,
+      status: 'COMPLETED',
+      vehicle: {
+        slug: `car-${index}`,
+        title: index === 14 ? '2019 Mazda CX-5' : `2022 Toyota RAV4 no. ${index}`,
+      },
+      start: new Date(Date.UTC(2026, 8, 20 - index)).toISOString(),
+      end: new Date(Date.UTC(2026, 8, 21 - index)).toISOString(),
+    }),
+  );
+
+  it('lists every finished trip on request, and finds one by search', async () => {
+    mockRoutes((request) => {
+      if (request.method === 'POST' && request.path === '/auth/session') {
+        return { status: 200, body: { user: guestUser } };
+      }
+      if (request.method === 'GET' && request.path === '/bookings') {
+        const mine = request.query.get('role') === 'guest' && request.query.get('group') === 'completed';
+        return { status: 200, body: { bookings: mine ? finished : [] } };
+      }
+      return undefined;
+    });
+    const { router } = renderWithRouter(
+      [{ path: '/incidents/new', element: <NewIncidentPage /> }],
+      '/incidents/new?type=TOLL',
+    );
+
+    const choices = await screen.findByRole('group', { name: 'Which trip is it about?' });
+    expect(within(choices).getAllByRole('radio')).toHaveLength(12);
+    expect(screen.queryByRole('radio', { name: /2019 Mazda CX-5/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more trips (3 more)' }));
+    expect(screen.getAllByRole('radio')).toHaveLength(15);
+    expect(screen.queryByRole('button', { name: /Show more trips/ })).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Find the trip'), 'mazda');
+    expect(screen.getAllByRole('radio')).toHaveLength(1);
+    await userEvent.clear(screen.getByLabelText('Find the trip'));
+    await userEvent.type(screen.getByLabelText('Find the trip'), 'nothing like it');
+    expect(screen.getByText('No trips match “nothing like it”.')).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText('Find the trip'));
+    await userEvent.type(screen.getByLabelText('Find the trip'), 'rv-old014');
+    await userEvent.click(screen.getByRole('radio', { name: /2019 Mazda CX-5/ }));
+    expect(router.state.location.search).toBe('?booking=RV-OLD014&type=TOLL');
   });
 });
 

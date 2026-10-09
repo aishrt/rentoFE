@@ -28,10 +28,11 @@ import {
   VehicleDetailsSection,
 } from '@/features/admin/listings/vehicle-facts';
 
+/** Back to the list the car was opened from: the review queue, or a search of every car. */
 function QueueLink() {
   return (
-    <BackLink to="/admin/vehicles" className="mt-3">
-      Review queue
+    <BackLink to="/admin/vehicles" previous className="mt-3">
+      Vehicles
     </BackLink>
   );
 }

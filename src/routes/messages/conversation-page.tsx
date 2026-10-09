@@ -256,6 +256,8 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
             targetType={reporting.type}
             targetId={reporting.id}
             subject={reporting.type === 'USER' ? current.otherParty.firstName : 'this message'}
+            // Reporting the person from here keeps which conversation it was, for support to read.
+            bookingRef={reporting.type === 'USER' ? current.ref : undefined}
             onDone={() => setReporting(null)}
           />
         )}

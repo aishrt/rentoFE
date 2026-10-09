@@ -83,6 +83,19 @@ export const CANCEL_REASONS: { value: AdminCancelRequest['reason']; label: strin
   },
 ];
 
+/**
+ * A request, or a booking waiting for the Guest's verification, isn't paid yet: only a platform cancellation
+ * applies, and it releases the card authorisation (plan §8.2).
+ */
+export const PENDING_CANCEL_REASONS: typeof CANCEL_REASONS = [
+  {
+    value: 'PLATFORM',
+    label: 'Platform cancellation',
+    description:
+      'Rento Vroom cancels the request: the hold on the Guest’s card is released, and nobody pays a fee.',
+  },
+];
+
 /** The status edits staff can make (plan §8.2), with what each sets off. */
 export const STATUS_EDITS = {
   CONFIRMED: {
@@ -98,7 +111,7 @@ export const STATUS_EDITS = {
     button: 'Mark trip as completed',
     title: 'Mark the trip as completed?',
     description:
-      'The trip ends as if it was checked out in the app: we ask the Guest and Host for reviews, check the kilometres driven against the allowance, and count the trip for both of them.',
+      'The trip ends without a check-out record: we ask the Guest and Host for reviews and count the trip for both of them, but no readings are recorded, so extra kilometres can’t be charged. If the Host has sent their odometer and fuel reading, complete the trip with them under Handover instead.',
     done: 'Trip marked as completed',
   },
 } as const;

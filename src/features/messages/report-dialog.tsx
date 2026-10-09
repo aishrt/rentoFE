@@ -27,6 +27,8 @@ interface ReportDialogContentProps {
   targetId: string;
   /** "Kiri", "this message", "this review". */
   subject: string;
+  /** A person reported from a booking's conversation: that booking, so support can read it (plan §6.2). */
+  bookingRef?: string;
   onDone: () => void;
 }
 
@@ -34,7 +36,13 @@ interface ReportDialogContentProps {
  * Reporting a person, message, review or listing to Rento Vroom's support team (spec §13, §16). Render
  * inside a <Dialog>. Reports are reviewed by people, so it says what happens next.
  */
-export function ReportDialogContent({ targetType, targetId, subject, onDone }: ReportDialogContentProps) {
+export function ReportDialogContent({
+  targetType,
+  targetId,
+  subject,
+  bookingRef,
+  onDone,
+}: ReportDialogContentProps) {
   const report = useReport();
   const [reason, setReason] = useState<Reason | ''>('');
   const [note, setNote] = useState('');
@@ -46,7 +54,13 @@ export function ReportDialogContent({ targetType, targetId, subject, onDone }: R
       return;
     }
     report.mutate(
-      { targetType, targetId, reason, ...(note.trim() && { note: note.trim() }) },
+      {
+        targetType,
+        targetId,
+        reason,
+        ...(note.trim() && { note: note.trim() }),
+        ...(bookingRef && { bookingRef }),
+      },
       {
         onSuccess: () => {
           toast('Thanks for telling us', {

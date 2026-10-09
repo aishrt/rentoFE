@@ -1,4 +1,5 @@
-import { BadgeCheck, Star } from 'lucide-react';
+import { BadgeCheck, Star, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
 import type { PublicHost } from '@/api/types';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,8 @@ import { formatRating } from './vehicle-format';
 
 /**
  * The Host (spec §6: Host rating and trip history), with the trust signals plan §12.1 asks for at each
- * decision: identity verified, rating, completed trips and how reliably they answer requests.
+ * decision: identity verified, rating, completed trips and how reliably they answer requests, and a link to
+ * their profile and reviews.
  */
 export function HostCard({ host }: { host: PublicHost }) {
   const facts = [
@@ -69,6 +71,16 @@ export function HostCard({ host }: { host: PublicHost }) {
         </dl>
 
         {host.bio && <p className="mt-5 leading-relaxed text-ink/85">{host.bio}</p>}
+
+        {/* Their profile, with what guests and other hosts have said about them (members only). */}
+        <Link
+          to={`/members/${host.id}`}
+          viewTransition
+          className="link-underline mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary"
+        >
+          <UserRound aria-hidden="true" className="size-4" />
+          {host.firstName}’s profile and reviews
+        </Link>
       </div>
     </ListingSection>
   );

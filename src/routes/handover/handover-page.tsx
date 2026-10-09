@@ -1,6 +1,6 @@
 import { CarFront, CircleCheck, Clock, Flag, Gauge, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ConditionReport, Handover, InspectionStage } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { TripRoute } from '@/components/brand/patterns/trip-route';
@@ -24,7 +24,12 @@ import { ANGLE_LABELS, takenLabel } from '@/features/handover/angles';
 import { areaName } from '@/features/handover/car-areas';
 import { CarDiagram } from '@/features/handover/car-diagram';
 import { DamageEditor, type EditablePin } from '@/features/handover/damage-editor';
-import { useConfirmInspection, useFlagDamage, useHandover } from '@/features/handover/handover-api';
+import {
+  useConfirmInspection,
+  useFlagDamage,
+  useHandover,
+  type HandoverState,
+} from '@/features/handover/handover-api';
 import { PhotoCapture } from '@/features/handover/photo-capture';
 import { useInspectionPhotos } from '@/features/handover/use-inspection-photos';
 import { useReportIncident } from '@/features/incidents/incidents-api';
@@ -232,10 +237,17 @@ function ReportSection({
 }
 
 /**
- * After flagging: one tap opens a damage case with what's on the check-out record (its marks, notes and
- * photos), and goes to it. The API keeps to the damage-report window and takes only damage no case has yet.
+ * After flagging, or a check-out that recorded new damage: one tap opens a damage case with what's on the
+ * check-out record (its marks, notes and photos), and goes to it. The API keeps to the damage-report window
+ * and takes only damage no case has yet.
  */
-function DamageFlaggedContent({ bookingRef }: { bookingRef: string }) {
+function DamageFlaggedContent({
+  bookingRef,
+  title = 'New damage flagged',
+}: {
+  bookingRef: string;
+  title?: string;
+}) {
   const navigate = useNavigate();
   const report = useReportIncident();
   const open = () =>
@@ -250,10 +262,7 @@ function DamageFlaggedContent({ bookingRef }: { bookingRef: string }) {
     );
 
   return (
-    <DialogContent
-      title="New damage flagged"
-      description="It’s on the check-out record, where you can both see it."
-    >
+    <DialogContent title={title} description="It’s on the check-out record, where you can both see it.">
       <p className="text-ink/85">
         To claim for it or get help from support, open an incident with this damage. We’ll add the marks,
         notes and photos from the check-out record, so you don’t need to describe it again.
@@ -357,6 +366,18 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
 function HandoverView({ bookingRef }: { bookingRef: string }) {
   const handover = useHandover(bookingRef);
   const [flagging, setFlagging] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Straight after a check-out that recorded new damage: offer the case right away (spec §14).
+  const [offerCase, setOfferCase] = useState(
+    () => (location.state as HandoverState | null)?.checkOutDamage === true,
+  );
+  const closeOffer = (open: boolean) => {
+    if (open) return;
+    setOfferCase(false);
+    // Not offered again on a reload.
+    void navigate(location.pathname, { replace: true, state: null });
+  };
   if (handover.isError) {
     return (
       <Alert
@@ -373,6 +394,10 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
   const data = handover.data;
   const base = bookingPath(data);
   const km = data.kilometres;
+  const newCheckOutDamage = Boolean(
+    data.checkOut?.damagePins.some((pin) => pin.newDamage) ||
+    data.checkOut?.photos.some((photo) => photo.angle === 'DAMAGE'),
+  );
 
   return (
     <div className="grid gap-8">
@@ -466,6 +491,11 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
 
       <Dialog open={flagging} onOpenChange={setFlagging}>
         {flagging && <FlagDamageDialogContent handover={data} />}
+      </Dialog>
+      <Dialog open={offerCase && newCheckOutDamage} onOpenChange={closeOffer}>
+        {offerCase && newCheckOutDamage && (
+          <DamageFlaggedContent bookingRef={data.ref} title="Your check-out recorded new damage" />
+        )}
       </Dialog>
     </div>
   );

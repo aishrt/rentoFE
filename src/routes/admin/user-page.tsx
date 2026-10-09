@@ -338,12 +338,13 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
 
           {user.host && (
             <HostSection
+              userId={user.id}
               host={user.host}
               onWaive={user.host.feesOwedCents > 0 ? () => setDialog('waive') : undefined}
             />
           )}
 
-          <LicenceSection licence={user.licence} />
+          <LicenceSection user={user} />
 
           {isAdmin && isSupportMember && !user.closed && (
             <ReviewSection id="staff-access" title="Support team">

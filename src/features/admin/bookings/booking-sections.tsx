@@ -12,6 +12,7 @@ import {
 import { Link } from 'react-router';
 import type { AdminBookingDetail, AdminPayment, AdminPayout, Booking, LineItem } from '@/api/types';
 import { PayoutFailure, PayoutStatusBadge } from '@/features/admin/finance/payout-status';
+import { OpenCaseButton } from '@/features/admin/operations/open-case-dialog';
 import { EmailAddress } from '@/features/admin/ops/email-address';
 import {
   BOOKING_STATUS,
@@ -377,6 +378,8 @@ export function CasesCard({
           ))}
         </ul>
       )}
+      {/* A case the Guest or Host hasn't reported, such as a toll notice or damage found later (plan §3). */}
+      <OpenCaseButton bookingRef={bookingRef} className="mt-4" />
       <p className="mt-4 text-xs text-muted">
         Staff open a booking’s messages only from a report, incident or ticket about it. Each opening is
         recorded in the audit log.

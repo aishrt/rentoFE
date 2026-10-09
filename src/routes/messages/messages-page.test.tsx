@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Message, ThreadDetail } from '@/api/types';
+import { applyMessagingEvent } from '@/features/messages/message-keys';
 import { message, threadDetail, threadSummary } from '@/features/messages/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
@@ -19,11 +20,14 @@ function mockMessaging({
   thread = threadDetail(),
   messages = [message()],
   threadError,
+  sendError,
 }: {
   user?: typeof guestUser | typeof hostUser;
-  thread?: ThreadDetail;
+  /** A function to change the conversation the API returns during a test. */
+  thread?: ThreadDetail | (() => ThreadDetail);
   messages?: Message[];
   threadError?: { status: number; code: string };
+  sendError?: { status: number; code: string; message: string };
 } = {}) {
   const current = [...messages];
   return mockRoutes((request) => {
@@ -57,12 +61,18 @@ function mockMessaging({
       case 'GET /threads/RV-7K2Q9M':
         return threadError
           ? { status: threadError.status, body: { error: { code: threadError.code, message: 'Not here' } } }
-          : { status: 200, body: { thread } };
+          : { status: 200, body: { thread: typeof thread === 'function' ? thread() : thread } };
       case 'GET /threads/RV-7K2Q9M/messages':
         return { status: 200, body: { messages: current, hasMore: false } };
       case 'POST /threads/RV-7K2Q9M/read':
         return { status: 204 };
       case 'POST /threads/RV-7K2Q9M/messages': {
+        if (sendError) {
+          return {
+            status: sendError.status,
+            body: { error: { code: sendError.code, message: sendError.message } },
+          };
+        }
         const { body } = request.body as { body: string };
         const sent = message({ id: `m${current.length + 1}`, from: 'ME', sender: 'GUEST', body });
         current.push(sent);
@@ -176,12 +186,69 @@ describe('ConversationPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send report' }));
 
     await vi.waitFor(() =>
+      // With the conversation it came from, so support can read it.
       expect(sent.find((request) => request.path === '/reports')?.body).toEqual({
         targetType: 'USER',
         targetId: 'host-1',
         reason: 'SCAM',
+        bookingRef: 'RV-7K2Q9M',
       }),
     );
+  });
+
+  it('reports a message without a booking, as the message says which conversation it’s in', async () => {
+    const sent = mockMessaging();
+    render('/messages/RV-7K2Q9M');
+    const log = await screen.findByRole('log', { name: 'Messages with Hana' });
+    await userEvent.click(within(log).getByRole('button', { name: /Report/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Report this message' });
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Spam' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() =>
+      expect(sent.find((request) => request.path === '/reports')?.body).toEqual({
+        targetType: 'MESSAGE',
+        targetId: 'm1',
+        reason: 'SPAM',
+      }),
+    );
+  });
+
+  it('swaps the box for the reason when the conversation closed after it was opened', async () => {
+    let current = threadDetail();
+    mockMessaging({
+      thread: () => current,
+      sendError: { status: 409, code: 'THREAD_CLOSED', message: 'Messages can’t be sent here.' },
+    });
+    render('/messages/RV-7K2Q9M');
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Message Hana' }), 'Hello?');
+
+    // Hana blocked Kiri in the meantime.
+    current = threadDetail({ canSend: false, readOnlyReason: 'Hana isn’t taking messages.' });
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('Hana isn’t taking messages.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Message Hana' })).not.toBeInTheDocument();
+  });
+
+  it('updates when a booking update arrives live, such as the booking being confirmed', async () => {
+    let current = threadDetail({ bookingStatus: 'PENDING', contactsHidden: true });
+    const sent = mockMessaging({ thread: () => current });
+    const { queryClient } = render('/messages/RV-7K2Q9M');
+    expect(await screen.findByText('Contact details are hidden for now')).toBeInTheDocument();
+    const loads = () => sent.filter((request) => request.path === '/threads/RV-7K2Q9M/messages').length;
+    const before = loads();
+
+    current = threadDetail();
+    act(() => {
+      applyMessagingEvent(queryClient, 'message', {
+        ref: 'RV-7K2Q9M',
+        message: message({ id: 's2', from: 'SYSTEM', sender: 'SYSTEM', body: 'Booking confirmed.' }),
+      });
+    });
+    await vi.waitFor(() =>
+      expect(screen.queryByText('Contact details are hidden for now')).not.toBeInTheDocument(),
+    );
+    // The messages load again too, so contact details typed before show unmasked.
+    await vi.waitFor(() => expect(loads()).toBeGreaterThan(before));
   });
 
   it('explains there’s no conversation for a booking that hasn’t reached the host', async () => {

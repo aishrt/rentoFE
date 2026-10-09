@@ -130,6 +130,44 @@ describe('AdminModerationPage', () => {
     expect(lastQuery(fetchMock).get('status')).toBe('OPEN');
   });
 
+  it('opens the conversation a person was reported from, and only then', async () => {
+    const person: AdminReport = {
+      ...listingReport,
+      id: 'r4',
+      targetType: 'USER',
+      targetId: 'u5',
+      reason: 'SCAM',
+      preview: 'Mere Walker',
+    };
+    mockApi({
+      'GET /admin/moderation/reports': {
+        status: 200,
+        body: {
+          reports: [
+            { ...person, reporter: { id: 'u2', name: 'Kiri Ngata' }, bookingRef: 'RV-7K2M9Q' },
+            { ...person, id: 'r5' },
+          ],
+        },
+      },
+    });
+    render();
+
+    const fromThread = await card('Profile reported by Kiri Ngata');
+    expect(fromThread.getByRole('link', { name: 'Open the conversation' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2M9Q/thread?context=REPORT:r4',
+    );
+    expect(fromThread.getByRole('link', { name: 'Open their account' })).toHaveAttribute(
+      'href',
+      '/admin/users/u5',
+    );
+
+    // Reported from elsewhere: no conversation to open.
+    const elsewhere = await card('Profile reported by Tama Rua');
+    expect(elsewhere.queryByRole('link', { name: 'Open the conversation' })).not.toBeInTheDocument();
+    expect(elsewhere.getByRole('link', { name: 'Open their account' })).toBeInTheDocument();
+  });
+
   it('resolves a report with what was done', async () => {
     let sent: unknown;
     let resolved = false;

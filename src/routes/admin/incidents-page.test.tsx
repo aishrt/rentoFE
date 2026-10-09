@@ -40,6 +40,59 @@ const lateReturn: IncidentSummary = {
 const lastUrl = (fetchMock: ReturnType<typeof mockApi>) =>
   new URL(String((fetchMock.mock.calls.at(-1)?.[0] as Request).url));
 
+describe('AdminIncidentsPage: opening a case', () => {
+  it('opens a case on a booking by its reference, saying when there’s no such booking', async () => {
+    const sent: unknown[] = [];
+    mockApi({
+      'GET /admin/incidents': { status: 200, body: { incidents: [] } },
+      'POST /admin/incidents': (init) => {
+        const body = JSON.parse(String(init?.body)) as { bookingRef: string };
+        sent.push(body);
+        return body.bookingRef === 'RV-ZZZZZZ'
+          ? {
+              status: 404,
+              body: {
+                error: {
+                  code: 'NOT_FOUND',
+                  message: 'We couldn’t find that booking.',
+                  fields: { bookingRef: 'No booking has this reference' },
+                },
+              },
+            }
+          : { status: 201, body: { incident: { caseRef: 'IN-NEW123', bookingRef: body.bookingRef } } };
+      },
+    });
+    const { router } = renderWithRouter(
+      [
+        { path: '/admin/incidents', element: <AdminIncidentsPage /> },
+        { path: '/admin/incidents/:ref', element: <p>Case page</p> },
+      ],
+      '/admin/incidents',
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Open a case' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Open a case' }));
+    await userEvent.type(dialog.getByLabelText('Booking reference'), 'RV-12');
+    await userEvent.click(dialog.getByRole('button', { name: /^What happened/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Fine' }));
+    await userEvent.type(dialog.getByLabelText('Description'), 'Speed camera notice from NZ Police.');
+    await userEvent.click(dialog.getByRole('button', { name: 'Open the case' }));
+    expect(await dialog.findByText('Enter a booking reference like RV-7K2Q9M')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(dialog.getByLabelText('Booking reference'));
+    await userEvent.type(dialog.getByLabelText('Booking reference'), 'rv-zzzzzz');
+    await userEvent.click(dialog.getByRole('button', { name: 'Open the case' }));
+    expect(await dialog.findByText('No booking has this reference')).toBeInTheDocument();
+
+    await userEvent.clear(dialog.getByLabelText('Booking reference'));
+    await userEvent.type(dialog.getByLabelText('Booking reference'), 'RV-2M8P4T');
+    await userEvent.click(dialog.getByRole('button', { name: 'Open the case' }));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/admin/incidents/IN-NEW123'));
+    expect(sent.at(-1)).toMatchObject({ bookingRef: 'RV-2M8P4T', type: 'FINE', visibility: 'BOTH' });
+  });
+});
+
 describe('AdminIncidentsPage', () => {
   it('lists every open case by default, each linking to it', async () => {
     const fetchMock = mockApi({

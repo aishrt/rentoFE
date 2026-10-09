@@ -10,13 +10,16 @@ import { riskFlagLabel } from '@/features/admin/ops/admin-labels';
 import { EmailAddress } from '@/features/admin/ops/email-address';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
+import { DocumentMatch, LicenceNumber } from './licence-facts';
+import { englishFact } from './licence-format';
 import {
   documentTypeLabel,
-  englishProofLabel,
   licenceClassLabel,
   personName,
   verificationStatusLabel,
 } from './operations-labels';
+
+type LicenceFacts = NonNullable<VerificationQueueItem['licence']>;
 
 function Detail({ term, children, className }: { term: string; children: ReactNode; className?: string }) {
   return (
@@ -29,19 +32,16 @@ function Detail({ term, children, className }: { term: string; children: ReactNo
 
 const Missing = ({ children }: { children: ReactNode }) => <span className="text-muted">{children}</span>;
 
-/** The licence details to compare with their ID and date of birth. */
-function LicenceDetails({ licence }: { licence: NonNullable<VerificationQueueItem['licence']> }) {
+/** The licence details to compare with their ID and date of birth, with the full number on request. */
+function LicenceDetails({ licence, userId }: { licence: LicenceFacts; userId: string }) {
   const expired = licence.expiry < todayNz();
+  const english = englishFact(licence);
   return (
     <>
       <Detail term="Licence">{licenceClassLabel(licence.class)}</Detail>
       <Detail term="Issued in">{licence.country}</Detail>
-      <Detail term="Number ends in">
-        {licence.numberEnding ? (
-          <span className="font-medium tabular-nums">{licence.numberEnding}</span>
-        ) : (
-          <Missing>Not given</Missing>
-        )}
+      <Detail term="Licence number">
+        <LicenceNumber userId={userId} numberEnding={licence.numberEnding} />
       </Detail>
       <Detail term="Version">
         {licence.version ? (
@@ -59,9 +59,7 @@ function LicenceDetails({ licence }: { licence: NonNullable<VerificationQueueIte
           {expired && ' (expired)'}
         </span>
       </Detail>
-      {licence.englishProof && (
-        <Detail term="Not in English, with">{englishProofLabel(licence.englishProof)}</Detail>
-      )}
+      {english && <Detail term={english.term}>{english.value}</Detail>}
       <Detail term="Licence check">{verificationStatusLabel(licence.status)}</Detail>
     </>
   );
@@ -131,8 +129,18 @@ export function VerificationCard({ item, onApprove, onReject, className, style }
             )}
           </Detail>
           <Detail term="Identity check">{verificationStatusLabel(item.identity.status)}</Detail>
+          {item.identity.licenceNumberMatched !== undefined && (
+            <Detail term="Licence number on the ID">
+              <DocumentMatch matched={item.identity.licenceNumberMatched} />
+            </Detail>
+          )}
+          {item.identity.dobMatched !== undefined && (
+            <Detail term="Date of birth on the ID">
+              <DocumentMatch matched={item.identity.dobMatched} />
+            </Detail>
+          )}
           {item.licence ? (
-            <LicenceDetails licence={item.licence} />
+            <LicenceDetails licence={item.licence} userId={item.userId} />
           ) : (
             <Detail term="Licence">
               <Missing>Not added yet</Missing>

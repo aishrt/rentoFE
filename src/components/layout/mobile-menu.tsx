@@ -31,6 +31,7 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
         { label: 'Saved cars', to: '/saved' },
         ...(hosting ? [{ label: 'Hosting', to: '/host' }] : []),
         { label: 'Notifications', to: '/notifications' },
+        { label: 'Reviews', to: '/account/reviews' },
         { label: 'Account', to: '/account' },
       ]
     : [];

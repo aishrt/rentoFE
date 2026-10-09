@@ -25,7 +25,7 @@ import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { ANGLE_LABELS } from '@/features/handover/angles';
 import { DamageEditor, type EditablePin } from '@/features/handover/damage-editor';
-import { useHandover, useSubmitInspection } from '@/features/handover/handover-api';
+import { useHandover, useSubmitInspection, type HandoverState } from '@/features/handover/handover-api';
 import { PhotoCapture, PhotoStatusBadge } from '@/features/handover/photo-capture';
 import { useInspectionPhotos, type InspectionPhoto } from '@/features/handover/use-inspection-photos';
 
@@ -176,7 +176,12 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
           toast(stage === 'CHECK_IN' ? 'Check-in done: enjoy the trip' : 'Check-out done: thanks!', {
             description: 'The other party is asked to review the photos and confirm.',
           });
-          navigate(handoverPath(handover), { replace: true });
+          // New damage at check-out: the handover offers to open a case with it in one tap (spec §14).
+          const newDamage = stage === 'CHECK_OUT' && (pins.length > 0 || damagePhotos.length > 0);
+          navigate(handoverPath(handover), {
+            replace: true,
+            ...(newDamage && { state: { checkOutDamage: true } satisfies HandoverState }),
+          });
         },
       },
     );

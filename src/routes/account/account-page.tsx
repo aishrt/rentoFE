@@ -8,6 +8,7 @@ import {
   Mail,
   Settings,
   ShieldCheck,
+  Star,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -34,6 +35,12 @@ const SECTIONS: { to: string; title: string; description: string; icon: LucideIc
     description: 'Saved cards, payments, receipts and refunds.',
     icon: CreditCard,
   },
+  {
+    to: '/account/reviews',
+    title: 'Reviews',
+    description: 'Reviews to write, and what hosts and guests said.',
+    icon: Star,
+  },
   { to: '/notifications', title: 'Notifications', description: 'Everything we’ve told you.', icon: Bell },
   {
     to: '/account/support',
@@ -44,7 +51,7 @@ const SECTIONS: { to: string; title: string; description: string; icon: LucideIc
   {
     to: '/account/settings',
     title: 'Settings',
-    description: 'Email, mobile, password and your privacy.',
+    description: 'Your name, email, mobile, password and privacy.',
     icon: Settings,
   },
 ];

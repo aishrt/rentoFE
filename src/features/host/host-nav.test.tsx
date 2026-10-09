@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithRouter } from '@/test/utils';
 import { HostSubNav } from './host-nav';
@@ -8,8 +8,8 @@ afterEach(() => {
 });
 
 /**
- * jsdom has no layout: a phone-width tab row, 300 px wide, holding five 90 px tabs after 16 px of padding,
- * so the row scrolls 186 px (16 + 5 × 90 + 4 × 4 gaps + 16 − 300).
+ * jsdom has no layout: a phone-width tab row, 300 px wide, holding seven 90 px tabs after 16 px of padding,
+ * so the row scrolls 386 px (16 + 7 × 90 + 6 × 4 gaps + 16 − 300).
  */
 function phoneLayout() {
   let scrollLeft = 0;
@@ -28,11 +28,11 @@ function phoneLayout() {
     return isNav(this) ? 300 : 90;
   });
   vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) {
-    return isNav(this) ? 486 : 90;
+    return isNav(this) ? 686 : 90;
   });
   vi.spyOn(Element.prototype, 'scrollLeft', 'get').mockImplementation(() => scrollLeft);
   const set = vi.spyOn(Element.prototype, 'scrollLeft', 'set').mockImplementation((value: number) => {
-    scrollLeft = Math.min(Math.max(value, 0), 186);
+    scrollLeft = Math.min(Math.max(value, 0), 386);
   });
   return { set, scrollLeft: () => scrollLeft };
 }
@@ -44,10 +44,10 @@ describe('HostSubNav', () => {
     const layout = phoneLayout();
     render('/host/profile');
 
-    // Profile is the last tab, from 392 px to 482 px: the row scrolls to its end, and only the row.
+    // Profile is the last tab, from 580 px to 670 px: the row scrolls to its end, and only the row.
     expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
-    expect(layout.set).toHaveBeenCalledWith(482 + 40 - 300);
-    expect(layout.scrollLeft()).toBe(186);
+    expect(layout.set).toHaveBeenCalledWith(670 + 40 - 300);
+    expect(layout.scrollLeft()).toBe(386);
     const nav = screen.getByRole('navigation', { name: 'Hosting' });
     expect(nav).toHaveAttribute('data-more-start');
     expect(nav).not.toHaveAttribute('data-more-end');
@@ -62,5 +62,33 @@ describe('HostSubNav', () => {
     const nav = screen.getByRole('navigation', { name: 'Hosting' });
     expect(nav).not.toHaveAttribute('data-more-start');
     expect(nav).toHaveAttribute('data-more-end');
+  });
+
+  it('has the Host’s places in order, with Inbox and Reviews on the pages shared with Guests', () => {
+    render('/host');
+
+    const links = within(screen.getByRole('navigation', { name: 'Hosting' })).getAllByRole('link');
+    expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['Overview', '/host'],
+      ['Bookings', '/host/bookings'],
+      ['Calendar', '/host/calendar'],
+      ['Earnings', '/host/earnings'],
+      ['Inbox', '/messages?as=host'],
+      ['Reviews', '/account/reviews'],
+      ['Profile', '/host/profile'],
+    ]);
+  });
+
+  it.each([
+    ['/host/calendar', 'Calendar'],
+    ['/host/vehicles/v1/calendar', 'Calendar'],
+    ['/host/vehicles/v1/photos', 'Overview'],
+    ['/host/vehicles/v1/maintenance', 'Overview'],
+    ['/host/bookings/RV-7K2Q9M', 'Bookings'],
+  ])('marks the tab %s belongs to', (path, tab) => {
+    render(path);
+
+    expect(screen.getByRole('link', { name: tab })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getAllByRole('link').filter((link) => link.hasAttribute('aria-current'))).toHaveLength(1);
   });
 });

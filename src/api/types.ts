@@ -75,6 +75,9 @@ export type Faq = Schemas['Faq'];
 export type PublicPolicies = Schemas['PublicPolicies'];
 export type CancellationTier = PublicPolicies['cancellation']['tiers'][number];
 export type FeaturedReviews = Schemas['FeaturedReviews'];
+/** The homepage's headline and supporting line, and the footer's links (plan §12.6, `cmsBlocks`). */
+export type HomeHero = Schemas['HomeHero'];
+export type SiteFooter = Schemas['SiteFooter'];
 export type ContactRequest = Schemas['ContactRequest'];
 /** The ids of the cars the user saved with the heart. */
 export type Favourites = Schemas['Favourites'];
@@ -106,6 +109,9 @@ export type Notifications = Schemas['Notifications'];
 export type HostApplication = Schemas['HostApplication'];
 export type ReviewQueueItem = Schemas['ReviewQueueItem'];
 export type AdminVehicle = Schemas['AdminVehicle'];
+/** Every car, for staff to search (plan §12.6). */
+export type AdminVehicleRow = Schemas['AdminVehicleRow'];
+export type AdminVehicles = Schemas['AdminVehicles'];
 
 // Booking flow (Phase 2).
 export type CreateBookingRequest = Schemas['CreateBookingRequest'];
@@ -162,6 +168,8 @@ export type InspectionAngle = InspectionRequest['photos'][number]['angle'];
 export type InspectionStage = InspectionRequest['stage'];
 export type DamagePinInput = Schemas['DamagePinInput'];
 export type FlagDamageRequest = Schemas['FlagDamageRequest'];
+/** Support completes a trip whose check-out is missing, with the Host's readings (plan §8.2). */
+export type StaffCompletionRequest = Schemas['StaffCompletionRequest'];
 
 // Host payouts and earnings (Phase 3).
 export type Earnings = Schemas['Earnings'];
@@ -207,6 +215,7 @@ export type AdminBookingDetail = Schemas['AdminBookingDetail'];
 export type AdminStatusEditRequest = Schemas['AdminStatusEditRequest'];
 export type AdminRefundRequest = Schemas['AdminRefundRequest'];
 export type AdminCancelRequest = Schemas['AdminCancelRequest'];
+export type AdminCancellationPreview = Schemas['AdminCancellationPreview'];
 export type AdminVehicleSuspension = Schemas['AdminVehicleSuspension'];
 export type AdminPayment = Schemas['AdminPayment'];
 export type AdminPayments = Schemas['AdminPayments'];
@@ -220,6 +229,8 @@ export type AdminReport = Schemas['AdminReport'];
 export type ModerationReview = Schemas['ModerationReviews']['reviews'][number];
 export type VerificationQueueItem = Schemas['VerificationQueueItem'];
 export type StaffIncidentUpdateRequest = Schemas['StaffIncidentUpdateRequest'];
+/** A case support opens themselves, for both parties, one of them or the team only. */
+export type StaffNewIncidentRequest = Schemas['StaffNewIncidentRequest'];
 export type IncidentChargeRequest = Schemas['IncidentChargeRequest'];
 export type IncidentAssignee = Schemas['IncidentAssignees']['assignees'][number];
 export type IncidentAssigneeRequest = Schemas['IncidentAssigneeRequest'];
@@ -228,6 +239,11 @@ export type AdminFeaturedVehicles = Schemas['AdminFeaturedVehicles'];
 export type LegalPageEdit = Schemas['LegalPageEdit'];
 export type AdminDestination = Schemas['AdminDestination'];
 export type DestinationEdit = Schemas['DestinationEdit'];
+export type DestinationCreate = Schemas['DestinationCreate'];
+export type AdminHomeHero = Schemas['AdminHomeHero'];
+export type AdminSiteFooter = Schemas['AdminSiteFooter'];
+export type AdminReviewChoice = Schemas['AdminReviewChoice'];
+export type AdminFeaturedReviews = Schemas['AdminFeaturedReviews'];
 export type AdminFaq = Schemas['AdminFaq'];
 export type FaqInput = Schemas['FaqInput'];
 export type AdminHelpArticle = Schemas['AdminHelpArticle'];

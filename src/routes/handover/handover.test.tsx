@@ -196,4 +196,51 @@ describe('HandoverPage', () => {
       attachments: [],
     });
   });
+
+  it('offers the case straight after a check-out that recorded new damage', async () => {
+    const sent = mockHandover(() =>
+      handover({
+        bookingStatus: 'COMPLETED',
+        checkIn: report(),
+        checkOut: report({
+          stage: 'CHECK_OUT',
+          submittedBy: 'GUEST',
+          damagePins: [{ id: 'p2', x: 80, y: 62, note: 'Dent', newDamage: true, flaggedBy: 'GUEST' }],
+        }),
+        actions: { ...handover().actions, checkIn: false, flagDamage: true },
+      }),
+    );
+    // The check-out page goes here with this state once it's recorded.
+    const { router } = render('/trips/RV-7K2Q9M/check-in');
+    await router.navigate('/trips/RV-7K2Q9M/handover', { state: { checkOutDamage: true } });
+
+    const offer = within(await screen.findByRole('dialog', { name: 'Your check-out recorded new damage' }));
+    await userEvent.click(offer.getByRole('button', { name: 'Open an incident with this damage' }));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/incidents/IN-4F7K2Q'));
+    expect(sent.find((request) => request.path === '/incidents')?.body).toMatchObject({
+      type: 'DAMAGE',
+      fromCheckOutDamage: true,
+    });
+  });
+
+  it('doesn’t offer it again once it’s turned down', async () => {
+    mockHandover(() =>
+      handover({
+        bookingStatus: 'COMPLETED',
+        checkIn: report(),
+        checkOut: report({
+          stage: 'CHECK_OUT',
+          submittedBy: 'GUEST',
+          damagePins: [{ id: 'p2', x: 80, y: 62, note: 'Dent', newDamage: true, flaggedBy: 'GUEST' }],
+        }),
+        actions: { ...handover().actions, checkIn: false, flagDamage: true },
+      }),
+    );
+    const { router } = render('/trips/RV-7K2Q9M/check-in');
+    await router.navigate('/trips/RV-7K2Q9M/handover', { state: { checkOutDamage: true } });
+    const offer = within(await screen.findByRole('dialog', { name: 'Your check-out recorded new damage' }));
+    await userEvent.click(offer.getByRole('button', { name: 'Not now' }));
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(router.state.location.state).toBeNull();
+  });
 });

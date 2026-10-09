@@ -116,7 +116,8 @@ export function usePlatformReport(range: DateRange) {
   });
 }
 
-export type ReportExport = 'bookings' | 'payments' | 'refunds' | 'payouts' | 'cancellations' | 'gst';
+export type ReportExport =
+  'bookings' | 'payments' | 'refunds' | 'payouts' | 'cancellations' | 'gst' | 'revenue';
 
 /** The CSV files an admin can download, for the accountant or a closer look in a spreadsheet. */
 export const REPORT_EXPORTS: readonly { type: ReportExport; label: string; description: string }[] = [
@@ -125,7 +126,16 @@ export const REPORT_EXPORTS: readonly { type: ReportExport; label: string; descr
   { type: 'refunds', label: 'Refunds', description: 'Refunds sent on these dates' },
   { type: 'payouts', label: 'Payouts', description: 'Host payouts due on these dates' },
   { type: 'cancellations', label: 'Cancellations', description: 'Bookings cancelled on these dates' },
-  { type: 'gst', label: 'GST', description: 'GST by month, on trips starting on these dates' },
+  {
+    type: 'gst',
+    label: 'GST',
+    description: 'By month: trips, extra charges and fees kept, less refunds',
+  },
+  {
+    type: 'revenue',
+    label: 'Revenue and fees',
+    description: 'By day: booking revenue, each kind of fee, and refunds',
+  },
 ];
 
 /** Downloads a report as a CSV file named rento-vroom-<type>-<from>-to-<to>.csv. */

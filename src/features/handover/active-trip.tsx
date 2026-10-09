@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   CarFront,
   LifeBuoy,
   MapPin,
@@ -23,12 +24,59 @@ const HOUR_MS = 60 * 60 * 1000;
 const directionsUrl = (address: string) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 
+/** Opens the booking's conversation with the other party. */
+export function MessageButton({ tripRef, name }: { tripRef: string; name: string }) {
+  return (
+    <Button asChild variant="secondary">
+      <Link to={`/messages/${tripRef}`}>
+        <MessagesSquare aria-hidden="true" />
+        Message {name}
+      </Link>
+    </Button>
+  );
+}
+
+/** Reports damage, a breakdown, a no-show or anything else that went wrong on the booking (spec §15). */
+export function ReportIncidentButton({ tripRef }: { tripRef: string }) {
+  return (
+    <Button asChild variant="secondary">
+      <Link to={`/incidents/new?booking=${tripRef}`}>
+        <TriangleAlert aria-hidden="true" />
+        Report an incident
+      </Link>
+    </Button>
+  );
+}
+
+/** Opens the booking's own page, from the top of Trips or Hosting. */
+export function OpenTripButton({ to, label }: { to: string; label: string }) {
+  return (
+    <Button asChild variant="secondary">
+      <Link to={to} viewTransition>
+        {label}
+        <ArrowRight aria-hidden="true" className="nudge-right" />
+      </Link>
+    </Button>
+  );
+}
+
+interface ActiveTripPanelProps {
+  booking: Booking;
+  /** The booking's page: `/trips/:ref` for the Guest, `/host/bookings/:ref` for the Host. */
+  base: string;
+  /**
+   * Away from the booking's page, at the top of Trips or the Host's Overview (plan §12.6): it names the car
+   * and links to the booking.
+   */
+  standalone?: boolean;
+}
+
 /**
  * The active trip (spec §28, "use vehicle"; plan §12.6): from check-in to check-out, everything needed on the
  * road. The return time and place with directions, message and call, the protection and its excess, reporting
  * an incident and emergency help, and Start check-out as the return time nears.
  */
-export function ActiveTripPanel({ booking, base }: { booking: Booking; base: string }) {
+export function ActiveTripPanel({ booking, base, standalone = false }: ActiveTripPanelProps) {
   const now = useNow();
   const policies = usePolicies();
   // The protection plan's own roadside number when the insurer gives one, else the platform-wide one.
@@ -51,6 +99,11 @@ export function ActiveTripPanel({ booking, base }: { booking: Booking; base: str
             <h2 className="mt-1 text-lg font-semibold text-ink">
               {guest ? 'Return' : `${other.firstName} returns it`} by {formatNzDateTime(booking.end)}
             </h2>
+            {standalone && (
+              <p className="mt-1 text-sm font-medium text-ink">
+                {booking.vehicle.title} <span className="font-normal text-muted">· {booking.ref}</span>
+              </p>
+            )}
             <p className="mt-1 flex items-start gap-1.5 text-sm text-ink/80">
               <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" />
               {place}
@@ -65,6 +118,7 @@ export function ActiveTripPanel({ booking, base }: { booking: Booking; base: str
       </div>
 
       <div className="flex flex-wrap gap-3">
+        {standalone && <OpenTripButton to={base} label={guest ? 'Open trip' : 'Open booking'} />}
         {guest && booking.dropoff.address && (
           <Button asChild variant="secondary">
             <a href={directionsUrl(booking.dropoff.address)} target="_blank" rel="noreferrer">
@@ -73,12 +127,7 @@ export function ActiveTripPanel({ booking, base }: { booking: Booking; base: str
             </a>
           </Button>
         )}
-        <Button asChild variant="secondary">
-          <Link to={`/messages/${booking.ref}`}>
-            <MessagesSquare aria-hidden="true" />
-            Message {other.firstName}
-          </Link>
-        </Button>
+        <MessageButton tripRef={booking.ref} name={other.firstName} />
         {other.phone && (
           <Button asChild variant="secondary">
             <a href={`tel:${other.phone}`}>
@@ -87,12 +136,7 @@ export function ActiveTripPanel({ booking, base }: { booking: Booking; base: str
             </a>
           </Button>
         )}
-        <Button asChild variant="secondary">
-          <Link to={`/incidents/new?booking=${booking.ref}`}>
-            <TriangleAlert aria-hidden="true" />
-            Report an incident
-          </Link>
-        </Button>
+        <ReportIncidentButton tripRef={booking.ref} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

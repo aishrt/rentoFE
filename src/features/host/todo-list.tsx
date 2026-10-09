@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { TodoItem } from '@/api/types';
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/cn';
@@ -30,7 +32,8 @@ const ICONS: Record<TodoItem['kind'], LucideIcon> = {
 
 /**
  * The Host's to-do list (spec §9): payout setup, requests, check-ins, handovers to confirm, documents and
- * Road User Charges running out, maintenance and listings to update. Nothing to do, nothing shown.
+ * Road User Charges running out, maintenance and listings to update. Nothing to do, nothing shown; a list that
+ * didn't load says so, with a way to try again.
  */
 export function HostTodoList() {
   const todo = useHostTodo();
@@ -41,6 +44,23 @@ export function HostTodoList() {
         <Skeleton className="h-12" />
         <Skeleton className="h-12" />
       </Card>
+    );
+  }
+  // A list already shown stays up if a later refresh fails.
+  if (todo.isError && !todo.data) {
+    return (
+      <Alert
+        variant="danger"
+        role="alert"
+        title="We couldn’t load your to-do list"
+        action={
+          <Button variant="secondary" size="sm" loading={todo.isFetching} onClick={() => void todo.refetch()}>
+            Try again
+          </Button>
+        }
+      >
+        {todo.error.message}
+      </Alert>
     );
   }
   if (!todo.data || todo.data.length === 0) return null;

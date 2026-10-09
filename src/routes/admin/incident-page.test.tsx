@@ -77,11 +77,17 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
     },
   ],
   canReply: true,
+  nextStatuses: ['AWAITING_RESPONSE', 'RESOLVED', 'CLOSED'],
   extraCharges: [],
   ...overrides,
 });
 
-const resolved = (overrides: Partial<Incident> = {}) => incident({ status: 'RESOLVED', ...overrides });
+const resolved = (overrides: Partial<Incident> = {}) =>
+  incident({
+    status: 'RESOLVED',
+    nextStatuses: ['INVESTIGATING', 'AWAITING_RESPONSE', 'CLOSED'],
+    ...overrides,
+  });
 
 // Who a case can be handed to; the signed-in staff member is Aroha.
 const team = {
@@ -284,6 +290,51 @@ describe('AdminIncidentPage', () => {
 
     expect(await form.findByText('Write an update, change the status or take the case')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it('offers only the statuses the case can move to: reopening a resolved one, never back to Open', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { incident: incident() } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByText('Reopening holds the booking’s unpaid payouts again.')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: /^Status/ }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'No change (Resolved)',
+      'Reopen: investigating',
+      'Reopen: waiting on them',
+      'Closed',
+    ]);
+    await userEvent.click(screen.getByRole('option', { name: 'Reopen: investigating' }));
+    await userEvent.type(form.getByLabelText('Update'), 'The Guest disputes the cleaning charge.');
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toMatchObject({ status: 'INVESTIGATING' });
+  });
+
+  it('keeps a closed case’s status as it is', async () => {
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': {
+        status: 200,
+        body: { incident: incident({ status: 'CLOSED', canReply: true, nextStatuses: [] }) },
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByRole('button', { name: /^Status/ })).toBeDisabled();
+    expect(form.getByText('A closed case is final. Open a new case for anything new.')).toBeInTheDocument();
   });
 
   it('charges the Guest from a resolved case, in cents', async () => {

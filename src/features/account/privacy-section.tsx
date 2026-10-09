@@ -147,6 +147,20 @@ function RequestForm({ kind, onDone }: { kind: Kind; onDone: () => void }) {
   );
 }
 
+/** One privacy request's dialog. Personal details opens it too, to correct a name that must match the ID. */
+export function PrivacyRequestDialog({ kind, onClose }: { kind: Kind | null; onClose: () => void }) {
+  const copy = kind ? COPY[kind] : null;
+  return (
+    <Dialog open={kind !== null} onOpenChange={(next) => !next && onClose()}>
+      {kind && copy && (
+        <DialogContent title={copy.title} description={copy.description}>
+          <RequestForm key={kind} kind={kind} onDone={onClose} />
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+}
+
 /**
  * Privacy (NZ Privacy Act 2020, plan §8.2 and §14): a copy of the user's information, a correction, or closing
  * the account. Each goes to the support team as a request, answered by email and shown in Help and support.
@@ -154,7 +168,6 @@ function RequestForm({ kind, onDone }: { kind: Kind; onDone: () => void }) {
  */
 export function PrivacySection() {
   const [open, setOpen] = useState<Kind | null>(null);
-  const copy = open ? COPY[open] : null;
 
   return (
     <SettingsSection
@@ -188,13 +201,7 @@ export function PrivacySection() {
           .
         </span>
       </p>
-      <Dialog open={open !== null} onOpenChange={(next) => !next && setOpen(null)}>
-        {open && copy && (
-          <DialogContent title={copy.title} description={copy.description}>
-            <RequestForm key={open} kind={open} onDone={() => setOpen(null)} />
-          </DialogContent>
-        )}
-      </Dialog>
+      <PrivacyRequestDialog kind={open} onClose={() => setOpen(null)} />
     </SettingsSection>
   );
 }

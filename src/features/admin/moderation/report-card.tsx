@@ -13,15 +13,20 @@ import { REPORT_STATUS, REPORT_TARGET, reportReasonLabel, reviewStateLabel } fro
 
 const linkClasses = 'link-underline inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary';
 
+/** The booking's conversation, opened from this report (plan §6.2: each opening is in the audit log). */
+function ConversationLink({ report, bookingRef }: { report: AdminReport; bookingRef: string }) {
+  return (
+    <Link to={threadPath(bookingRef, 'REPORT', report.id)} className={linkClasses}>
+      <MessagesSquare aria-hidden="true" className="size-4" />
+      Open the conversation
+    </Link>
+  );
+}
+
 /** Where to look at what was reported, in context. */
 function contextLink(report: AdminReport): ReactNode {
   if (report.targetType === 'MESSAGE' && report.bookingRef) {
-    return (
-      <Link to={threadPath(report.bookingRef, 'REPORT', report.id)} className={linkClasses}>
-        <MessagesSquare aria-hidden="true" className="size-4" />
-        Open the conversation
-      </Link>
-    );
+    return <ConversationLink report={report} bookingRef={report.bookingRef} />;
   }
   if (report.targetType === 'VEHICLE') {
     return (
@@ -32,11 +37,19 @@ function contextLink(report: AdminReport): ReactNode {
     );
   }
   if (report.targetType === 'USER') {
-    return (
+    const account = (
       <Link to={`/admin/users/${report.targetId}`} className={linkClasses}>
         <ArrowUpRight aria-hidden="true" className="size-4" />
         Open their account
       </Link>
+    );
+    // Reported from a booking's conversation: that conversation too.
+    if (!report.bookingRef) return account;
+    return (
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <ConversationLink report={report} bookingRef={report.bookingRef} />
+        {account}
+      </div>
     );
   }
   return null;

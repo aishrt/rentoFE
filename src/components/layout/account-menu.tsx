@@ -8,6 +8,7 @@ import {
   LogOut,
   Luggage,
   MessagesSquare,
+  Star,
   UserRound,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -92,6 +93,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <Link to="/notifications" viewTransition>
               <Bell aria-hidden="true" />
               Notifications
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/account/reviews" viewTransition>
+              <Star aria-hidden="true" />
+              Reviews
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

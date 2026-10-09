@@ -1,11 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, SendHorizontal, X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { controlClasses } from '@/components/ui/control-styles';
 import { contentTypeOf, uploadFile, uploadProblem } from '@/features/host/upload';
 import { cn } from '@/lib/cn';
+import { threadQueryKey } from './message-keys';
 import { useSendMessage } from './messages-api';
 
 /** Up to 6 photos in one message, as the API allows. */
@@ -33,6 +36,7 @@ const enterSends = () => typeof window !== 'undefined' && window.matchMedia('(po
  */
 export function Composer({ bookingRef, otherName }: { bookingRef: string; otherName: string }) {
   const send = useSendMessage(bookingRef);
+  const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
@@ -112,6 +116,13 @@ export function Composer({ bookingRef, otherName }: { bookingRef: string; otherN
           photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
           setPhotos([]);
           textInput.current?.focus();
+        },
+        onError: (error) => {
+          // The conversation closed, or one of them blocked the other, since it was opened: refresh it, so
+          // the box gives way to the reason.
+          if (error instanceof ApiError && error.code === 'THREAD_CLOSED') {
+            void queryClient.invalidateQueries({ queryKey: threadQueryKey(bookingRef) });
+          }
         },
       },
     );

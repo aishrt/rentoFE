@@ -382,13 +382,13 @@ describe('CheckoutPage: payment', () => {
     await continueToVerification();
 
     // Said before anything is agreed to.
-    const notice = await screen.findByText('We’re still checking your identity');
+    const notice = await screen.findByText('We’re still checking your details');
     expect(notice.closest('[role="status"]')).toHaveTextContent(
       /Your card is authorised, not charged.*confirm the booking as soon as the check is approved, usually within 24 hours/,
     );
     expect(
       screen.getAllByText(
-        /Your card is authorised for NZ\$1,050\.80 now and charged only once your identity check is approved\./,
+        /Your card is authorised for NZ\$1,050\.80 now and charged only once our check of your details is approved\./,
       ).length,
     ).toBeGreaterThan(0);
 
@@ -400,6 +400,34 @@ describe('CheckoutPage: payment', () => {
     expect(await screen.findByText('Booking held')).toBeInTheDocument();
     expect(await screen.findByText('Trip page')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/trips/RV-7K2Q9M');
+  });
+
+  it('holds an Instant Book while support checks the Guest’s licence by hand', async () => {
+    mockCheckoutApi({
+      readiness: () =>
+        readiness({
+          identityStatus: 'APPROVED',
+          licenceInReview: true,
+          licence: { ...readiness().licence!, status: 'PENDING' },
+        }),
+      payment: () => ({
+        status: 200,
+        body: paymentSession({ captureMethod: 'manual', verificationInReview: true }),
+      }),
+    });
+    renderCheckout();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Confirm and pay' })).toBeInTheDocument();
+    await continueToVerification();
+
+    // Told before paying that it's held as a request, and charged only once the licence is approved.
+    expect(await screen.findByText('We’re still checking your details')).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        /Your card is authorised for NZ\$1,050\.80 now and charged only once our check of your details is approved\./,
+      ).length,
+    ).toBeGreaterThan(0);
+    await userEvent.click(await screen.findByRole('checkbox', { name: /I agree to the Guest Agreement/ }));
+    expect(await screen.findByRole('button', { name: 'Confirm booking' })).toBeInTheDocument();
   });
 
   it('shows why a payment failed and keeps the dates held', async () => {

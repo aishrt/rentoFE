@@ -62,6 +62,7 @@ import { PayBooking, type PaidBooking } from '@/features/booking/pay-booking';
 import { CancellationPolicy } from '@/features/booking/trip-policies';
 import { useNow } from '@/features/booking/use-time-left';
 import { ActiveTripPanel } from '@/features/handover/active-trip';
+import { ReportIncidentLink } from '@/features/incidents/report-incident-link';
 import { HandoverCard } from '@/features/handover/handover-card';
 import { cn } from '@/lib/cn';
 
@@ -158,8 +159,8 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
         return (
           <Banner tone="info" icon={ShieldCheck} title="We’re checking your details">
             <p>
-              Your identity check needs a closer look from our team. The dates are held for you, and we’ll
-              confirm your booking as soon as it’s approved
+              Your ID or driver licence needs a closer look from our team. The dates are held for you, and
+              we’ll confirm your booking as soon as it’s approved
               {alsoHost ? ` and ${host} accepts` : ''}.
               {booking.hostAccepted ? ` ${host} has already accepted.` : ''} Your card is authorised for NZ
               {formatNzd(booking.price.totalCents)} and charged only then.
@@ -222,9 +223,9 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
         <Banner tone="danger" icon={Hourglass} title="This booking expired">
           <p>
             {booking.verificationReview === 'REJECTED'
-              ? 'We weren’t able to verify your identity, so your card authorisation was released. Nothing was charged.'
+              ? 'We weren’t able to verify your identity or driver licence, so your card authorisation was released. Nothing was charged.'
               : booking.verificationReview === 'PENDING'
-                ? 'We couldn’t finish your identity check within 24 hours, so your card authorisation was released. Nothing was charged.'
+                ? 'We couldn’t finish checking your ID and licence within 24 hours, so your card authorisation was released. Nothing was charged.'
                 : booking.payment?.status === 'CANCELLED'
                   ? `${host} didn’t answer within 24 hours, so your card authorisation was released. Nothing was charged.`
                   : 'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.'}
@@ -336,7 +337,7 @@ function Trip({ tripRef }: { tripRef: string }) {
     const held = updated.verificationReview === 'PENDING';
     toast(held ? 'Your booking is held' : updated.status === 'PENDING' ? 'Request sent' : 'You’re booked', {
       description: held
-        ? 'We’re finishing your identity check. You’re only charged once it’s approved.'
+        ? 'We’re finishing the check of your details. You’re only charged once it’s approved.'
         : updated.status === 'PENDING'
           ? `${booking.host.firstName} has 24 hours to answer.`
           : `Your trip in the ${booking.vehicle.title} is confirmed.`,
@@ -446,6 +447,7 @@ function Trip({ tripRef }: { tripRef: string }) {
                 Release these dates
               </Button>
             )}
+            <ReportIncidentLink booking={booking} />
             <SupportLink bookingRef={booking.ref} />
           </Card>
         </div>

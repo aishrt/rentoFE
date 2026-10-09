@@ -17,6 +17,7 @@ import {
   TripCard,
 } from '@/features/admin/bookings/booking-sections';
 import { useAdminBooking } from '@/features/admin/bookings/bookings-api';
+import { HandoverCard } from '@/features/admin/bookings/handover-card';
 import { BOOKING_STATUS } from '@/features/admin/ops/admin-labels';
 import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 import { LoadError } from '@/features/admin/ops/query-feedback';
@@ -101,6 +102,7 @@ function AdminBooking({ bookingRef }: { bookingRef: string }) {
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="grid min-w-0 gap-6">
           <TripCard booking={booking} />
+          <HandoverCard booking={booking} bookingRef={bookingRef} />
           <PaymentsCard payments={detail.data.payments} refundableCents={detail.data.refundableCents} />
           <PayoutsCard payouts={detail.data.payouts} />
           <ExtraChargesCard charges={detail.data.extraCharges} />
@@ -120,9 +122,10 @@ function AdminBooking({ bookingRef }: { bookingRef: string }) {
 }
 
 /**
- * One booking's whole record for staff (plan §12.6): the trip and its price, the Guest and Host, the status
- * history, payments with their refunds, payouts, extra charges, and its incidents and tickets, with the
- * status edit, refunds and cancellation (plan §8.2).
+ * One booking's whole record for staff (plan §12.6): the trip and its price, the handover, the Guest and
+ * Host, the status history, payments with their refunds, payouts, extra charges, and its incidents and
+ * tickets, with the status edit, refunds, cancellation and completing a trip with a missing check-out
+ * (plan §8.2).
  */
 export function AdminBookingPage() {
   const { ref = '' } = useParams();

@@ -2,8 +2,10 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicleSummary } from '@/api/types';
-import { readiness } from '@/features/booking/test-fixtures';
+import { confirmedBooking, readiness, summary as bookingSummary } from '@/features/booking/test-fixtures';
+import { handover } from '@/features/handover/test-fixtures';
 import { hostUser } from '@/features/host/host-fixtures';
+import { policies } from '@/features/vehicles/test-fixtures';
 import { mockApi, renderWithRouter } from '@/test/utils';
 import { HostHomePage } from './host-home-page';
 
@@ -167,6 +169,7 @@ describe('HostHomePage', () => {
     mockApi({
       'POST /auth/session': { status: 200, body: { user: { ...hostUser, hostStatus: 'APPROVED' } } },
       'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
+      'GET /bookings': { status: 200, body: { bookings: [] } },
       'GET /host/todo': {
         status: 200,
         body: {
@@ -197,5 +200,65 @@ describe('HostHomePage', () => {
       'href',
       '/host/vehicles/v1/maintenance',
     );
+    expect(screen.queryByRole('region', { name: 'Trips under way' })).not.toBeInTheDocument();
+  });
+
+  it('puts the trips under way at the top: one on the road, and one to check in', async () => {
+    const HOUR = 3_600_000;
+    const end = new Date(Date.now() + 26 * HOUR).toISOString();
+    const kiri = { firstName: 'Kiri' };
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: { ...hostUser, hostStatus: 'APPROVED' } } },
+      'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
+      'GET /host/todo': { status: 200, body: { items: [] } },
+      'GET /policies': { status: 200, body: policies },
+      'GET /bookings': {
+        status: 200,
+        body: {
+          bookings: [
+            bookingSummary({ id: 'bk1', ref: 'RV-ONROAD', status: 'ACTIVE', otherParty: kiri, end }),
+            bookingSummary({
+              id: 'bk2',
+              ref: 'RV-STARTED',
+              otherParty: kiri,
+              start: new Date(Date.now() - HOUR).toISOString(),
+            }),
+          ],
+        },
+      },
+      'GET /bookings/RV-ONROAD': {
+        status: 200,
+        body: {
+          booking: confirmedBooking({
+            ref: 'RV-ONROAD',
+            status: 'ACTIVE',
+            role: 'HOST',
+            end,
+            guest: { ...confirmedBooking().guest, phone: '+64219876543' },
+          }),
+        },
+      },
+      'GET /bookings/RV-STARTED/inspections': {
+        status: 200,
+        body: { handover: handover({ ref: 'RV-STARTED', role: 'HOST' }) },
+      },
+    });
+    render();
+
+    const now = within(await screen.findByRole('region', { name: 'Trips under way' }));
+    expect(await now.findByRole('heading', { name: /^Kiri returns it by/ })).toBeInTheDocument();
+    expect(now.getByRole('link', { name: 'Call Kiri' })).toHaveAttribute('href', 'tel:+64219876543');
+    // A day from the return time: no check-out yet.
+    expect(now.queryByRole('link', { name: 'Start check-out' })).not.toBeInTheDocument();
+
+    expect(now.getByRole('heading', { name: 'Check in with Kiri' })).toBeInTheDocument();
+    expect(await now.findByRole('link', { name: 'Start check-in' })).toHaveAttribute(
+      'href',
+      '/host/bookings/RV-STARTED/check-in',
+    );
+    expect(
+      now.getAllByRole('link', { name: 'Open booking' }).map((link) => link.getAttribute('href')),
+    ).toEqual(['/host/bookings/RV-ONROAD', '/host/bookings/RV-STARTED']);
+    expect(now.getAllByRole('link', { name: 'Message Kiri' })).toHaveLength(2);
   });
 });

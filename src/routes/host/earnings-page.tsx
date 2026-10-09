@@ -118,8 +118,18 @@ function PayoutSetup({ account }: { account: PayoutAccount }) {
   );
 }
 
+/** A deduction's line, as on the payout email (plan §8.1, items 10 and 15). */
+function deductionLabel(deduction: HostPayout['deductions'][number]): string {
+  if (deduction.type === 'HOST_CANCELLATION_FEE') return 'Host cancellation fee';
+  if (deduction.type === 'HOST_FUNDED_REFUND')
+    return deduction.bookingRef ? `Refund for ${deduction.bookingRef}` : 'Refund to a guest';
+  return 'Other deduction';
+}
+
+/** Paid payouts shown before "Show all". */
+const PAID_SHOWN = 12;
+
 function PayoutRow({ payout }: { payout: HostPayout }) {
-  const deducted = payout.deductions.reduce((sum, deduction) => sum + deduction.amountCents, 0);
   // As on the payout email: the commission with the GST in it, for GST-registered Hosts' records.
   const commission =
     payout.commissionCents !== undefined &&
@@ -139,13 +149,27 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
               : payout.status === 'FAILED'
                 ? 'Didn’t go through: our team is on it'
                 : `Due ${formatNzDate(payout.scheduledFor)}`}
-          {deducted > 0 && ` · ${formatNzd(deducted)} deducted`}
         </p>
         {commission && (
           <p className="text-xs text-muted">
             {payout.grossCents !== undefined
               ? `Earned ${formatNzd(payout.grossCents)} · commission ${commission}`
               : `Commission ${commission}`}
+          </p>
+        )}
+        {payout.deductions.length > 0 && (
+          <ul aria-label="Deductions" className="text-xs text-muted">
+            {payout.deductions.map((deduction, index) => (
+              <li key={`${deduction.type}-${index}`}>
+                {deductionLabel(deduction)}{' '}
+                <span className="tabular-nums">−{formatNzd(deduction.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {payout.reversedCents !== undefined && payout.reversedCents > 0 && (
+          <p className="text-xs text-muted">
+            {formatNzd(payout.reversedCents)} taken back from this payout for refunds you fund
           </p>
         )}
       </div>
@@ -332,6 +356,7 @@ function Earnings() {
   const sync = useSyncPayoutAccount();
   const [params, setParams] = useSearchParams();
   const synced = useRef(false);
+  const [allPaid, setAllPaid] = useState(false);
 
   // Back from Stripe's setup pages: read the account now rather than wait for Stripe's message.
   const returned = params.get('payouts');
@@ -378,8 +403,22 @@ function Earnings() {
       ? Math.round(((summary.monthCents - summary.previousMonthCents) / summary.previousMonthCents) * 100)
       : null;
   const upcoming = payouts.data.payouts.filter((payout) => payout.status !== 'PAID');
-  const paid = payouts.data.payouts.filter((payout) => payout.status === 'PAID').slice(0, 12);
-  const { feesOwedCents } = payouts.data.account;
+  const paid = payouts.data.payouts.filter((payout) => payout.status === 'PAID');
+  const paidShown = allPaid ? paid : paid.slice(0, PAID_SHOWN);
+  const { feesOwedCents, refundsOwedCents } = payouts.data.account;
+  // What the Host owes, each kind on its own line, taken off their next payout (plan §8.1, items 10 and 15).
+  const owed = [
+    {
+      label: 'Fees owed',
+      detail: 'Host cancellation fees, taken off your next payout',
+      cents: feesOwedCents,
+    },
+    {
+      label: 'Refunds owed',
+      detail: 'Refunds to guests you fund, made after the trip was paid out, taken off your next payout',
+      cents: refundsOwedCents,
+    },
+  ].filter((line) => line.cents > 0);
   const lastMonth = earnings.data.months.at(-2)?.month;
 
   return (
@@ -441,17 +480,18 @@ function Earnings() {
             </h2>
             <p className="font-semibold text-ink tabular-nums">{formatNzd(summary.upcomingPayoutsCents)}</p>
           </div>
-          {feesOwedCents > 0 && (
-            <div className="mt-4 flex items-baseline justify-between gap-3 rounded-control bg-canvas px-4 py-3 text-sm">
+          {owed.map((line) => (
+            <div
+              key={line.label}
+              className="mt-4 flex items-baseline justify-between gap-3 rounded-control bg-canvas px-4 py-3 text-sm"
+            >
               <p>
-                <span className="font-medium text-ink">Fees owed</span>
-                <span className="block text-xs text-muted">
-                  Host cancellation fees, taken off your next payout
-                </span>
+                <span className="font-medium text-ink">{line.label}</span>
+                <span className="block text-xs text-muted">{line.detail}</span>
               </p>
-              <p className="font-semibold text-ink tabular-nums">−{formatNzd(feesOwedCents)}</p>
+              <p className="font-semibold text-ink tabular-nums">−{formatNzd(line.cents)}</p>
             </div>
-          )}
+          ))}
           {upcoming.length === 0 ? (
             <p className="mt-4 text-sm text-muted">
               Nothing waiting. Payouts are sent 24 hours after each trip starts.
@@ -472,11 +512,23 @@ function Earnings() {
           {paid.length === 0 ? (
             <p className="mt-4 text-sm text-muted">Your paid payouts will show here.</p>
           ) : (
-            <ul className="divide-y divide-line/70">
-              {paid.map((payout) => (
+            <ul id="paid-payouts" className="divide-y divide-line/70">
+              {paidShown.map((payout) => (
                 <PayoutRow key={payout.id} payout={payout} />
               ))}
             </ul>
+          )}
+          {paid.length > PAID_SHOWN && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              aria-expanded={allPaid}
+              aria-controls="paid-payouts"
+              onClick={() => setAllPaid((shown) => !shown)}
+            >
+              {allPaid ? 'Show fewer' : `Show all ${paid.length}`}
+            </Button>
           )}
         </Card>
       </div>
@@ -504,8 +556,8 @@ function EarningsSkeleton() {
 
 /**
  * The Host's earnings (spec §9, plan §12.6): payout setup, today, this week, this month against last month,
- * all time and platform fees, the monthly chart, fees owed, payouts upcoming and paid with their commission
- * and bank dates, each trip's breakdown by month and the GST-ready statement.
+ * all time and platform fees, the monthly chart, fees and refunds owed, payouts upcoming and paid with their
+ * commission, deductions and bank dates, each trip's breakdown by month and the GST-ready statement.
  */
 export function EarningsPage() {
   return (

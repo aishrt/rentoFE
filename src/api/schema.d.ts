@@ -892,7 +892,70 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change the name
+         * @description Personal details (plan §11): the first and last name, trimmed, 1 to 50 characters each. Allowed until the identity check has passed or is being checked (`nameLocked`); after that the name must match the ID, so it is refused with 409 NAME_LOCKED and corrected through a privacy request (POST /me/privacy-requests, CORRECTION). Written to the audit log.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateMeRequest"];
+                };
+            };
+            responses: {
+                /** @description The signed-in user, with the new name */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/me/password": {
@@ -2187,7 +2250,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Staff: approve or reject a driver licence checked by hand */
+        /**
+         * Staff: approve or reject a driver licence checked by hand
+         * @description Approving confirms the bookings that waited for it (requests still go to their Host), unless the identity check still waits too (`stillInReview`). Rejecting releases them with their card authorisations. The person is emailed either way. 409 NOT_IN_REVIEW when the licence isn’t waiting for a check.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2248,8 +2314,85 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/licence-number": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: show the full driver licence number
+         * @description Decrypted to check the licence by hand. Each time it’s shown is written to the audit log (plan §14). Not cached.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The number */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LicenceNumber"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3670,7 +3813,7 @@ export interface paths {
         };
         /**
          * City and destination landing pages
-         * @description Public. Featured ones first: they are the homepage tiles.
+         * @description Public. Published ones only, featured first: they are the homepage tiles.
          */
         get: {
             parameters: {
@@ -3797,6 +3940,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cms/home.hero": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The homepage’s headline and supporting line
+         * @description Public. The original text until an admin saves their own.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The text */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HomeHeroResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cms/site.footer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The footer’s links and social accounts
+         * @description Public. The original links until an admin saves their own.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The links */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SiteFooterResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/faqs": {
         parameters: {
             query?: never;
@@ -3886,7 +4107,7 @@ export interface paths {
         };
         /**
          * Customer reviews for the homepage
-         * @description Public. Real published reviews only, and `show: false` until there are enough (settings).
+         * @description Public. Real published reviews only, and `show: false` until there are enough (settings). The ones admins picked, in order, or else the newest well-rated ones.
          */
         get: {
             parameters: {
@@ -6553,6 +6774,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/vehicles/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every car, to search
+         * @description Whatever its status (live, switched off, suspended, draft, under review…), 25 a page, most recently changed first. Each word of `q` must match the year, make, model or variant, the plate, or the Host’s name or email.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Words to match: the year, make or model, the plate, or the Host’s name or email */
+                    q?: string;
+                    status?: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+                    /** @description Only this Host’s cars */
+                    hostId?: string;
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The cars */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminVehicles"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vehicles/{id}": {
         parameters: {
             query?: never;
@@ -8355,7 +8649,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: cancel for a no-show, or as a platform cancellation
-         * @description Admins, and support staff with the REFUNDS permission. A Guest no-show is a Guest cancellation at the start time; a Host no-show a Host cancellation; a platform cancellation a full refund.
+         * @description Admins, and support staff with the REFUNDS permission. A confirmed booking: a Guest no-show is a Guest cancellation at the start time; a Host no-show a Host cancellation; a platform cancellation a full refund. A PENDING booking (a request, or one waiting for the Guest’s verification) is a platform cancellation only (409 NOT_CONFIRMED for a no-show): its card authorisation is released and its held dates freed. Both parties are told, except the Host of an Instant Book that never reached them.
          */
         post: {
             parameters: {
@@ -8429,6 +8723,86 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: what a cancellation would refund and cost
+         * @description For the reason chosen, from the same policy engine as the cancellation (plan §8.2): the Guest’s refund (less any earlier refunds), what’s kept and the Host’s share, any Host cancellation fee, or the authorisation released for a pending booking. `allowed` is false, with the reason in `message`, when that cancellation isn’t possible.
+         */
+        get: {
+            parameters: {
+                query: {
+                    reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+                };
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminCancellationPreview"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9191,7 +9565,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The check-in and check-out reports, and what you can do next */
+        /**
+         * The check-in and check-out reports, and what you can do next
+         * @description For the Guest, the Host and staff (role STAFF, with no actions: staff complete a trip with POST /admin/bookings/{id}/complete).
+         */
         get: {
             parameters: {
                 query?: never;
@@ -9476,7 +9853,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: complete a trip whose check-out is missing
-         * @description With the Host’s odometer and fuel reading and photos (plan §8.2). The booking becomes COMPLETED, and extra kilometres, reviews and the payout follow as normal.
+         * @description With the Host’s odometer and fuel or battery reading, and any photos they sent (plan §8.2), which become the check-out record. The booking becomes COMPLETED, and extra kilometres (worked out against the check-in reading, when there is one), reviews and the payout follow as normal. 409 NOT_CHECK_OUT unless the trip is under way without a check-out; 400 when the odometer is below the check-in reading.
          */
         post: {
             parameters: {
@@ -9490,18 +9867,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": {
-                        odometer: number;
-                        /** @description Fuel, or battery charge for an EV, 0–100 % */
-                        fuelOrBatteryPct: number;
-                        notes?: string;
-                        photos: components["schemas"]["InspectionPhotoInput"][];
-                        /**
-                         * @description Check-in: damage already on the car. Check-out: new damage.
-                         * @default []
-                         */
-                        damagePins?: components["schemas"]["DamagePinInput"][];
-                    };
+                    "application/json": components["schemas"]["StaffCompletionRequest"];
                 };
             };
             responses: {
@@ -10300,7 +10666,7 @@ export interface paths {
         };
         /**
          * A member’s public profile and the published reviews about them
-         * @description Only what each party may see of the other (plan §6.2).
+         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. This is the public profile plan §11 lists as GET /users/{id}/profile. A closed or suspended account is not found.
          */
         get: {
             parameters: {
@@ -10792,7 +11158,70 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Staff: open a case on a booking
+         * @description Outside the damage-report window, on any booking past checkout (404 otherwise). For both parties, only the Guest or the Host it’s about, or the team only (INTERNAL) until an update is shared; a party never sees a case with nothing for them. The staff member who opens it has it. Holds the booking’s payouts until the case is settled, tells the parties who can see it, and is written to the audit log.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffNewIncidentRequest"];
+                };
+            };
+            responses: {
+                /** @description Opened */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -10933,7 +11362,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: post an update, change the status or take the case
-         * @description Updates go to both parties, one of them, or the team only (INTERNAL). Resolving or closing the last open case on a booking releases its payouts.
+         * @description Updates go to both parties, one of them, or the team only (INTERNAL). The status moves only to one of the case’s `nextStatuses`: nothing goes back to OPEN, a resolved case can be reopened (INVESTIGATING or AWAITING_RESPONSE), and a closed one is final (409 INVALID_STATUS_CHANGE; 409 CASE_CHANGED when someone else changed the status meanwhile). Resolving or closing the last open case on a booking releases its payouts; reopening a case holds the unpaid ones again.
          */
         post: {
             parameters: {
@@ -10989,6 +11418,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -12159,7 +12597,7 @@ export interface paths {
         put?: never;
         /**
          * Staff with the refunds permission: refund the Guest
-         * @description A Host-funded refund comes off the trip’s payout, or the Host’s next one once it’s paid (plan §8.1, item 15).
+         * @description A Host-funded refund comes off the trip’s payout, or once that’s sent, off the Host’s next payout or back from the Stripe transfer as staff choose (recoverFrom). The answer’s hostRefund says which (plan §8.1, item 15).
          */
         post: {
             parameters: {
@@ -13355,6 +13793,392 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/content/hero": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the homepage’s headline and supporting line
+         * @description The original text until an admin saves their own (`saved: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHomeHero"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /** Admin: change the homepage’s headline and supporting line */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HomeHero"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHomeHero"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/featured-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the customer reviews picked for the homepage
+         * @description In order, each saying whether it can show now, with the threshold in settings and how many reviews are published: the section stays hidden until there are enough.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedReviews"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Admin: pick the homepage’s customer reviews
+         * @description Up to six published Guest reviews with words to quote, in order. None: the newest well-rated reviews are shown. One hidden later is left off the homepage.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FeaturedReviewsInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedReviews"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: published Guest reviews to pick for the homepage, by their words */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminReviewChoices"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/footer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the footer’s links and social accounts
+         * @description The original links until an admin saves their own (`saved: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSiteFooter"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Admin: change the footer’s links and social accounts
+         * @description Links are full https:// addresses or paths on the website, like /help; social accounts are https:// addresses.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SiteFooter"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSiteFooter"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/content/legal": {
         parameters: {
             query?: never;
@@ -13497,7 +14321,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Admin: destination landing pages */
+        /** Admin: destination landing pages, published or not */
         get: {
             parameters: {
                 query?: never;
@@ -13537,7 +14361,70 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Admin: add a destination landing page
+         * @description At /rental/{slug}, which can’t change later. Airports must be in the place list. 409 SLUG_TAKEN when another page has the address.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DestinationCreate"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminDestinationResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -13557,7 +14444,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Admin: edit a destination landing page */
+        /**
+         * Admin: edit a destination landing page, or publish or unpublish it
+         * @description Only the fields sent change; empty text removes an optional one. Unpublished, it’s off the homepage, its page answers 404 and the sitemap leaves it out.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -14177,7 +15067,7 @@ export interface paths {
         };
         /**
          * Admin: a report as a CSV file
-         * @description Bookings, payments, refunds, payouts, cancellations or the monthly GST summary for a range of NZ days.
+         * @description Bookings, payments, refunds, payouts, cancellations, the monthly GST summary, or revenue and fees by day, for a range of NZ days. Every total matches the summary for the same days.
          */
         get: {
             parameters: {
@@ -14186,7 +15076,7 @@ export interface paths {
                     from: string;
                     /** @description Last NZ day, inclusive */
                     to: string;
-                    type: "bookings" | "payments" | "refunds" | "payouts" | "cancellations" | "gst";
+                    type: "bookings" | "payments" | "refunds" | "payouts" | "cancellations" | "gst" | "revenue";
                 };
                 header?: never;
                 path?: never;
@@ -14453,6 +15343,10 @@ export interface components {
             email: string;
             firstName: string;
             lastName: string;
+            /** @description YYYY-MM-DD (NZ), from the driver licence details; absent until they are entered */
+            dateOfBirth?: string;
+            /** @description The name must match the ID once the identity check has passed or is being checked: it is then corrected through a privacy request (POST /me/privacy-requests), not PATCH /me */
+            nameLocked: boolean;
             roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
             emailVerified: boolean;
             /** @description Verified mobile number, E.164 (+64211234567) */
@@ -14503,6 +15397,10 @@ export interface components {
             phone: string;
             /** @description false when it is already the verified number */
             sent: boolean;
+        };
+        UpdateMeRequest: {
+            firstName?: string;
+            lastName?: string;
         };
         AcceptAgreementsRequest: {
             types: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
@@ -14702,6 +15600,10 @@ export interface components {
             identity: {
                 status: string;
                 documentType?: string;
+                /** @description A driver licence used as the ID: whether its number is the licence’s on the account now. Left out for another document */
+                licenceNumberMatched?: boolean;
+                /** @description Whether the date of birth on the ID matched the account’s when it was checked */
+                dobMatched?: boolean;
             };
             licence: {
                 class: string;
@@ -14710,6 +15612,8 @@ export interface components {
                 version?: string;
                 expiry: string;
                 issuedAt?: string;
+                /** @description Overseas licences: false when it isn’t in English, which then needs English proof */
+                inEnglish?: boolean;
                 englishProof?: string;
                 status: string;
             } | null;
@@ -14725,11 +15629,23 @@ export interface components {
         LicenceReviewResult: {
             /** @enum {string} */
             licenceStatus: "APPROVED" | "REJECTED";
+            /** @description References of the bookings this confirmed */
+            confirmed: string[];
+            /** @description Requests the Host still has to answer */
+            waitingForHost: string[];
+            /** @description Bookings ended, with the card authorisation released */
+            released: string[];
+            /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
+            stillInReview?: string[];
         };
         LicenceReviewRequest: {
             /** @enum {string} */
             decision: "APPROVE" | "REJECT";
             note?: string;
+        };
+        LicenceNumber: {
+            /** @description The full licence number, as the person entered it */
+            number: string;
         };
         AdminOverview: {
             metrics: {
@@ -15182,6 +16098,8 @@ export interface components {
             mfaEnabled: boolean;
             /** Format: date-time */
             lastLoginAt?: string;
+            /** @description What they can do beyond the support role (plan §6.2): REFUNDS for refunds, payments and payouts. The admin has every permission. */
+            permissions: "REFUNDS"[];
         };
         StaffInvite: {
             id: string;
@@ -15638,6 +16556,8 @@ export interface components {
             lng: number;
             /** @description IATA codes of the airports that serve it */
             airports: string[];
+            /** @description A homepage tile */
+            featured: boolean;
         };
         DestinationResponse: {
             destination: components["schemas"]["DestinationDetail"];
@@ -15653,6 +16573,8 @@ export interface components {
             lng: number;
             /** @description IATA codes of the airports that serve it */
             airports: string[];
+            /** @description A homepage tile */
+            featured: boolean;
             intro: string;
         };
         LegalPageResponse: {
@@ -15668,6 +16590,35 @@ export interface components {
             markdown: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        HomeHeroResponse: {
+            hero: components["schemas"]["HomeHero"];
+        };
+        HomeHero: {
+            headline: string;
+            /** @description The supporting line under the headline */
+            subheading: string;
+        };
+        SiteFooterResponse: {
+            footer: components["schemas"]["SiteFooter"];
+        };
+        SiteFooter: {
+            /** @description The footer’s columns of links; a group with no links is left out */
+            groups: components["schemas"]["FooterGroup"][];
+            socialLinks: components["schemas"]["SocialLink"][];
+        };
+        FooterGroup: {
+            title: string;
+            links: components["schemas"]["FooterLink"][];
+        };
+        FooterLink: {
+            label: string;
+            href: string;
+        };
+        /** @description A social media account, e.g. Instagram */
+        SocialLink: {
+            label: string;
+            href: string;
         };
         Faqs: {
             faqs: components["schemas"]["Faq"][];
@@ -16456,6 +17407,36 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        AdminVehicles: {
+            vehicles: components["schemas"]["AdminVehicleRow"][];
+            total: number;
+            page: number;
+            /** @description The Host named by hostId, to label the filter */
+            host?: {
+                id: string;
+                name: string;
+            };
+        };
+        AdminVehicleRow: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            regoPlate?: string;
+            city?: string;
+            host: {
+                id: string;
+                name: string;
+                email: string;
+            };
+            /** @description Approved, but hidden until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
+            /** @description Hidden while its Host’s account is suspended (plan §8.2) */
+            hostSuspended: boolean;
+            tripCount: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         AdminVehicle: {
             vehicle: components["schemas"]["HostVehicle"];
             host: {
@@ -16497,6 +17478,8 @@ export interface components {
                 englishProof?: "IDP" | "APPROVED_TRANSLATION";
             } | null;
             hasDateOfBirth: boolean;
+            /** @description Support staff are checking the licence by hand: a booking made meanwhile becomes a request, confirmed once they approve it (plan §8.2) */
+            licenceInReview: boolean;
             /** @enum {string} */
             identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
             /** @description Stripe is checking the ID and selfie; usually a minute or two */
@@ -16651,8 +17634,19 @@ export interface components {
                  * @description Once paid: usually in the Host’s bank by then
                  */
                 expectedInBankBy?: string;
-                /** @description Everything paid out for the booking so far */
+                /** @description Everything paid out for the booking so far, less any taken back for refunds */
                 paidCents?: number;
+                /** @description Refunds made to the Guest on the booking, oldest first */
+                refunds?: {
+                    amountCents: number;
+                    /** Format: date-time */
+                    at: string;
+                    /**
+                     * @description HOST: it comes off the Host’s payout (plan §8.1, item 15)
+                     * @enum {string}
+                     */
+                    fundedBy: "PLATFORM" | "HOST";
+                }[];
             };
             /**
              * Format: date-time
@@ -16672,6 +17666,8 @@ export interface components {
             /** @description PENDING: the Host has accepted, and the booking now waits only for the Guest’s verification */
             hostAccepted?: boolean;
             guest: {
+                /** @description For their public profile; missing once an account is gone */
+                id?: string;
                 firstName: string;
                 avatarUrl?: string;
                 /** @description Identity verified */
@@ -16682,6 +17678,8 @@ export interface components {
                 phone?: string;
             };
             host: {
+                /** @description For their public profile; missing once an account is gone */
+                id?: string;
                 firstName: string;
                 avatarUrl?: string;
                 /** @description Identity verified */
@@ -16900,6 +17898,30 @@ export interface components {
             reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
             note: string;
         };
+        AdminCancellationPreview: {
+            /** @enum {string} */
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+            allowed: boolean;
+            /**
+             * @description How the policy engine treats it: a no-show is a Guest or Host cancellation
+             * @enum {string|null}
+             */
+            kind: "GUEST_CANCELLATION" | "HOST_CANCELLATION" | "PLATFORM_CANCELLATION" | null;
+            /** @description Back to the Guest’s card */
+            refundCents: number;
+            /** @description What the Guest paid and doesn’t get back */
+            feeCents: number;
+            /** @description The Host’s share of the kept fee */
+            hostShareCents: number;
+            /** @description A Host cancellation fee, off their next payout */
+            hostFeeCents: number;
+            /** @description A request or a booking waiting for verification: the card authorisation released, as nothing was charged */
+            releasedCents: number;
+            refundPct: number;
+            hoursBeforeStart: number;
+            /** @description A sentence to show before staff confirm */
+            message: string;
+        };
         IdentityReviewResponse: {
             /** @enum {string} */
             identityStatus: "APPROVED" | "REJECTED";
@@ -16909,6 +17931,8 @@ export interface components {
             waitingForHost: string[];
             /** @description Bookings ended, with the card authorisation released */
             released: string[];
+            /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
+            stillInReview?: string[];
         };
         IdentityReviewRequest: {
             /** @enum {string} */
@@ -17062,6 +18086,8 @@ export interface components {
             /** @enum {string} */
             reason: "SPAM" | "SCAM" | "HARASSMENT" | "INAPPROPRIATE" | "CONTACT_DETAILS" | "FAKE" | "SAFETY" | "OTHER";
             note?: string;
+            /** @description A member reported from a booking’s conversation: that booking, which must be between the two of them, so support can read the conversation (plan §6.2) */
+            bookingRef?: string;
         };
         BlockedUsers: {
             users: {
@@ -17209,6 +18235,23 @@ export interface components {
             photos: components["schemas"]["InspectionPhotoInput"][];
             note?: string;
         };
+        StaffCompletionRequest: {
+            odometer: number;
+            /** @description Fuel, or battery charge for an EV, 0–100 % */
+            fuelOrBatteryPct: number;
+            /** @description Where the readings came from, e.g. "From the Host’s photo, 9 Oct" */
+            notes?: string;
+            /**
+             * @description Check-in: damage already on the car. Check-out: new damage.
+             * @default []
+             */
+            damagePins: components["schemas"]["DamagePinInput"][];
+            /**
+             * @description The Host’s photos, if they sent any (uploaded with purpose INSPECTION_PHOTO)
+             * @default []
+             */
+            photos: components["schemas"]["InspectionPhotoInput"][];
+        };
         HostPayouts: {
             account: components["schemas"]["PayoutAccount"];
             payouts: components["schemas"]["HostPayout"][];
@@ -17224,6 +18267,8 @@ export interface components {
             bankDays?: number;
             /** @description Host cancellation fees still to come off a payout */
             feesOwedCents: number;
+            /** @description Host-funded refunds made after a booking’s payout, still to come off a payout */
+            refundsOwedCents: number;
         };
         HostPayout: {
             id: string;
@@ -17238,11 +18283,16 @@ export interface components {
             grossCents?: number;
             commissionCents?: number;
             commissionGstCents?: number;
+            /** @description Each line taken off the payout */
             deductions: {
                 /** @enum {string} */
                 type: "HOST_CANCELLATION_FEE" | "HOST_FUNDED_REFUND" | "OTHER";
                 amountCents: number;
+                /** @description HOST_FUNDED_REFUND: the booking the refund was made on */
+                bookingRef?: string;
             }[];
+            /** @description Taken back from the transfer for Host-funded refunds after it was paid */
+            reversedCents?: number;
             /** Format: date-time */
             scheduledFor: string;
             /**
@@ -17515,6 +18565,8 @@ export interface components {
             /** @description Oldest first; only those the viewer may see */
             events: components["schemas"]["IncidentEvent"][];
             canReply: boolean;
+            /** @description Staff only: the statuses the case can move to now. A resolved case can be reopened; a closed one is final */
+            nextStatuses?: ("OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED")[];
             /** @description Charges added to the booking from this case */
             extraCharges: {
                 /** @enum {string} */
@@ -17589,6 +18641,23 @@ export interface components {
             note: string;
             /** @default [] */
             attachments: components["schemas"]["AttachmentInput"][];
+        };
+        StaffNewIncidentRequest: {
+            bookingRef: string;
+            /** @enum {string} */
+            type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+            description: string;
+            /**
+             * @description Photos and documents, uploaded first with purpose INCIDENT_FILE
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
+            /**
+             * @description Who sees the case: BOTH parties, only the GUEST or the HOST it’s about, or INTERNAL to support staff until an update is shared with a party
+             * @default BOTH
+             * @enum {string}
+             */
+            visibility: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
         };
         IncidentAssignees: {
             assignees: {
@@ -17706,6 +18775,14 @@ export interface components {
             createdAt: string;
             suspendedReason?: string;
             emailVerified: boolean;
+            /** @description Emails to the address bounced, or Resend won't send to it (plan §7). Cleared by the next delivery. */
+            emailProblem?: {
+                /** @enum {string} */
+                kind: "BOUNCED" | "SUPPRESSED";
+                detail?: string;
+                /** Format: date-time */
+                at: string;
+            };
             phoneVerified: boolean;
             permissions: string[];
             /** Format: date-time */
@@ -17716,7 +18793,21 @@ export interface components {
                 numberEnding: string;
                 expiry: string;
                 status: string;
+                version?: string;
+                issuedAt?: string;
+                /** @description Overseas: false when it isn’t in English */
+                inEnglish?: boolean;
+                englishProof?: string;
             } | null;
+            /** @description Their date of birth, to compare with the licence */
+            dob?: string;
+            /** @description The ID used in the identity check: a driver licence’s number compared with the licence on the account now, and the date of birth compared when it was checked */
+            identityDocument?: {
+                /** @description driving_license, passport or id_card */
+                type?: string;
+                licenceNumberMatched?: boolean;
+                dobMatched?: boolean;
+            };
             host: {
                 /** @enum {string} */
                 status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -17852,6 +18943,18 @@ export interface components {
             }[];
             /** @description What can still be refunded on the booking’s payment */
             refundableCents: number;
+            /** @description The trip’s payout was sent (or is being sent, or the booking ended without one), so a Host-funded refund comes off the Host’s next payout or is taken back from the transfer */
+            tripPayoutSent?: boolean;
+            /** @description After a Host-funded refund: how it’s recovered from the Host (plan §8.1, item 15) */
+            hostRefund?: {
+                /** @enum {string} */
+                recoveredFrom: "THIS_PAYOUT" | "NEXT_PAYOUT" | "REVERSE_TRANSFER";
+                reversedCents?: number;
+                /** @description What comes off the Host’s next payout */
+                owedCents?: number;
+                /** @description Why the transfer wasn’t reversed as asked */
+                note?: string;
+            };
         };
         AdminPayment: {
             id: string;
@@ -17922,6 +19025,11 @@ export interface components {
              * @enum {string}
              */
             fundedBy: "PLATFORM" | "HOST";
+            /**
+             * @description A Host-funded refund once the trip’s payout was sent: take it off the Host’s next payout (the default), or reverse the Stripe transfer. If Stripe refuses the reversal, it comes off the next payout.
+             * @enum {string}
+             */
+            recoverFrom?: "NEXT_PAYOUT" | "REVERSE_TRANSFER";
         };
         AdminVehicleSuspension: {
             vehicle: {
@@ -18046,7 +19154,7 @@ export interface components {
             };
             /** @description What was reported: the message, review or listing */
             preview: string;
-            /** @description A reported message’s booking, to open its thread */
+            /** @description A reported message’s booking, or the booking a member was reported from, to open its thread */
             bookingRef?: string;
             review?: components["schemas"]["ModerationReview"];
             resolution?: string;
@@ -18080,6 +19188,42 @@ export interface components {
         AdminVehicleChoices: {
             vehicles: components["schemas"]["AdminVehicleChoice"][];
         };
+        AdminHomeHero: {
+            hero: components["schemas"]["HomeHero"];
+            /** @description False while the homepage shows its original text */
+            saved: boolean;
+        };
+        AdminFeaturedReviews: {
+            reviewIds: string[];
+            reviews: components["schemas"]["AdminReviewChoice"][];
+            /** @description Published reviews needed before the homepage shows any (settings) */
+            homepageThreshold: number;
+            publishedCount: number;
+        };
+        AdminReviewChoice: {
+            id: string;
+            /** @description The Guest’s first name, as the homepage shows it */
+            authorName: string;
+            overall: number;
+            body: string;
+            vehicleTitle: string;
+            city?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Published and not hidden: a picked review that isn’t is left off the homepage */
+            shown: boolean;
+        };
+        FeaturedReviewsInput: {
+            reviewIds: string[];
+        };
+        AdminReviewChoices: {
+            reviews: components["schemas"]["AdminReviewChoice"][];
+        };
+        AdminSiteFooter: {
+            footer: components["schemas"]["SiteFooter"];
+            /** @description False while the footer shows its original links */
+            saved: boolean;
+        };
         AdminLegalPages: {
             pages: components["schemas"]["LegalPage"][];
         };
@@ -18101,19 +19245,63 @@ export interface components {
             tagline?: string;
             intro: string;
             heroImage?: string;
+            lat: number;
+            lng: number;
+            airports: string[];
             featured: boolean;
             order: number;
+            /** @description False: off the homepage, a 404 page and out of the sitemap */
+            published: boolean;
         };
         AdminDestinationResponse: {
             destination: components["schemas"]["AdminDestination"];
         };
+        DestinationCreate: {
+            /** @description The page’s address, /rental/{slug}. It can’t change later. */
+            slug: string;
+            city: string;
+            /** @description The te reo Māori name; empty removes it */
+            maoriName?: string;
+            /** @enum {string} */
+            region: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+            /** @description Empty removes it */
+            tagline?: string;
+            intro: string;
+            /** @description The picture’s address; empty removes it */
+            heroImage?: string;
+            lat: number;
+            lng: number;
+            /**
+             * @description IATA codes of airports in the place list
+             * @default []
+             */
+            airports: string[];
+            /** @default false */
+            featured: boolean;
+            /** @default 0 */
+            order: number;
+            /** @default true */
+            published: boolean;
+        };
         DestinationEdit: {
+            city?: string;
+            /** @description The te reo Māori name; empty removes it */
+            maoriName?: string;
+            /** @enum {string} */
+            region?: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+            /** @description Empty removes it */
             tagline?: string;
             intro?: string;
-            /** Format: uri */
+            /** @description The picture’s address; empty removes it */
             heroImage?: string;
+            lat?: number;
+            lng?: number;
+            /** @description IATA codes of airports in the place list */
+            airports?: string[];
             featured?: boolean;
             order?: number;
+            /** @description False: off the homepage, a 404 page and out of the sitemap */
+            published?: boolean;
         };
         AdminFaqs: {
             faqs: components["schemas"]["AdminFaq"][];
@@ -18191,14 +19379,41 @@ export interface components {
             money: {
                 /** @description Paid for trips starting in the range, GST included */
                 grossBookingsCents: number;
+                /** @description Sent to Guests in the range */
                 refundsCents: number;
-                /** @description Service fees and commission */
+                /** @description Service fees and commission, the platform’s share of cancellation fees kept and the commission on extra charges (fees.totalCents) */
                 platformFeesCents: number;
                 hostPayoutsPaidCents: number;
+                /** @description Paid in the range, GST included */
                 extraChargesCents: number;
                 cancellationFeesKeptCents: number;
+                /** @description Net of refunds (gst.collectedCents) */
                 gstCollectedCents: number;
                 gstOnPlatformFeesCents: number;
+            };
+            fees: {
+                /** @description On trips starting in the range */
+                serviceFeesCents: number;
+                /** @description On trips starting in the range */
+                hostCommissionCents: number;
+                /** @description The platform’s share of the fees kept from bookings cancelled in the range */
+                cancellationFeesShareCents: number;
+                /** @description On extra charges paid in the range */
+                extraChargeCommissionCents: number;
+                totalCents: number;
+            };
+            gst: {
+                /** @description From settings (plan §5: 15 %, provisional) */
+                ratePct: number;
+                inTripsCents: number;
+                inExtraChargesCents: number;
+                /** @description In the fees kept from bookings cancelled in the range */
+                inCancellationFeesCents: number;
+                /** @description In refunds sent in the range of money counted here. A cancellation’s own refund is already left out of the fee kept. */
+                givenBackCents: number;
+                /** @description Trips, extra charges and fees kept, less refunds */
+                collectedCents: number;
+                onPlatformFeesCents: number;
             };
         };
         AuditLog: {

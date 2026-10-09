@@ -107,6 +107,11 @@ export const routes: RouteObject[] = [
                 path: 'account/reviews',
                 lazy: page(() => import('@/routes/account/reviews-page'), 'ReviewsPage'),
               },
+              // A member's public profile and reviews (plan §6.2, §11).
+              {
+                path: 'members/:id',
+                lazy: page(() => import('@/routes/members/member-page'), 'MemberPage'),
+              },
               {
                 path: 'unsubscribe',
                 lazy: page(() => import('@/routes/account/unsubscribe-page'), 'UnsubscribePage'),
@@ -133,6 +138,11 @@ export const routes: RouteObject[] = [
               {
                 path: 'host/vehicles/:id/calendar',
                 lazy: page(() => import('@/routes/host/vehicle-calendar-page'), 'VehicleCalendarPage'),
+              },
+              // The Host's Calendar tab: any of their cars' calendars (plan §12.6).
+              {
+                path: 'host/calendar',
+                lazy: page(() => import('@/routes/host/host-calendar-page'), 'HostCalendarPage'),
               },
               {
                 path: 'host/vehicles/:id/maintenance',

@@ -46,6 +46,14 @@ export const moneyField = () =>
     .trim()
     .refine((value) => isMoney(value), 'Enter an amount in dollars, like 15 or 1,500');
 
+/** A 24-hour time, "21:00" or "7:00", as the API's HH:MM. */
+export const timeField = () =>
+  z
+    .string()
+    .trim()
+    .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Enter a 24-hour time, like 21:00')
+    .transform((value) => value.padStart(5, '0'));
+
 export const textField = (label: string, max = 200) =>
   z.string().trim().min(1, `Enter the ${label}`).max(max, `Use ${max} characters or fewer`);
 

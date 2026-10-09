@@ -8,12 +8,15 @@ import type {
   AdminStatusEditRequest,
   AdminVehicleSuspension,
   Booking,
+  Handover,
+  StaffCompletionRequest,
 } from '@/api/types';
 
 /*
  * Bookings in the staff portal (plan §12.6, spec §18): search, one booking's whole record, the status edit,
- * refunds and cancellations, a booking's messages opened from a case (plan §6.2), and suspending a car
- * (plan §8.2). The API writes every action to the audit log.
+ * refunds and cancellations with their preview, the handover and completing a trip with a missing check-out,
+ * a booking's messages opened from a case (plan §6.2), and suspending a car (plan §8.2). The API writes every
+ * action to the audit log.
  */
 
 export type BookingStatus = AdminBookingRow['status'];
@@ -138,12 +141,61 @@ export function refundRequest(ref: string, body: AdminRefundRequest): Promise<Ad
   return unwrap(client.POST('/admin/bookings/{id}/refunds', { params: { path: { id: ref } }, body }));
 }
 
-/** A confirmed booking only, with the refunds permission: a no-show or a platform cancellation. */
+/**
+ * With the refunds permission: a confirmed booking for a no-show or as a platform cancellation, or a pending
+ * one (a request, or one waiting for verification) as a platform cancellation, which releases the card.
+ */
 export async function cancelRequest(ref: string, body: AdminCancelRequest): Promise<Booking> {
   const response = await unwrap(
     client.POST('/admin/bookings/{id}/cancel', { params: { path: { id: ref } }, body }),
   );
   return response.booking;
+}
+
+/** What cancelling for this reason would refund and cost, from the same policy engine (plan §8.2). */
+export function useAdminCancellationPreview(ref: string, reason: AdminCancelRequest['reason'] | null) {
+  return useQuery({
+    queryKey: [...adminBookingQueryKey(ref), 'cancellation-preview', reason] as const,
+    queryFn: ({ signal }) =>
+      unwrap(
+        client.GET('/admin/bookings/{id}/cancellation-preview', {
+          params: { path: { id: ref }, query: { reason: reason! } },
+          signal,
+        }),
+      ),
+    enabled: reason !== null,
+    // The refund depends on the time to pick-up: worked out afresh each time the dialog opens.
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+// The handover -----------------------------------------------------------------------------------------------
+
+export const staffHandoverQueryKey = (ref: string) => ['admin', 'bookings', 'handover', ref] as const;
+
+/** Both condition reports, as staff see them. Photo links work for 10 minutes; fresh ones come with each refresh. */
+export function useStaffHandover(ref: string, enabled: boolean) {
+  return useQuery({
+    queryKey: staffHandoverQueryKey(ref),
+    queryFn: async ({ signal }) =>
+      (await unwrap(client.GET('/bookings/{id}/inspections', { params: { path: { id: ref } }, signal })))
+        .handover,
+    enabled,
+    staleTime: 30_000,
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+/**
+ * A trip whose check-out is missing: support completes it with the Host's odometer and fuel or battery reading
+ * (plan §8.2), which become the check-out record, so extra kilometres are charged as usual.
+ */
+export async function completeTripRequest(ref: string, body: StaffCompletionRequest): Promise<Handover> {
+  const response = await unwrap(
+    client.POST('/admin/bookings/{id}/complete', { params: { path: { id: ref } }, body }),
+  );
+  return response.handover;
 }
 
 // A booking's messages ---------------------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useBookings, type BookingGroup } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
+import { CurrentTrips } from '@/features/handover/current-trips';
 
 const TABS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -110,6 +111,8 @@ function Trips() {
         <h1 className="headline mt-2 text-title-3 font-medium">Trips</h1>
         <p className="mt-2 text-muted">Your bookings and requests, with receipts, times and where to meet.</p>
       </div>
+      {/* From check-in to check-out, the trip sits at the top (plan §12.6). */}
+      <CurrentTrips role="guest" />
       <SegmentedTabs
         idPrefix="trips"
         label="Trips"
@@ -135,7 +138,10 @@ function TripsSkeleton() {
   );
 }
 
-/** The Guest's trips (spec §8): Upcoming, Current, Completed and Cancelled, grouped by the API (plan §8.2). */
+/**
+ * The Guest's trips (spec §8): any trip under way at the top, then Upcoming, Current, Completed and Cancelled,
+ * grouped by the API (plan §8.2).
+ */
 export function TripsPage() {
   return (
     <Container className="py-8 sm:py-12">

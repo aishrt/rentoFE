@@ -3,20 +3,27 @@ import { ApiError, client, unwrap } from '@/api/client';
 import type {
   AdminDestination,
   AdminFaq,
+  AdminFeaturedReviews,
   AdminFeaturedVehicles,
   AdminHelpArticle,
+  AdminHomeHero,
+  AdminSiteFooter,
+  DestinationCreate,
   DestinationEdit,
   FaqInput,
   HelpArticleInput,
+  HomeHero,
   LegalPage,
   LegalPageEdit,
+  SiteFooter,
 } from '@/api/types';
 import { formErrorMessage } from '@/features/account/form-errors';
 
 /*
- * The website's content in the staff portal (plan §9, Days 19–23), admin only: the homepage's featured
- * cars, the legal pages, destination pages, FAQs and help articles. The API clears the public pages'
- * one-minute cache when something is saved, so a change shows on the website within a minute.
+ * The website's content in the staff portal (plan §9, Days 19–23; §12.6), admin only: the homepage's
+ * headline, featured cars and customer reviews, the footer's links, the legal pages, destination pages, FAQs
+ * and help articles. The API clears the public pages' one-minute cache when something is saved, so a change
+ * shows on the website within a minute.
  */
 
 // Under ['admin'], so signing out drops them from memory with the rest of the staff data.
@@ -27,9 +34,15 @@ export const legalPagesQueryKey = ['admin', 'content', 'legal'] as const;
 export const destinationsQueryKey = ['admin', 'content', 'destinations'] as const;
 export const faqsQueryKey = ['admin', 'content', 'faqs'] as const;
 export const helpArticlesQueryKey = ['admin', 'content', 'help-articles'] as const;
+export const heroQueryKey = ['admin', 'content', 'hero'] as const;
+export const footerQueryKey = ['admin', 'content', 'footer'] as const;
+export const featuredReviewsQueryKey = ['admin', 'content', 'featured-reviews'] as const;
+export const reviewChoicesQueryKey = (q: string) => ['admin', 'content', 'reviews', q] as const;
 
 /** The homepage has room for eight featured cars. */
 export const MAX_FEATURED = 8;
+/** …and six customer reviews. */
+export const MAX_FEATURED_REVIEWS = 6;
 
 // Featured cars ----------------------------------------------------------------------------------------------
 
@@ -92,6 +105,12 @@ export function useDestinations() {
   });
 }
 
+/** Adds a destination page. Another page with the web address: 409 SLUG_TAKEN. */
+export async function createDestinationRequest(input: DestinationCreate): Promise<AdminDestination> {
+  const response = await unwrap(client.POST('/admin/content/destinations', { body: input }));
+  return response.destination;
+}
+
 export async function editDestinationRequest(input: {
   slug: string;
   edit: DestinationEdit;
@@ -104,6 +123,80 @@ export async function editDestinationRequest(input: {
   );
   return response.destination;
 }
+
+// Homepage headline, customer reviews and footer links (plan §12.6) ---------------------------------------------
+
+/** The homepage's headline and supporting line; `saved: false` while the original text shows. */
+export function useHeroText() {
+  return useQuery({
+    queryKey: heroQueryKey,
+    queryFn: ({ signal }) => unwrap(client.GET('/admin/content/hero', { signal })),
+  });
+}
+
+export async function saveHeroTextRequest(hero: HomeHero): Promise<AdminHomeHero> {
+  return unwrap(client.PUT('/admin/content/hero', { body: hero }));
+}
+
+/** The footer's groups of links and social accounts; `saved: false` while the original links show. */
+export function useFooterLinks() {
+  return useQuery({
+    queryKey: footerQueryKey,
+    queryFn: ({ signal }) => unwrap(client.GET('/admin/content/footer', { signal })),
+  });
+}
+
+export async function saveFooterLinksRequest(footer: SiteFooter): Promise<AdminSiteFooter> {
+  return unwrap(client.PUT('/admin/content/footer', { body: footer }));
+}
+
+/** The reviews picked for the homepage, in order, with the threshold that shows the section. */
+export function useFeaturedReviews() {
+  return useQuery({
+    queryKey: featuredReviewsQueryKey,
+    queryFn: ({ signal }) => unwrap(client.GET('/admin/content/featured-reviews', { signal })),
+  });
+}
+
+/** Published Guest reviews with words to quote, newest first, by their words. */
+export function useReviewChoices(q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: reviewChoicesQueryKey(query),
+    queryFn: ({ signal }) =>
+      unwrap(client.GET('/admin/content/reviews', { params: { query: query ? { q: query } : {} }, signal })),
+    select: (data) => data.reviews,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Up to six reviews, in order. None: the homepage shows the newest well-rated ones. */
+export async function saveFeaturedReviewsRequest(reviewIds: string[]): Promise<AdminFeaturedReviews> {
+  return unwrap(client.PUT('/admin/content/featured-reviews', { body: { reviewIds } }));
+}
+
+const isHttps = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname !== '';
+  } catch {
+    return false;
+  }
+};
+
+/** A full https:// address, as the API takes for social accounts. */
+export const isHttpsAddress = (value: string) => isHttps(value.trim());
+
+/**
+ * A full https:// address, or a path on this website such as /help, as the API takes for links and
+ * pictures. Never two slashes or a backslash after the first, which browsers read as another website.
+ */
+export const isLinkAddress = (value: string) =>
+  isHttps(value.trim()) || /^\/(?![/\\])[^\s\\]*$/.test(value.trim());
+
+export const LINK_ADDRESS_MESSAGE =
+  'Use a full address starting with https://, or a path on this website starting with /';
 
 // FAQs -------------------------------------------------------------------------------------------------------
 
@@ -202,7 +295,7 @@ export const slugify = (text: string) =>
 export const isApiError = (error: unknown, code: string) => error instanceof ApiError && error.code === code;
 
 // These messages come from the API and are already written for people.
-const CONTENT_ERROR_CODES = ['UNKNOWN_VEHICLE', 'NOT_FOUND', 'SLUG_TAKEN', 'FORBIDDEN'];
+const CONTENT_ERROR_CODES = ['UNKNOWN_VEHICLE', 'UNKNOWN_REVIEW', 'NOT_FOUND', 'SLUG_TAKEN', 'FORBIDDEN'];
 
 /**
  * The message a content form shows above its fields for an API error, or null when every part of it

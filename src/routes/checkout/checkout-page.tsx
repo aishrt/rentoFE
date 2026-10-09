@@ -254,8 +254,10 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
 
   const readiness = useCheckoutReadiness(resolved.end || undefined, user !== null);
   const readinessOk = readiness.data ? readiness.data.problems.length === 0 : null;
-  // The identity check is with support: the Guest can still book, and the card is only authorised (plan §8.2).
-  const verificationInReview = readiness.data?.identityStatus === 'PENDING';
+  // The identity check or the licence is with support: the Guest can still book, and the card is only
+  // authorised (plan §8.2).
+  const verificationInReview =
+    readiness.data?.identityStatus === 'PENDING' || readiness.data?.licenceInReview === true;
   const isOwnCar = ownCar || (user !== null && vehicle.host.id === user.id);
 
   // The step on screen: never past what's still missing, and skipping what's already done.
@@ -385,7 +387,7 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
       toast('You’re booked', { description: `Your trip in the ${vehicle.title} is confirmed.` });
     } else if (booking.verificationReview === 'PENDING') {
       toast('Your booking is held', {
-        description: 'We’re finishing your identity check. You’re only charged once it’s approved.',
+        description: 'We’re finishing the check of your details. You’re only charged once it’s approved.',
       });
     } else if (booking.status === 'PENDING') {
       toast('Request sent', {

@@ -21,12 +21,33 @@ import { RefundDialog } from './refund-dialog';
 type Action = 'status' | 'refund' | 'cancel';
 type StatusEdit = (typeof STATUS_EDITS)[keyof typeof STATUS_EDITS];
 
+/** How a Host-funded refund is taken back from the Host, after the refund's toast (plan §8.1, item 15). */
+function hostRefundWords(recovery: AdminBookingDetail['hostRefund']): string {
+  if (!recovery || recovery.recoveredFrom === 'THIS_PAYOUT') return '';
+  const reversed = recovery.reversedCents
+    ? ` ${formatNzd(recovery.reversedCents)} was taken back from the Host’s payout.`
+    : '';
+  // A transfer Stripe wouldn't reverse: the note says why, and that it comes off the next payout instead.
+  if (recovery.note) return `${reversed} ${recovery.note}`;
+  const owed = recovery.owedCents
+    ? ` ${formatNzd(recovery.owedCents)} comes off the Host’s next payout.`
+    : '';
+  return `${reversed}${owed}`;
+}
+
 /** The booking changed meanwhile: the API's answer shows, and the page catches up. */
-const STALE_CODES = ['ALREADY_CHANGED', 'TRANSITION_NOT_ALLOWED', 'NOT_CANCELLABLE', 'NOT_PAID'];
+const STALE_CODES = [
+  'ALREADY_CHANGED',
+  'TRANSITION_NOT_ALLOWED',
+  'NOT_CANCELLABLE',
+  'NOT_CONFIRMED',
+  'NOT_PAID',
+];
 
 /**
  * What staff can do to a booking (plan §8.2): mark a trip started or completed, refund the Guest, or cancel
- * a confirmed booking. Each needs a reason for the audit log; money needs the refunds permission.
+ * a confirmed booking or a pending request. Each needs a reason for the audit log; money needs the refunds
+ * permission.
  */
 export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetail; queryRef: string }) {
   const queryClient = useQueryClient();
@@ -36,6 +57,9 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
   const [edit, setEdit] = useState<StatusEdit | null>(null);
   const available =
     booking.status === 'CONFIRMED' || booking.status === 'ACTIVE' ? STATUS_EDITS[booking.status] : null;
+  // A request, or a booking waiting for the Guest's verification: only authorised, so it can be cancelled
+  // with the hold on the card released (plan §8.2).
+  const pending = booking.status === 'PENDING';
 
   const toggle = (action: Action) => (next: boolean) => setOpen(next ? action : null);
   const show = (next: AdminBookingDetail) => {
@@ -69,7 +93,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
       });
     } else {
       toast('Refund sent', {
-        description: `${formatNzd(request.amountCents)} back to ${booking.guest.firstName}’s card. We’ve emailed them.`,
+        description: `${formatNzd(request.amountCents)} back to ${booking.guest.firstName}’s card. We’ve emailed them.${hostRefundWords(next.hostRefund)}`,
       });
     }
   };
@@ -77,8 +101,11 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
   const cancel = async (request: AdminCancelRequest) => {
     await cancelRequest(queryRef, request).catch(catchUp);
     setOpen(null);
-    toast('Booking cancelled', {
-      description: 'The Guest and Host have been told, and the refund is on its way.',
+    toast(pending ? 'Request cancelled' : 'Booking cancelled', {
+      // The Host of an Instant Book waiting for the Guest's verification never heard of it, so isn't told.
+      description: pending
+        ? `${booking.instantBook ? 'The Guest has' : 'The Guest and Host have'} been told, and the hold on the Guest’s card is released.`
+        : 'The Guest and Host have been told, and the refund is on its way.',
     });
     void queryClient.invalidateQueries({ queryKey: adminBookingQueryKey(queryRef) });
     void queryClient.invalidateQueries({ queryKey: adminBookingListsQueryKey });
@@ -104,10 +131,10 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
           Refund
         </Button>
       )}
-      {booking.status === 'CONFIRMED' && (
+      {(booking.status === 'CONFIRMED' || pending) && (
         <Button variant="secondary" onClick={() => setOpen('cancel')}>
           <CircleX aria-hidden="true" />
-          Cancel booking
+          {pending ? 'Cancel request' : 'Cancel booking'}
         </Button>
       )}
 
@@ -125,10 +152,17 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
         open={open === 'refund'}
         onOpenChange={toggle('refund')}
         refundableCents={detail.refundableCents}
+        tripPayoutSent={detail.tripPayoutSent}
         guestName={booking.guest.firstName}
         onConfirm={refund}
       />
-      <CancelBookingDialog open={open === 'cancel'} onOpenChange={toggle('cancel')} onConfirm={cancel} />
+      <CancelBookingDialog
+        open={open === 'cancel'}
+        onOpenChange={toggle('cancel')}
+        bookingRef={queryRef}
+        pending={pending}
+        onConfirm={cancel}
+      />
     </>
   );
 }

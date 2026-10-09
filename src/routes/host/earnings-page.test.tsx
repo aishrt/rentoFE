@@ -59,9 +59,19 @@ function earnings(overrides: Partial<Earnings> = {}): Earnings {
   };
 }
 
-function payouts(account: Partial<HostPayouts['account']> = {}): HostPayouts {
+function payouts(
+  account: Partial<HostPayouts['account']> = {},
+  extra: HostPayouts['payouts'] = [],
+): HostPayouts {
   return {
-    account: { connected: false, payoutsEnabled: false, requirements: [], feesOwedCents: 0, ...account },
+    account: {
+      connected: false,
+      payoutsEnabled: false,
+      requirements: [],
+      feesOwedCents: 0,
+      refundsOwedCents: 0,
+      ...account,
+    },
     payouts: [
       {
         id: 'p1',
@@ -81,7 +91,11 @@ function payouts(account: Partial<HostPayouts['account']> = {}): HostPayouts {
         type: 'TRIP',
         status: 'PAID',
         amountCents: 10000,
-        deductions: [{ type: 'HOST_CANCELLATION_FEE', amountCents: 2500 }],
+        deductions: [
+          { type: 'HOST_CANCELLATION_FEE', amountCents: 2500 },
+          { type: 'HOST_FUNDED_REFUND', amountCents: 5000, bookingRef: 'RV-REF234' },
+        ],
+        reversedCents: 1500,
         scheduledFor: '2026-09-13T21:00:00.000Z',
         paidAt: '2026-09-13T21:05:00.000Z',
         expectedInBankBy: '2026-09-17T21:05:00.000Z',
@@ -96,11 +110,16 @@ function payouts(account: Partial<HostPayouts['account']> = {}): HostPayouts {
         scheduledFor: '2026-10-14T21:00:00.000Z',
         booking: { ref: 'RV-FAIL22', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-12T21:00:00.000Z' },
       },
+      ...extra,
     ],
   };
 }
 
-function mockEarnings(account: Partial<HostPayouts['account']> = {}, figures: Partial<Earnings> = {}) {
+function mockEarnings(
+  account: Partial<HostPayouts['account']> = {},
+  figures: Partial<Earnings> = {},
+  extra: HostPayouts['payouts'] = [],
+) {
   return mockRoutes((request) => {
     switch (`${request.method} ${request.path}`) {
       case 'POST /auth/session':
@@ -108,7 +127,7 @@ function mockEarnings(account: Partial<HostPayouts['account']> = {}, figures: Pa
       case 'GET /host/earnings':
         return { status: 200, body: earnings(figures) };
       case 'GET /host/payouts':
-        return { status: 200, body: payouts(account) };
+        return { status: 200, body: payouts(account, extra) };
       case 'POST /host/connect/onboarding-link':
         return { status: 200, body: { url: 'https://connect.stripe.com/setup/e/acct_1/abc' } };
       default:
@@ -137,9 +156,16 @@ describe('EarningsPage', () => {
     // The commission and its GST on each payout, as on the payout email.
     expect(screen.getByText('Earned $267 · commission −$53.40 (incl. $6.97 GST)')).toBeInTheDocument();
     expect(screen.getByText(/usually in your bank by/)).toBeInTheDocument();
-    expect(screen.getByText(/\$25 deducted/)).toBeInTheDocument();
-    // Nothing owed, so no fees line.
+    // Each deduction on its own line, as on the payout email, and what was taken back for refunds.
+    const deductions = within(screen.getByRole('list', { name: 'Deductions' }));
+    expect(deductions.getAllByRole('listitem').map((line) => line.textContent)).toEqual([
+      'Host cancellation fee −$25',
+      'Refund for RV-REF234 −$50',
+    ]);
+    expect(screen.getByText('$15 taken back from this payout for refunds you fund')).toBeInTheDocument();
+    // Nothing owed, so no fees or refunds lines.
     expect(screen.queryByText('Fees owed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refunds owed')).not.toBeInTheDocument();
     // A transfer Stripe refused is delayed, not upcoming.
     const failed = screen.getByText('Extra charge ·', { exact: false }).closest('li')!;
     expect(within(failed).getByText('Didn’t go through: our team is on it')).toBeInTheDocument();
@@ -195,6 +221,42 @@ describe('EarningsPage', () => {
     const fees = await screen.findByText('Fees owed');
     expect(fees.parentElement).toHaveTextContent('Host cancellation fees, taken off your next payout');
     expect(fees.parentElement?.nextElementSibling).toHaveTextContent('−$25');
+  });
+
+  it('shows Host-funded refunds still owed apart from cancellation fees', async () => {
+    mockEarnings({ feesOwedCents: 2500, refundsOwedCents: 5000 });
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    const refunds = await screen.findByText('Refunds owed');
+    expect(refunds.parentElement).toHaveTextContent('taken off your next payout');
+    expect(refunds.parentElement?.nextElementSibling).toHaveTextContent('−$50');
+    expect(screen.getByText('Fees owed').parentElement?.nextElementSibling).toHaveTextContent('−$25');
+  });
+
+  it('shows the latest 12 paid payouts, and all of them on request', async () => {
+    const older = Array.from({ length: 13 }, (_, index) => ({
+      id: `old${index}`,
+      type: 'TRIP' as const,
+      status: 'PAID' as const,
+      amountCents: 10000,
+      deductions: [],
+      scheduledFor: '2026-08-01T21:00:00.000Z',
+      paidAt: '2026-08-01T21:05:00.000Z',
+      booking: {
+        ref: `RV-OLD${String(index).padStart(3, '0')}`,
+        vehicleTitle: '2019 Mazda 3',
+        start: '2026-07-31T21:00:00.000Z',
+      },
+    }));
+    mockEarnings({}, {}, older);
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    // 14 paid in all: the one from the fixtures first, then 11 of these.
+    const more = await screen.findByRole('button', { name: 'Show all 14' });
+    expect(screen.getAllByText('2019 Mazda 3')).toHaveLength(11);
+    await userEvent.click(more);
+    expect(screen.getAllByText('2019 Mazda 3')).toHaveLength(13);
+    expect(screen.getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('sends a Host without payout setup to Stripe', async () => {

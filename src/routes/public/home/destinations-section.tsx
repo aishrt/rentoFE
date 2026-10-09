@@ -6,10 +6,33 @@ import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { trackSpotlight } from '@/components/motion/spotlight';
 import { IconBadge } from '@/components/ui/icon-badge';
+import { useDestinationList } from '@/features/content/site-content';
 import { cn } from '@/lib/cn';
-import { destinations } from './home-content';
+import { destinations as launchTiles, type Destination } from './home-content';
+
+/**
+ * The homepage tiles: the featured, published destination pages admins choose (plan §12.6), in their order.
+ * The launch cities show while they load, or if they can't; a city added later uses the brand blue.
+ */
+function useTiles(): Destination[] {
+  const list = useDestinationList();
+  if (!list.data) return launchTiles;
+  return list.data
+    .filter((destination) => destination.featured)
+    .map((destination) => ({
+      slug: destination.slug,
+      name: destination.city,
+      maoriName: destination.maoriName,
+      region: destination.region,
+      tagline: destination.tagline ?? '',
+      tone: launchTiles.find((tile) => tile.slug === destination.slug)?.tone ?? 'bg-primary',
+    }));
+}
 
 export function DestinationsSection() {
+  const destinations = useTiles();
+  // None featured: the section is left out rather than shown empty.
+  if (destinations.length === 0) return null;
   return (
     <section
       id="destinations"

@@ -4,6 +4,7 @@ import type { IncidentStatus } from '@/api/types';
 import { IconButton } from '@/components/ui/icon-button';
 import { SegmentedTabs, type TabOption } from '@/components/ui/segmented-tabs';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
+import { OpenCaseButton } from '@/features/admin/operations/open-case-dialog';
 import { useAdminIncidents } from '@/features/admin/operations/operations-api';
 import {
   INCIDENT_STATUSES,
@@ -66,7 +67,8 @@ export function AdminIncidentsPage() {
       <AdminPageHeader
         eyebrow="Operations"
         title="Incidents & disputes"
-        description="Damage, breakdowns, late returns and disagreements reported by Guests and Hosts. Open a case to update it, change its status or charge the Guest."
+        description="Damage, breakdowns, late returns and disagreements reported by Guests and Hosts, or opened by the team. Open a case to update it, change its status or charge the Guest."
+        actions={<OpenCaseButton />}
       />
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-6">

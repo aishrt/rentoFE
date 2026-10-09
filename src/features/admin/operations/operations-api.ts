@@ -5,8 +5,10 @@ import type {
   IncidentChargeRequest,
   IncidentStatus,
   StaffIncidentUpdateRequest,
+  StaffNewIncidentRequest,
   VerificationQueueItem,
 } from '@/api/types';
+import { adminBookingQueryKey } from '@/features/admin/bookings/bookings-api';
 
 /*
  * The support team's operations (spec §18, plan §12.6): the verification queue, and incident cases with
@@ -37,11 +39,13 @@ export function useVerificationQueue() {
 
 export type VerificationDecision = 'APPROVE' | 'REJECT';
 
-/** What deciding an identity check did to the bookings that waited for it. Licences have none. */
+/** What deciding an identity check or a licence did to the bookings that waited for it. */
 export interface VerificationOutcome {
   confirmed: string[];
   waitingForHost: string[];
   released: string[];
+  /** Bookings that still wait for the other part (the identity check or the licence) with support. */
+  stillInReview: string[];
 }
 
 // The API's limit for a review note, under the decision dialog's own.
@@ -54,9 +58,10 @@ function asNotesError(error: unknown): unknown {
 }
 
 /**
- * Identity: approving confirms the bookings that waited for the check (requests still go to their Host);
- * rejecting releases them and their card authorisations. Licence: rejecting emails the person the note.
- * Either way the person is emailed. 409 when the check isn't waiting for a review any more.
+ * Approving confirms the bookings that waited for the check (requests still go to their Host), unless the
+ * other part still waits for support; rejecting releases them and their card authorisations. Rejecting a
+ * licence emails the person the note. Either way the person is emailed. 409 when the check isn't waiting
+ * for a review any more.
  */
 export async function reviewVerificationRequest(input: {
   userId: string;
@@ -72,17 +77,23 @@ export async function reviewVerificationRequest(input: {
   const params = { path: { id: input.userId } };
   const body = { decision: input.decision, ...(input.notes && { note: input.notes }) };
   try {
-    if (input.kind === 'IDENTITY') {
-      const { confirmed, waitingForHost, released } = await unwrap(
-        client.POST('/admin/users/{id}/identity-review', { params, body }),
-      );
-      return { confirmed, waitingForHost, released };
-    }
-    await unwrap(client.POST('/admin/users/{id}/licence-review', { params, body }));
-    return { confirmed: [], waitingForHost: [], released: [] };
+    const { confirmed, waitingForHost, released, stillInReview } =
+      input.kind === 'IDENTITY'
+        ? await unwrap(client.POST('/admin/users/{id}/identity-review', { params, body }))
+        : await unwrap(client.POST('/admin/users/{id}/licence-review', { params, body }));
+    return { confirmed, waitingForHost, released, stillInReview: stillInReview ?? [] };
   } catch (error) {
     throw asNotesError(error);
   }
+}
+
+/**
+ * The full licence number, decrypted to check by hand (plan §14). Each call is written to the audit log,
+ * so it's fetched only when a staff member asks, and never cached.
+ */
+export async function fetchLicenceNumber(userId: string): Promise<string> {
+  return (await unwrap(client.GET('/admin/users/{id}/licence-number', { params: { path: { id: userId } } })))
+    .number;
 }
 
 /** Cases with one status, or every open one; the most recently updated first. */
@@ -94,6 +105,25 @@ export function useAdminIncidents(status?: IncidentStatus) {
     select: (data) => data.incidents,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Support opens a case on a booking themselves, outside the damage-report window (plan §3), for both
+ * parties, one of them or the team only; they have it, and the booking's payouts are held. 404 for a
+ * booking reference that doesn't exist.
+ */
+export function useOpenIncident() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: StaffNewIncidentRequest): Promise<Incident> =>
+      (await unwrap(client.POST('/admin/incidents', { body }))).incident,
+    onSuccess: (incident) => {
+      queryClient.setQueryData(adminIncidentQueryKey(incident.caseRef), incident);
+      void queryClient.invalidateQueries({ queryKey: adminIncidentListsQueryKey });
+      // The booking's record lists its cases.
+      void queryClient.invalidateQueries({ queryKey: adminBookingQueryKey(incident.bookingRef) });
+    },
   });
 }
 

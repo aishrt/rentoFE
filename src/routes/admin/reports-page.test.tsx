@@ -48,6 +48,22 @@ const report = (overrides: Partial<PlatformReport['bookings']> = {}): PlatformRe
     gstCollectedCents: 161028,
     gstOnPlatformFeesCents: 24130,
   },
+  fees: {
+    serviceFeesCents: 92000,
+    hostCommissionCents: 84000,
+    cancellationFeesShareCents: 6600,
+    extraChargeCommissionCents: 2400,
+    totalCents: 185000,
+  },
+  gst: {
+    ratePct: 15,
+    inTripsCents: 161028,
+    inExtraChargesCents: 1565,
+    inCancellationFeesCents: 1043,
+    givenBackCents: 2608,
+    collectedCents: 161028,
+    onPlatformFeesCents: 24130,
+  },
 });
 
 const render = (path = '/admin/reports') =>
@@ -83,6 +99,16 @@ describe('AdminReportsPage', () => {
     expect((await figure('Paid to Hosts')).getByText('$9,025')).toBeInTheDocument();
     expect((await figure('GST collected')).getByText('$1,610.28')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'GST' })).toBeInTheDocument();
+    // GST in each kind of money, and the platform's fees by kind.
+    const givenBack = await figure('GST given back');
+    expect(givenBack.getByText('$26.08')).toBeInTheDocument();
+    expect(givenBack.getByText('In refunds of that money sent on these days')).toBeInTheDocument();
+    expect((await figure('GST in extra charges')).getByText('$15.65')).toBeInTheDocument();
+    expect((await figure('GST in cancellation fees')).getByText('$10.43')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Platform fees' })).toBeInTheDocument();
+    expect((await figure('Extra-charge commission')).getByText('$24')).toBeInTheDocument();
+    expect((await figure('Share of cancellation fees')).getByText('$66')).toBeInTheDocument();
+    expect((await figure('Host commission')).getByText('$840')).toBeInTheDocument();
     expect(
       screen.getByText(/Trip money counts by the trip’s start date, as Hosts’ earnings do/),
     ).toBeInTheDocument();
@@ -134,6 +160,11 @@ describe('AdminReportsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download Payouts CSV' }));
     await vi.waitFor(() => expect(downloads).toHaveLength(2));
     expect(downloads[1]).toBe('rento-vroom-payouts-2026-09-01-to-2026-09-30.csv');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download Revenue and fees CSV' }));
+    await vi.waitFor(() => expect(downloads).toHaveLength(3));
+    expect(downloads[2]).toBe('rento-vroom-revenue-2026-09-01-to-2026-09-30.csv');
+    expect(queries(fetchMock, '/admin/reports/export').at(-1)?.get('type')).toBe('revenue');
   });
 
   it('says when a download fails', async () => {

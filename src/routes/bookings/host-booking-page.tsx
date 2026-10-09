@@ -54,6 +54,7 @@ import { DeclineDialogContent } from '@/features/booking/decline-dialog';
 import { ExtraCharges } from '@/features/booking/extra-charges';
 import { useTimeLeft } from '@/features/booking/use-time-left';
 import { ActiveTripPanel } from '@/features/handover/active-trip';
+import { ReportIncidentLink } from '@/features/incidents/report-incident-link';
 import { HandoverCard } from '@/features/handover/handover-card';
 import { HostSubNav } from '@/features/host/host-nav';
 
@@ -137,6 +138,38 @@ function payoutStatusLine(payout: NonNullable<Booking['payout']>): string | null
   if (payout.status === 'SCHEDULED' && payout.scheduledFor)
     return `Paid to your Stripe account from ${formatNzDateTime(payout.scheduledFor)}, then to your bank on Stripe’s schedule.`;
   return null;
+}
+
+/**
+ * Refunds made to the Guest on the booking with who funds each, and what the Host was actually paid for it
+ * (plan §8.1, items 15 and 19).
+ */
+function PaidAndRefunded({ payout, guest }: { payout: NonNullable<Booking['payout']>; guest: string }) {
+  const refunds = payout.refunds ?? [];
+  if (refunds.length === 0 && payout.paidCents === undefined) return null;
+  return (
+    <dl className="mt-4 grid gap-2 border-t border-line pt-4">
+      {refunds.map((refund, index) => (
+        <div key={`${refund.at}-${index}`} className="flex items-baseline justify-between gap-4 text-muted">
+          <dt>
+            Refund to {guest}, {formatNzDate(refund.at)}
+            <span className="block text-xs">
+              {refund.fundedBy === 'HOST'
+                ? 'Funded by you: it comes off your payout'
+                : 'Funded by Rento Vroom'}
+            </span>
+          </dt>
+          <dd className="tabular-nums">{formatNzd(refund.amountCents)}</dd>
+        </div>
+      ))}
+      {payout.paidCents !== undefined && (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="font-semibold text-ink">Paid to you so far</dt>
+          <dd className="font-semibold text-ink tabular-nums">{formatNzd(payout.paidCents)}</dd>
+        </div>
+      )}
+    </dl>
+  );
 }
 
 function HostStatus({ booking }: { booking: Booking }) {
@@ -331,6 +364,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
                   <dd className="tabular-nums">{formatNzd(booking.price.totalCents)}</dd>
                 </div>
               </dl>
+              <PaidAndRefunded payout={booking.payout} guest={guest} />
               <p className="mt-4 text-muted">
                 {payoutStatusLine(booking.payout) ??
                   'Paid to your Stripe account 24 hours after the trip starts, then to your bank on Stripe’s payout schedule.'}
@@ -349,6 +383,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
                 Cancel booking
               </Button>
             )}
+            <ReportIncidentLink booking={booking} />
             <SupportLink bookingRef={booking.ref} />
           </Card>
         </div>

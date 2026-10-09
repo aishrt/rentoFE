@@ -42,7 +42,11 @@ const PLAN_BUDGET_KB = 170;
 // (186.5 KB locally, so about 186.65 KB in the pipeline): pickers inside dialogs open their lists in the dialog
 // (PopoverRootContext, 0.2 KB with the chunks it moved), the header keeps the wordmark on one line on phones,
 // and reviews can be reported (the review card's action slot).
-const LIMIT_KB = 186.7;
+// Raised from 186.7 on 9 October 2026 (186.5 → 187.3 KB locally, so about 187.45 KB in the pipeline): admins
+// now edit the homepage's headline, footer links and destination tiles (plan §12.6), so the homepage reads them
+// from the API with the original copy as the fallback (0.42 KB, measured with and without those files); and the
+// Host calendar and member profile routes and the account menus' Reviews link add about 0.15 KB to the entry.
+const LIMIT_KB = 187.5;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

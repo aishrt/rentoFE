@@ -84,13 +84,20 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
     formState: { errors },
   } = useForm<UpdateValues>({ resolver: zodResolver(updateSchema), defaultValues: DEFAULTS });
 
+  // Only where the case can go from here (the API's workflow): a resolved case can be reopened, a closed
+  // one is final.
+  const reopening = incident.status === 'RESOLVED';
   const statusOptions = [
     { value: '', label: `No change (${STAFF_INCIDENT_STATUS[incident.status].label})` },
-    ...INCIDENT_STATUSES.filter((status) => status !== incident.status).map((status) => ({
+    ...(incident.nextStatuses ?? []).map((status) => ({
       value: status,
-      label: STAFF_INCIDENT_STATUS[status].label,
+      label:
+        reopening && status !== 'CLOSED'
+          ? `Reopen: ${STAFF_INCIDENT_STATUS[status].label.toLowerCase()}`
+          : STAFF_INCIDENT_STATUS[status].label,
     })),
   ];
+  const statusFinal = statusOptions.length === 1;
 
   const onSubmit = handleSubmit(async ({ note, visibility, status, assignToMe }) => {
     const body: StaffIncidentUpdateRequest = {
@@ -162,7 +169,16 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
               name="status"
               control={control}
               render={({ field }) => (
-                <Field label="Status">
+                <Field
+                  label="Status"
+                  description={
+                    statusFinal
+                      ? 'A closed case is final. Open a new case for anything new.'
+                      : reopening
+                        ? 'Reopening holds the booking’s unpaid payouts again.'
+                        : undefined
+                  }
+                >
                   <Select
                     ref={field.ref}
                     name={field.name}
@@ -172,6 +188,7 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
                     options={statusOptions}
                     icon={<Flag />}
                     listLabel="Statuses"
+                    disabled={statusFinal}
                   />
                 </Field>
               )}

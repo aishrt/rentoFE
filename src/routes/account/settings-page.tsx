@@ -8,6 +8,7 @@ import { BlockedSection } from '@/features/account/blocked-section';
 import { EmailSection } from '@/features/account/email-section';
 import { NotificationsSection } from '@/features/account/notifications-section';
 import { PasswordSection } from '@/features/account/password-section';
+import { PersonalDetailsSection } from '@/features/account/personal-details-section';
 import { PhoneSection } from '@/features/account/phone-section';
 import { PrivacySection } from '@/features/account/privacy-section';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
@@ -23,8 +24,9 @@ function SettingsSkeleton() {
 }
 
 /**
- * Account settings (plan §6.1): the email address, mobile number and password, notification choices
- * (plan §7), the people blocked in messages, and privacy requests, including closing the account (plan §8.2). Part of the Guest dashboard.
+ * Account settings (plan §6.1): personal details (the name and date of birth, plan §11), the email address,
+ * mobile number and password, notification choices (plan §7), the people blocked in messages, and privacy
+ * requests, including closing the account (plan §8.2). Part of the Guest dashboard.
  */
 export function AccountSettingsPage() {
   return (
@@ -37,8 +39,9 @@ export function AccountSettingsPage() {
             <div className="grid max-w-2xl gap-6">
               <AccountPageHeader
                 title="Account settings"
-                description={`Kia ora ${user.firstName}. How you log in, how we reach you, what we send you, and your privacy.`}
+                description={`Kia ora ${user.firstName}. Your details, how you log in, how we reach you, what we send you, and your privacy.`}
               />
+              <PersonalDetailsSection user={user} />
               <EmailSection user={user} />
               <PhoneSection user={user} />
               <PasswordSection />

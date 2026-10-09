@@ -10,6 +10,7 @@ export const hostUser: SessionUser = {
   email: 'aroha@example.co.nz',
   firstName: 'Aroha',
   lastName: 'Host',
+  nameLocked: false,
   roles: ['GUEST', 'HOST'],
   emailVerified: true,
   phone: '+64211234567',

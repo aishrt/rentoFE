@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { summary } from '@/features/booking/test-fixtures';
-import { mockRoutes } from '@/features/vehicles/test-fixtures';
+import type { Booking } from '@/api/types';
+import { confirmedBooking, summary } from '@/features/booking/test-fixtures';
+import { handover } from '@/features/handover/test-fixtures';
+import { mockRoutes, policies } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
 import { TripsPage } from './trips-page';
 
@@ -12,15 +14,26 @@ afterEach(() => {
 
 const HOUR = 3_600_000;
 
-function mockTrips(groups: Partial<Record<string, ReturnType<typeof summary>[]>>, user = guestUser) {
+function mockTrips(
+  groups: Partial<Record<string, ReturnType<typeof summary>[]>>,
+  user = guestUser,
+  details: Booking[] = [],
+) {
   return mockRoutes((request) => {
     switch (`${request.method} ${request.path}`) {
       case 'POST /auth/session':
         return { status: 200, body: { user } };
       case 'GET /bookings':
         return { status: 200, body: { bookings: groups[request.query.get('group') ?? ''] ?? [] } };
-      default:
-        return undefined;
+      case 'GET /policies':
+        return { status: 200, body: policies };
+      default: {
+        // A trip under way: its details and its handover.
+        const [, ref, part] = /^\/bookings\/([^/]+)(?:\/(inspections))?$/.exec(request.path) ?? [];
+        const detail = details.find((booking) => booking.ref === ref);
+        if (ref && part) return { status: 200, body: { handover: handover({ ref }) } };
+        return detail ? { status: 200, body: { booking: detail } } : undefined;
+      }
     }
   });
 }
@@ -53,9 +66,10 @@ describe('TripsPage', () => {
     // The trips, not the dashboard's navigation around them.
     const items = await within(await screen.findByRole('tabpanel')).findAllByRole('listitem');
     expect(items).toHaveLength(2);
-    expect(sent.find((request) => request.path === '/bookings')?.query.toString()).toBe(
-      'role=guest&group=upcoming',
-    );
+    // The list, and the trips under way above it.
+    expect(
+      sent.filter((request) => request.path === '/bookings').map((request) => request.query.toString()),
+    ).toEqual(expect.arrayContaining(['role=guest&group=upcoming', 'role=guest&group=current']));
 
     const confirmed = within(items[0]!);
     expect(confirmed.getByRole('link')).toHaveAttribute('href', '/trips/RV-7K2Q9M');
@@ -94,6 +108,61 @@ describe('TripsPage', () => {
 
     expect(await screen.findByText('Completed', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Completed' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('puts a trip on the road at the top, with what’s needed until it’s returned', async () => {
+    const end = new Date(Date.now() + 2 * HOUR).toISOString();
+    mockTrips(
+      {
+        current: [
+          summary({
+            ref: 'RV-ONROAD',
+            status: 'ACTIVE',
+            start: new Date(Date.now() - 48 * HOUR).toISOString(),
+            end,
+          }),
+        ],
+      },
+      guestUser,
+      [confirmedBooking({ ref: 'RV-ONROAD', status: 'ACTIVE', end })],
+    );
+    render();
+
+    const now = within(await screen.findByRole('region', { name: 'Trips under way' }));
+    expect(await now.findByRole('heading', { name: /^Return by/ })).toBeInTheDocument();
+    expect(now.getByText('2022 Toyota RAV4')).toBeInTheDocument();
+    expect(now.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trips/RV-ONROAD');
+    // Two hours from the return time: check-out is a tap away.
+    expect(now.getByRole('link', { name: 'Start check-out' })).toHaveAttribute(
+      'href',
+      '/trips/RV-ONROAD/check-out',
+    );
+    expect(now.getByRole('link', { name: 'Message Liam' })).toHaveAttribute('href', '/messages/RV-ONROAD');
+    expect(now.getByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      '/incidents/new?booking=RV-ONROAD',
+    );
+    // The tabs still open on Upcoming, under it.
+    expect(screen.getByRole('tab', { name: 'Upcoming' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('asks to check in once a booked trip has started', async () => {
+    mockTrips({
+      current: [summary({ ref: 'RV-STARTED', start: new Date(Date.now() - HOUR).toISOString() })],
+    });
+    render();
+
+    const now = within(await screen.findByRole('region', { name: 'Trips under way' }));
+    expect(now.getByRole('heading', { name: 'Check in to start your trip' })).toBeInTheDocument();
+    expect(await now.findByRole('link', { name: 'Start check-in' })).toHaveAttribute(
+      'href',
+      '/trips/RV-STARTED/check-in',
+    );
+    expect(now.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trips/RV-STARTED');
+    expect(now.getByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      '/incidents/new?booking=RV-STARTED',
+    );
   });
 
   it('sends a visitor who isn’t logged in to log in, and back afterwards', async () => {

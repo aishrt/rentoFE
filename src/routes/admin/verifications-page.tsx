@@ -30,24 +30,29 @@ const joinRefs = (refs: string[]) => refs.join(', ');
 /** The toast after a decision: who it was, and what happened to the bookings that waited for it. */
 function decidedToast({ item, decision }: Decision, outcome: VerificationOutcome) {
   const name = personName(item);
-  if (item.kind === 'LICENCE') {
-    if (decision === 'APPROVE') toast(`${name}’s licence is approved`);
-    else toast(`${name}’s licence was rejected`, { description: 'We’ve emailed them your note.' });
-    return;
-  }
+  const licence = item.kind === 'LICENCE';
   const bookings =
     decision === 'APPROVE'
       ? [
           outcome.confirmed.length > 0 && `Confirmed ${joinRefs(outcome.confirmed)}.`,
           outcome.waitingForHost.length > 0 && `${joinRefs(outcome.waitingForHost)} now waits for the Host.`,
+          // The other part of the check is still with the team.
+          outcome.stillInReview.length > 0 &&
+            `${joinRefs(outcome.stillInReview)} still waits for ${licence ? 'the identity check' : 'the licence check'}.`,
         ]
       : [
           outcome.released.length > 0 &&
             `Released ${joinRefs(outcome.released)} and the card authorisation: nothing was charged.`,
         ];
-  toast(decision === 'APPROVE' ? `${name} is verified` : `${name}’s identity check was rejected`, {
-    description: ['We’ve emailed them.', ...bookings].filter(Boolean).join(' '),
-  });
+  const title = licence
+    ? decision === 'APPROVE'
+      ? `${name}’s licence is approved`
+      : `${name}’s licence was rejected`
+    : decision === 'APPROVE'
+      ? `${name} is verified`
+      : `${name}’s identity check was rejected`;
+  const emailed = licence && decision === 'REJECT' ? 'We’ve emailed them your note.' : 'We’ve emailed them.';
+  toast(title, { description: [emailed, ...bookings].filter(Boolean).join(' ') });
 }
 
 function Section({
@@ -201,7 +206,7 @@ export function AdminVerificationsPage() {
         />
         <Section
           title="Licences to check by hand"
-          description="Their ID wasn’t a driver licence, so check the licence details against their date of birth and name."
+          description="No ID document confirmed these licences: check the details, with the full number, against their name and date of birth. Approving confirms the bookings waiting on it; rejecting releases them."
           items={licences}
           start={start}
         />
@@ -225,8 +230,8 @@ export function AdminVerificationsPage() {
               ? `They won’t be able to book.${waiting > 0 ? ' Bookings waiting on this check are released with their card authorisations, so nothing is charged.' : ''} We’ll email them.`
               : `They’ll be verified.${waiting > 0 ? ' Bookings waiting on this check are confirmed; requests still go to their Host.' : ''} We’ll email them.`
             : rejecting
-              ? 'They won’t be able to book until their licence details are fixed. We’ll email them your note, so write it for them.'
-              : 'Their licence details are accepted.'
+              ? `They won’t be able to book until their licence details are fixed.${waiting > 0 ? ' Bookings waiting on this licence are released with their card authorisations, so nothing is charged.' : ''} We’ll email them your note, so write it for them.`
+              : `Their licence details are accepted.${waiting > 0 ? ' Bookings waiting on this licence are confirmed; requests still go to their Host.' : ''} We’ll email them.`
         }
         confirmLabel={rejecting ? 'Reject' : 'Approve'}
         tone={rejecting ? 'danger' : 'primary'}

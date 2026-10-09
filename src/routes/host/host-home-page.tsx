@@ -19,6 +19,7 @@ import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
 import { HostTodoList } from '@/features/host/todo-list';
 import { useCheckoutReadiness } from '@/features/booking/booking-api';
 import { IdentityCheck } from '@/features/booking/identity-check';
+import { CurrentTrips } from '@/features/handover/current-trips';
 import { MyVehicles } from '@/features/host/my-vehicles';
 
 type HostStatus = NonNullable<SessionUser['hostStatus']>;
@@ -228,6 +229,8 @@ function HostHome({ user }: { user: SessionUser }) {
         }
       />
       <ApplicationStatus status={status} />
+      {/* Trips under way sit at the top, from check-in to check-out (plan §12.6), even while suspended. */}
+      {(status === 'APPROVED' || status === 'SUSPENDED') && <CurrentTrips role="host" />}
       {(status === 'APPLIED' || status === 'APPROVED') && <HostIdentity />}
       {status === 'APPROVED' && <HostTodoList />}
       <MyVehicles canAdd={status === 'APPLIED' || status === 'APPROVED'} />
@@ -236,8 +239,9 @@ function HostHome({ user }: { user: SessionUser }) {
 }
 
 /**
- * The Host's home (spec §9): where their application stands, the to-do list, and My Vehicles with each car's
- * status and what's left. Someone who hasn't applied sees why to host and where to start.
+ * The Host's home (spec §9), their Today: where their application stands, the trips under way, the to-do list,
+ * and My Vehicles with each car's status and what's left. Someone who hasn't applied sees why to host and where
+ * to start.
  */
 export function HostHomePage() {
   return (

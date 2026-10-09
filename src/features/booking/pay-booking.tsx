@@ -25,8 +25,8 @@ interface PayBookingProps {
   /** The 30-minute hold ran out before the payment started. */
   onHoldExpired: () => void;
   /**
-   * Known before the payment starts (from checkout's verification step): the Guest's identity check is with
-   * support. The payment session says so too, once it exists.
+   * Known before the payment starts (from checkout's verification step): the Guest's identity check or
+   * licence is with support. The payment session says so too, once it exists.
    */
   verificationInReview?: boolean;
 }
@@ -48,7 +48,7 @@ function PaymentsNotSetUp() {
  * The Guest Agreement, then the payment (plan §8.1): ticking the box records the agreement and starts the
  * PaymentIntent, and the payment form opens with the Guest's saved cards. The final breakdown sits right
  * above the button, which reads Confirm and pay for Instant Book or Request to book, turns into progress,
- * then an animated tick (plan §12.4). While the Guest's identity check is in review, the card is only
+ * then an animated tick (plan §12.4). While the Guest's identity check or licence is in review, the card is only
  * authorised and the booking waits for the check (plan §8.2). Used at checkout and on an unpaid trip while
  * its dates are held.
  */
@@ -105,7 +105,7 @@ export function PayBooking({
   return (
     <div className="grid gap-6">
       {inReview && (
-        <Alert role="status" title="We’re still checking your identity">
+        <Alert role="status" title="We’re still checking your details">
           You can finish booking now. Your card is authorised, not charged, and the dates are held for you. We
           confirm the booking as soon as the check is approved{request && ` and ${hostName} accepts`}, usually
           within 24 hours. If it isn’t approved, nothing is charged.

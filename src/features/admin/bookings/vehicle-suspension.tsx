@@ -7,7 +7,11 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
-import { adminVehicleQueryKey, reviewQueueQueryKey } from '@/features/admin/listings/listing-api';
+import {
+  adminVehicleListsQueryKey,
+  adminVehicleQueryKey,
+  reviewQueueQueryKey,
+} from '@/features/admin/listings/listing-api';
 import { ReviewSection } from '@/features/admin/listings/review-section';
 import { BOOKING_STATUS } from '@/features/admin/ops/admin-labels';
 import { formatTripSpan } from '@/features/booking/booking-format';
@@ -40,6 +44,7 @@ export function SuspensionAction({ vehicle, onSuspended, onLifted }: SuspensionA
     );
     void queryClient.invalidateQueries({ queryKey: adminVehicleQueryKey(vehicle.id) });
     void queryClient.invalidateQueries({ queryKey: reviewQueueQueryKey });
+    void queryClient.invalidateQueries({ queryKey: adminVehicleListsQueryKey });
   };
 
   const suspend = async (reason: string) => {

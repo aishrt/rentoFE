@@ -78,9 +78,13 @@ const aroha: AdminUserDetail = {
     class: 'NZ_FULL',
     country: 'NZ',
     numberEnding: '1234',
+    version: '045',
+    issuedAt: '2015-05-01',
     expiry: '2029-05-01',
     status: 'APPROVED',
   },
+  dob: '1990-03-14',
+  identityDocument: { type: 'driving_license', licenceNumberMatched: true, dobMatched: false },
   host: {
     status: 'APPROVED',
     payoutsEnabled: true,
@@ -127,6 +131,41 @@ const session = (user: typeof adminUser = adminUser) => ({ status: 200, body: { 
 const region = async (name: string) => within(await screen.findByRole('region', { name }));
 
 describe('AdminUserPage', () => {
+  it('warns staff when emails to the address bounce', async () => {
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': {
+        status: 200,
+        body: {
+          user: {
+            ...aroha,
+            emailProblem: {
+              kind: 'BOUNCED',
+              detail: '(Permanent, General) Mailbox does not exist',
+              at: '2026-10-08T02:00:00.000Z',
+            },
+          },
+        },
+      },
+    });
+    render();
+
+    const account = await region('Account');
+    expect(account.getByText('Emails to this address are bouncing')).toBeInTheDocument();
+    expect(account.getByText('(Permanent, General) Mailbox does not exist')).toBeInTheDocument();
+  });
+
+  it('shows no email warning while emails are delivered', async () => {
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+    });
+    render();
+
+    await region('Account');
+    expect(screen.queryByText(/Emails to this address are/)).not.toBeInTheDocument();
+  });
+
   it('shows their account, licence, hosting, flags and bookings', async () => {
     mockApi({
       'POST /auth/session': session(),
@@ -150,10 +189,28 @@ describe('AdminUserPage', () => {
     expect(licence.getByText('Full NZ licence')).toBeInTheDocument();
     expect(licence.getByText('Ending 1234')).toBeInTheDocument();
     expect(licence.getByText('1 May 2029')).toBeInTheDocument();
+    // What it's checked against: the version, issue date, date of birth and how the ID compared.
+    expect(licence.getByText('045')).toBeInTheDocument();
+    expect(licence.getByText('1 May 2015')).toBeInTheDocument();
+    expect(licence.getByText('14 Mar 1990')).toBeInTheDocument();
+    expect(
+      within(licence.getByText('ID used').parentElement!).getByText('Driver licence'),
+    ).toBeInTheDocument();
+    expect(
+      within(licence.getByText('Number on the ID').parentElement!).getByText('Matches'),
+    ).toBeInTheDocument();
+    expect(
+      within(licence.getByText('Birth date on the ID').parentElement!).getByText('Doesn’t match'),
+    ).toBeInTheDocument();
 
     const host = await region('Host');
     expect(host.getByText('$45.50')).toBeInTheDocument();
     expect(host.getByText('12')).toBeInTheDocument();
+    // Their cars, in Vehicles' All cars tab.
+    expect(host.getByRole('link', { name: '2 cars' })).toHaveAttribute(
+      'href',
+      '/admin/vehicles?view=all&hostId=u10',
+    );
     expect(host.getByText('4.9 (9)')).toBeInTheDocument();
     expect(host.getByRole('button', { name: 'Waive fees' })).toBeInTheDocument();
 
@@ -179,6 +236,34 @@ describe('AdminUserPage', () => {
     // The admin can close an account; support staff controls are only for support team members.
     expect(await screen.findByRole('region', { name: 'Close account' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Support team' })).not.toBeInTheDocument();
+  });
+
+  it('shows the full licence number only when asked, and says when it can’t', async () => {
+    let asked = 0;
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+      'GET /admin/users/u10/licence-number': () => {
+        asked += 1;
+        return asked === 1
+          ? { status: 200, body: { number: 'DL551234' } }
+          : {
+              status: 404,
+              body: { error: { code: 'NOT_FOUND', message: 'This person has no licence details.' } },
+            };
+      },
+    });
+    render();
+
+    const licence = await region('Driver licence');
+    expect(asked).toBe(0);
+    await userEvent.click(licence.getByRole('button', { name: 'Show full number' }));
+    expect(await licence.findByText('DL551234')).toBeInTheDocument();
+    await userEvent.click(licence.getByRole('button', { name: 'Hide number' }));
+    expect(licence.getByText('Ending 1234')).toBeInTheDocument();
+    await userEvent.click(licence.getByRole('button', { name: 'Show full number' }));
+    expect(await licence.findByRole('alert')).toHaveTextContent('This person has no licence details.');
+    expect(asked).toBe(2);
   });
 
   it('suspends with a reason, then brings their upcoming bookings into view', async () => {

@@ -80,6 +80,27 @@ describe('TripPage', () => {
       'href',
       `/contact?category=BOOKING&booking=${REF}`,
     );
+    // An incident can be reported before, during and after the trip, with this booking chosen.
+    expect(screen.getByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      `/incidents/new?booking=${REF}`,
+    );
+  });
+
+  it('offers to report an incident after the trip, but not on a booking that never went ahead', async () => {
+    mockTrip(confirmedBooking({ status: 'COMPLETED' }));
+    const { unmount } = render();
+    expect(await screen.findByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      `/incidents/new?booking=${REF}`,
+    );
+    unmount();
+    vi.unstubAllGlobals();
+
+    mockTrip(confirmedBooking({ status: 'CANCELLED' }));
+    render();
+    expect(await screen.findByRole('heading', { level: 1, name: '2022 Toyota RAV4' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Report an incident' })).not.toBeInTheDocument();
   });
 
   it('says the return is at the pick-up place, rather than repeating it', async () => {

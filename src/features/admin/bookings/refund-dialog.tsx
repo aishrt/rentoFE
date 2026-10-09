@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { DollarSign } from 'lucide-react';
 import { useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '@/api/client';
 import type { AdminRefundRequest } from '@/api/types';
@@ -21,9 +21,12 @@ import { FUNDED_BY } from './bookings-labels';
 
 const REASON_MAX = 500;
 const FUNDERS = ['PLATFORM', 'HOST'] as const;
+const RECOVERIES = ['NEXT_PAYOUT', 'REVERSE_TRANSFER'] as const;
 type FundedBy = AdminRefundRequest['fundedBy'];
+type RecoverFrom = NonNullable<AdminRefundRequest['recoverFrom']>;
 
 const isFunder = (value: string): value is FundedBy => FUNDERS.some((funder) => funder === value);
+const isRecovery = (value: string): value is RecoverFrom => RECOVERIES.some((recovery) => recovery === value);
 
 function refundSchema(maxCents: number) {
   return z.object({
@@ -42,6 +45,7 @@ function refundSchema(maxCents: number) {
       if (message) context.addIssue({ code: 'custom', message });
     }),
     fundedBy: z.string().refine(isFunder, 'Choose who pays for the refund'),
+    recoverFrom: z.string().refine(isRecovery, 'Choose how the Host pays it back'),
     reason: z
       .string()
       .trim()
@@ -65,11 +69,28 @@ const FUNDER_CHOICES = [
   },
 ] as const;
 
+/** Once the trip's payout has gone, how a Host-funded refund is taken back (plan §8.1, item 15). */
+const RECOVERY_CHOICES = [
+  {
+    value: 'NEXT_PAYOUT',
+    label: 'From their next payout',
+    description: 'Shown as its own line on the Host’s next payout.',
+  },
+  {
+    value: 'REVERSE_TRANSFER',
+    label: 'Reverse the Stripe transfer',
+    description:
+      'Taken back from this trip’s payout now. If Stripe can’t, it comes off their next payout instead.',
+  },
+] as const;
+
 interface RefundDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** What can still be refunded on the booking's payment. */
   refundableCents: number;
+  /** The trip's payout has been sent, so a Host-funded refund is taken back another way. */
+  tripPayoutSent?: boolean;
   guestName: string;
   /** Sends the refund. An API error it throws shows in the dialog. */
   onConfirm: (refund: AdminRefundRequest) => Promise<void>;
@@ -77,12 +98,14 @@ interface RefundDialogProps {
 
 /**
  * A refund to the Guest's card (plan §6.2: staff with the refunds permission), in dollars up to what's left
- * to refund, with who pays for it (plan §8.1, item 15) and a reason for the audit log.
+ * to refund, with who pays for it (plan §8.1, item 15) and a reason for the audit log. A Host-funded refund
+ * after the trip's payout has gone is taken off the Host's next payout, or back from the Stripe transfer.
  */
 export function RefundDialog({
   open,
   onOpenChange,
   refundableCents,
+  tripPayoutSent = false,
   guestName,
   onConfirm,
 }: RefundDialogProps) {
@@ -92,7 +115,7 @@ export function RefundDialog({
         title="Refund the Guest"
         description={`Back to the card ${guestName} paid with. Up to ${formatNzd(refundableCents)} can still be refunded. We’ll email them.`}
       >
-        <RefundForm refundableCents={refundableCents} onConfirm={onConfirm} />
+        <RefundForm refundableCents={refundableCents} tripPayoutSent={tripPayoutSent} onConfirm={onConfirm} />
       </DialogContent>
     </Dialog>
   );
@@ -100,8 +123,9 @@ export function RefundDialog({
 
 function RefundForm({
   refundableCents,
+  tripPayoutSent,
   onConfirm,
-}: Pick<RefundDialogProps, 'refundableCents' | 'onConfirm'>) {
+}: Pick<RefundDialogProps, 'refundableCents' | 'tripPayoutSent' | 'onConfirm'>) {
   const confirm = useMutation({ mutationFn: onConfirm });
   const schema = useMemo(() => refundSchema(refundableCents), [refundableCents]);
   const {
@@ -112,14 +136,21 @@ function RefundForm({
     formState: { errors },
   } = useForm<z.input<RefundSchema>, unknown, z.output<RefundSchema>>({
     resolver: zodResolver(schema),
-    defaultValues: { amount: '', fundedBy: '', reason: '' },
+    defaultValues: { amount: '', fundedBy: '', recoverFrom: 'NEXT_PAYOUT', reason: '' },
   });
+  const funder = useWatch({ control, name: 'fundedBy' });
+  const askRecovery = Boolean(tripPayoutSent) && funder === 'HOST';
 
-  const onSubmit = handleSubmit(async ({ amount, fundedBy, reason }) => {
+  const onSubmit = handleSubmit(async ({ amount, fundedBy, recoverFrom, reason }) => {
     const amountCents = dollarsToCents(amount);
     if (amountCents === null) return;
     try {
-      await confirm.mutateAsync({ amountCents, reason, fundedBy });
+      await confirm.mutateAsync({
+        amountCents,
+        reason,
+        fundedBy,
+        ...(fundedBy === 'HOST' && tripPayoutSent && { recoverFrom }),
+      });
     } catch (error) {
       applyFieldErrors(error, ['reason'] as const, setError);
       const amountError = error instanceof ApiError ? error.fields?.amountCents : undefined;
@@ -169,6 +200,26 @@ function RefundForm({
             />
           )}
         />
+        {askRecovery && (
+          <Controller
+            name="recoverFrom"
+            control={control}
+            render={({ field }) => (
+              <ChoiceCards
+                ref={field.ref}
+                legend="How the Host pays it back"
+                description="This trip’s payout has already been sent to the Host."
+                name={field.name}
+                value={isRecovery(field.value) ? field.value : ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                choices={RECOVERY_CHOICES}
+                columns={1}
+                error={errors.recoverFrom?.message}
+              />
+            )}
+          />
+        )}
         <Field
           label="Reason"
           description="For the audit log. The Guest doesn’t see it."
