@@ -277,6 +277,32 @@ describe('VehiclePage', () => {
     });
   });
 
+  it('lets a signed-in reader report the listing itself', async () => {
+    const sent = mockListing({ user: guestUser });
+    const user = userEvent.setup();
+    renderListing();
+
+    await user.click(await screen.findByRole('button', { name: 'Report this listing' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Report this listing' }));
+    await user.click(dialog.getByRole('radio', { name: /Fake or misleading/ }));
+    await user.click(dialog.getByRole('button', { name: 'Send report' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sent.find((request) => request.path === '/reports')?.body).toEqual({
+      targetType: 'VEHICLE',
+      targetId: vehicleDetail().id,
+      reason: 'FAKE',
+    });
+  });
+
+  it('doesn’t offer the Host a report on their own listing', async () => {
+    mockListing({ user: { ...guestUser, id: 'host-liam' } });
+    renderListing();
+    expect(await screen.findByRole('region', { name: 'Reviews' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('button', { name: 'Report this listing' })).not.toBeInTheDocument();
+  });
+
   it('sends visitors to log in before they report a review', async () => {
     mockListing();
     const user = userEvent.setup();

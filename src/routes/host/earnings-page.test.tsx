@@ -176,6 +176,25 @@ describe('EarningsPage', () => {
     expect(screen.getByRole('row', { name: /December 2026 \$213\.60/ })).toBeInTheDocument();
   });
 
+  it('gives an upcoming payout both dates: when it’s sent, and when it usually reaches the bank', async () => {
+    mockEarnings({}, {}, [
+      {
+        id: 'p4',
+        type: 'TRIP',
+        status: 'SCHEDULED',
+        amountCents: 12000,
+        deductions: [],
+        scheduledFor: '2026-10-20T21:00:00.000Z',
+        expectedInBankBy: '2026-10-23T21:00:00.000Z',
+        booking: { ref: 'RV-NEXT01', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-19T21:00:00.000Z' },
+      },
+    ]);
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    const upcoming = await screen.findByText(/^Due .*, usually in your bank by /);
+    expect(upcoming.textContent).toMatch(/21.*Oct.*24.*Oct|21\/10.*24\/10/);
+  });
+
   it('shows each trip’s breakdown a month at a time, this month first', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-08T00:00:00.000Z'));

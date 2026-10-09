@@ -16,6 +16,7 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AvailabilitySection } from '@/features/vehicles/availability-calendar';
 import { BookingPanel } from '@/features/vehicles/booking-panel';
+import { ReportLink } from '@/features/reviews/report-link';
 import { HostCard } from '@/features/vehicles/host-card';
 import { ListingGallery } from '@/features/vehicles/listing-gallery';
 import { ListingHeader } from '@/features/vehicles/listing-header';
@@ -154,6 +155,17 @@ function Listing({ vehicle, backTo }: { vehicle: VehicleDetail; backTo?: string 
             <AvailabilitySection vehicleId={vehicle.id} />
             <ListingReviews vehicle={vehicle} />
             <LocationMap vehicle={vehicle} />
+            {/* A listing that looks wrong goes to the support team (plan §3, reports; spec §22). */}
+            <div className="mt-10 flex justify-end border-t border-line pt-4">
+              <ReportLink
+                targetType="VEHICLE"
+                targetId={vehicle.id}
+                subject="this listing"
+                label="Report this listing"
+                ownerId={vehicle.host.id}
+                className="text-muted"
+              />
+            </div>
           </div>
 
           <aside aria-label="Book this car" className="hidden lg:block">

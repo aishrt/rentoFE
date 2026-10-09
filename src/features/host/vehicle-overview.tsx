@@ -178,7 +178,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
   return (
     <div className="grid gap-8">
       <HostPageHeader
-        back={<BackLink to="/host">Hosting</BackLink>}
+        back={<BackLink to="/host/vehicles">My vehicles</BackLink>}
         title={vehicleDisplayTitle(vehicle.title)}
         titleAside={
           <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
@@ -222,7 +222,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
       )}
 
       {/* grid-cols-1 here and below: truncated step summaries would otherwise widen a phone’s page. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section aria-labelledby="listing-sections" className="grid grid-cols-1 content-start gap-3">
           <h2 id="listing-sections" className="text-base font-semibold text-ink">
             Your listing
@@ -285,7 +285,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
           )}
         </section>
 
-        <aside className="hidden lg:block" aria-hidden="true">
+        <aside className="hidden xl:block" aria-hidden="true">
           <div className="sticky top-24 aspect-4/3 overflow-hidden rounded-card border border-line bg-canvas shadow-card">
             {cover ? (
               <img src={cover} alt="" className="size-full object-cover" />

@@ -157,9 +157,18 @@ const calendarWith = (blocks: CalendarBlock[]): HostCalendar => ({
   rules: { minNoticeHours: 24, bufferHours: 3 },
 });
 
-const listing = (patch: Partial<HostVehicle> = {}, hostPatch: Partial<AdminVehicle['host']> = {}) => ({
+const listing = (
+  patch: Partial<HostVehicle> = {},
+  hostPatch: Partial<AdminVehicle['host']> = {},
+  extra: Partial<Pick<AdminVehicle, 'keyChanges' | 'upcomingBookings'>> = {},
+) => ({
   status: 200,
-  body: { vehicle: { ...vehicle, ...patch }, host: { ...host, ...hostPatch } } satisfies AdminVehicle,
+  body: {
+    vehicle: { ...vehicle, ...patch },
+    host: { ...host, ...hostPatch },
+    keyChanges: [],
+    ...extra,
+  } satisfies AdminVehicle,
 });
 
 const baseHandlers = {
@@ -254,6 +263,45 @@ describe('AdminVehicleReviewPage: what staff see', () => {
     expect(approve).toBeDisabled();
     expect(approve).toHaveAccessibleDescription(/Approve the Host's application first/);
     expect(bar.getByRole('button', { name: 'Request changes' })).toBeEnabled();
+  });
+
+  it('compares the key details the Host changed on the live listing, from what they were to now', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing(
+        { regoPlate: 'QRS456', model: 'Yaris' },
+        {},
+        {
+          keyChanges: [
+            { field: 'regoPlate', before: 'ABC123', after: 'QRS456', changedAt: '2026-10-07T21:00:00.000Z' },
+            { field: 'model', before: 'Corolla', after: 'Yaris', changedAt: '2026-10-08T21:00:00.000Z' },
+            { field: 'chassisNo', after: 'NZE121-1234567', changedAt: '2026-10-08T21:00:00.000Z' },
+          ],
+        },
+      ),
+    });
+    render();
+
+    const changes = await section('Key details changed');
+    const rows = within(changes.getByRole('table')).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'Number plateABC123QRS456Thu, 8 Oct 2026',
+      'ModelCorollaYarisFri, 9 Oct 2026',
+      'Chassis numberNot givenNZE121-1234567Fri, 9 Oct 2026',
+    ]);
+    expect(
+      within(screen.getByRole('navigation', { name: 'On this page' })).getByRole('link', {
+        name: /Key details changed/,
+      }),
+    ).toHaveAttribute('href', '#key-changes');
+  });
+
+  it('shows no key details section when nothing key changed', async () => {
+    mockApi(baseHandlers);
+    render();
+
+    expect(await screen.findByRole('heading', { level: 1, name: '2021 Toyota Corolla' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Key details changed' })).not.toBeInTheDocument();
   });
 
   it('says when the listing is missing', async () => {
@@ -601,10 +649,14 @@ describe('AdminVehicleReviewPage: suspension', () => {
     const fetchMock = mockApi({
       ...baseHandlers,
       'GET /admin/vehicles/v1': () =>
-        listing({
-          status: suspended ? 'SUSPENDED' : 'ACTIVE',
-          reviewNotes: suspended ? 'Hail damage to the windscreen.' : undefined,
-        }),
+        listing(
+          {
+            status: suspended ? 'SUSPENDED' : 'ACTIVE',
+            reviewNotes: suspended ? 'Hail damage to the windscreen.' : undefined,
+          },
+          {},
+          suspended ? { upcomingBookings: [upcoming] } : {},
+        ),
       'POST /admin/vehicles/v1/suspend': (init) => {
         sent = JSON.parse(String(init?.body));
         suspended = true;
@@ -640,16 +692,42 @@ describe('AdminVehicleReviewPage: suspension', () => {
     );
     expect(bookings.getByText('Sam Rewi')).toBeInTheDocument();
 
-    // The listing reloads with its new status and the note the Host was sent.
+    // The listing reloads with its new status and the note the Host was sent, and the bookings stay.
     expect(await screen.findByText('Hail damage to the windscreen.')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Lift suspension' })).toBeInTheDocument();
     const listingLoads = fetchMock.mock.calls.filter(([input]) =>
       (input as Request).url.endsWith('/admin/vehicles/v1'),
     );
     expect(listingLoads.length).toBeGreaterThanOrEqual(2);
+    expect((await section('Upcoming bookings')).getByRole('link', { name: 'RV-9P4L2C' })).toBeInTheDocument();
+  });
 
-    await userEvent.click(bookings.getByRole('button', { name: 'Done' }));
-    expect(screen.queryByRole('region', { name: 'Upcoming bookings' })).not.toBeInTheDocument();
+  it('lists a suspended car’s upcoming bookings whenever its page is opened', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing(
+        { status: 'SUSPENDED' },
+        {},
+        {
+          upcomingBookings: [
+            bookingRow({
+              id: 'bk1',
+              ref: 'RV-1A2B3C',
+              status: 'PENDING',
+              guest: { id: 'u7', name: 'Sam Rewi' },
+            }),
+            bookingRow({ id: 'bk2', ref: 'RV-4D5E6F', guest: { id: 'u8', name: 'Tama Hohaia' } }),
+          ],
+        },
+      ),
+    });
+    render();
+
+    const bookings = await section('Upcoming bookings');
+    expect(bookings.getAllByRole('link').map((link) => link.textContent)).toEqual(['RV-1A2B3C', 'RV-4D5E6F']);
+    expect(bookings.getByText('Requested')).toBeInTheDocument();
+    expect(bookings.getByText('Tama Hohaia')).toBeInTheDocument();
+    expect(bookings.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 
   it("shows the API's reason when the car can't be suspended", async () => {
@@ -678,7 +756,8 @@ describe('AdminVehicleReviewPage: suspension', () => {
     let lifted = false;
     mockApi({
       ...baseHandlers,
-      'GET /admin/vehicles/v1': () => listing({ status: lifted ? 'ACTIVE' : 'SUSPENDED' }),
+      'GET /admin/vehicles/v1': () =>
+        listing({ status: lifted ? 'ACTIVE' : 'SUSPENDED' }, {}, lifted ? {} : { upcomingBookings: [] }),
       'POST /admin/vehicles/v1/unsuspend': () => {
         lifted = true;
         return {
@@ -699,6 +778,7 @@ describe('AdminVehicleReviewPage: suspension', () => {
     expect(await screen.findByText('Suspension lifted')).toBeInTheDocument();
     expect(screen.getByText('It’s back in search.')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Suspend car' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Upcoming bookings' })).not.toBeInTheDocument();
   });
 
   it('offers no suspension for a listing still under review', async () => {

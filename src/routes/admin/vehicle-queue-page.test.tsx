@@ -20,6 +20,7 @@ const corolla: ReviewQueueItem = {
   city: 'Auckland',
   pendingPhotos: 8,
   pendingDocuments: 3,
+  keyChanges: [],
   flags: 2,
   // 9 am on 26 September in New Zealand.
   updatedAt: '2026-09-25T21:00:00.000Z',
@@ -32,6 +33,7 @@ const rav4: ReviewQueueItem = {
   host: { id: 'h2', name: 'Tama Rewi', status: 'APPLIED' },
   pendingPhotos: 1,
   pendingDocuments: 0,
+  keyChanges: [],
   flags: 0,
   updatedAt: '2026-09-28T21:00:00.000Z',
 };
@@ -68,6 +70,33 @@ describe('AdminVehicleQueuePage', () => {
       '/admin/host-applications',
     );
     expect(screen.getByText('2 listings waiting')).toBeInTheDocument();
+  });
+
+  it('says which key details a live listing changed, which sent it back for review', async () => {
+    const yaris: ReviewQueueItem = {
+      ...rav4,
+      id: 'v5',
+      title: '2019 Toyota Yaris',
+      status: 'UNDER_REVIEW',
+      host: { id: 'h2', name: 'Tama Rewi', status: 'APPROVED' },
+      keyChanges: ['regoPlate', 'vin', 'model'],
+    };
+    const civic: ReviewQueueItem = { ...yaris, id: 'v6', title: '2020 Honda Civic', pendingPhotos: 0 };
+    mockApi({
+      'GET /admin/vehicles': { status: 200, body: { vehicles: [yaris, { ...civic, keyChanges: ['year'] }] } },
+    });
+    render();
+
+    const first = await row('2019 Toyota Yaris');
+    expect(first.getByText('Back for review')).toBeInTheDocument();
+    expect(first.getByText('Key details changed')).toBeInTheDocument();
+    expect(first.getByText('Number plate, VIN and model')).toBeInTheDocument();
+    expect(first.getByText('1 photo')).toBeInTheDocument();
+    expect(first.queryByText('Nothing new')).not.toBeInTheDocument();
+
+    const second = await row('2020 Honda Civic');
+    expect(second.getByText('Year')).toBeInTheDocument();
+    expect(second.queryByText('Nothing new')).not.toBeInTheDocument();
   });
 
   it('says when the queue is empty', async () => {

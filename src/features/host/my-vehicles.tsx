@@ -91,14 +91,14 @@ function VehicleRow({ vehicle, index }: { vehicle: HostVehicleSummary; index: nu
         <div className="flex flex-col gap-4 p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-ink">
+              <h2 className="text-lg font-semibold text-ink">
                 <Link
                   to={editPath}
                   className="link-underline focus-visible:outline-2 focus-visible:outline-primary"
                 >
                   {title}
                 </Link>
-              </h3>
+              </h2>
               <p className="mt-0.5 text-sm text-muted">
                 {vehicle.dailyCents ? `${formatNzdFromCents(vehicle.dailyCents)} a day · ` : ''}
                 Updated {updatedFormat.format(new Date(vehicle.updatedAt))}
@@ -190,11 +190,8 @@ function VehiclesSkeleton() {
   );
 }
 
-/** My Vehicles (spec §9): every car with its status, what's left, and where to go next. */
-export function MyVehicles({ canAdd }: { canAdd: boolean }) {
-  const vehicles = useHostVehicles();
-
-  const addButton = canAdd && (
+function AddCarButton() {
+  return (
     <Button asChild>
       <Link to="/host/vehicles/new">
         <Plus aria-hidden="true" />
@@ -202,42 +199,49 @@ export function MyVehicles({ canAdd }: { canAdd: boolean }) {
       </Link>
     </Button>
   );
+}
+
+/** A Host with no cars yet: where to start. */
+function FirstCar({ canAdd }: { canAdd: boolean }) {
+  return (
+    <Card variant="flat" className="flex justify-center px-6 py-12">
+      <EmptyState
+        titleAs="h2"
+        visual={
+          <IconBadge size="xl">
+            <CarFront />
+          </IconBadge>
+        }
+        title="Add your first car"
+        description="Six short steps, and you can save and come back any time. Have your rego, WOF and insurance handy."
+        actions={canAdd && <AddCarButton />}
+      />
+    </Card>
+  );
+}
+
+const countOf = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+
+/**
+ * My Vehicles (spec §9), the Host's Vehicles page under its heading: every car with its status, what's left,
+ * and where to go next.
+ */
+export function MyVehicles({ canAdd }: { canAdd: boolean }) {
+  const vehicles = useHostVehicles();
 
   return (
-    <section aria-labelledby="my-vehicles" className="grid gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 id="my-vehicles" className="headline text-2xl font-medium">
-            My vehicles
-          </h2>
-          {vehicles.data && vehicles.data.length > 0 && (
-            <p className="mt-1 text-sm text-muted">
-              {vehicles.data.length} {vehicles.data.length === 1 ? 'car' : 'cars'}
-            </p>
-          )}
+    <div className="grid gap-5">
+      {vehicles.data && vehicles.data.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm text-muted">{countOf(vehicles.data.length, 'car')}</p>
+          {canAdd && <AddCarButton />}
         </div>
-        {vehicles.data && vehicles.data.length > 0 && addButton}
-      </div>
-
+      )}
       {vehicles.isPending && <VehiclesSkeleton />}
       {vehicles.isError && (
         <SectionError title="We couldn't load your cars" onRetry={() => vehicles.refetch()} />
       )}
-      {vehicles.data?.length === 0 && (
-        <Card variant="flat" className="flex justify-center px-6 py-12">
-          <EmptyState
-            titleAs="h2"
-            visual={
-              <IconBadge size="xl">
-                <CarFront />
-              </IconBadge>
-            }
-            title="Add your first car"
-            description="Six short steps, and you can save and come back any time. Have your rego, WOF and insurance handy."
-            actions={addButton}
-          />
-        </Card>
-      )}
+      {vehicles.data?.length === 0 && <FirstCar canAdd={canAdd} />}
       {vehicles.data && vehicles.data.length > 0 && (
         <ul className="grid gap-4">
           {vehicles.data.map((vehicle, index) => (
@@ -245,6 +249,92 @@ export function MyVehicles({ canAdd }: { canAdd: boolean }) {
           ))}
         </ul>
       )}
-    </section>
+    </div>
+  );
+}
+
+/** "3 cars · 1 live · 1 in review · 1 draft to finish". */
+function carsSummary(cars: HostVehicleSummary[]): string {
+  const live = cars.filter((car) => car.status === 'ACTIVE').length;
+  const inReview = cars.filter(
+    (car) => car.status === 'UNDER_REVIEW' || car.status === 'CHANGES_REQUESTED',
+  ).length;
+  const drafts = cars.filter((car) => car.status === 'DRAFT').length;
+  return [
+    countOf(cars.length, 'car'),
+    live > 0 && `${live} live`,
+    inReview > 0 && `${inReview} in review`,
+    drafts > 0 && `${countOf(drafts, 'draft')} to finish`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** How many cars Today lists before "All vehicles". */
+const SUMMARY_CARS = 3;
+
+/**
+ * The Host's cars on Today: how many, how they stand, and the ones changed most recently, with the way to
+ * My Vehicles; or, with none yet, where to start.
+ */
+export function VehiclesSummary({ canAdd }: { canAdd: boolean }) {
+  const vehicles = useHostVehicles();
+
+  if (vehicles.isPending) return <Skeleton aria-hidden="true" className="h-44 rounded-card" />;
+  if (vehicles.isError) {
+    return <SectionError title="We couldn't load your cars" onRetry={() => vehicles.refetch()} />;
+  }
+  if (vehicles.data.length === 0) return <FirstCar canAdd={canAdd} />;
+
+  return (
+    <Card asChild className="grid grid-cols-1 gap-4 p-5 sm:p-6">
+      <section aria-labelledby="today-vehicles">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id="today-vehicles" className="font-semibold text-ink">
+              My vehicles
+            </h2>
+            <p className="mt-1 text-sm text-muted">{carsSummary(vehicles.data)}</p>
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/host/vehicles" viewTransition>
+              All vehicles
+              <ArrowRight aria-hidden="true" className="nudge-right" />
+            </Link>
+          </Button>
+        </div>
+        <ul className="grid grid-cols-1 gap-1">
+          {vehicles.data.slice(0, SUMMARY_CARS).map((vehicle) => (
+            <li key={vehicle.id}>
+              <Link
+                to={`/host/vehicles/${vehicle.id}`}
+                className="-mx-2 flex min-h-14 items-center gap-3 rounded-control px-2 py-1.5 transition-colors duration-120 hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-inner bg-canvas">
+                  {vehicle.photo ? (
+                    <img
+                      src={smallPhoto(vehicle.photo)}
+                      alt=""
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <CarFront aria-hidden="true" className="size-5 text-primary/60" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                  {vehicleDisplayTitle(vehicle.title)}
+                </span>
+                <VehicleStatusBadge
+                  status={vehicle.status}
+                  waitingForPayouts={vehicle.waitingForPayouts}
+                  className="shrink-0"
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </Card>
   );
 }

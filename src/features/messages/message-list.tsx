@@ -1,4 +1,4 @@
-import { Flag, Info } from 'lucide-react';
+import { Ban, Flag, Info } from 'lucide-react';
 import type { Message } from '@/api/types';
 import { cn } from '@/lib/cn';
 import { formatMessageDay, formatMessageTime, groupByDay } from './message-format';
@@ -57,8 +57,25 @@ function SystemMessage({ message }: { message: Message }) {
 }
 
 /**
+ * A message support removed, as the Guest and Host see it: the API sends only the notice in its place, with
+ * no words or photos of the original, and there's nothing to report.
+ */
+function RemovedMessage({ message, who }: { message: Message; who: string }) {
+  return (
+    <p className="flex max-w-[min(85%,32rem)] items-start gap-2 rounded-card border border-dashed border-line px-4 py-2.5 text-sm text-muted italic">
+      <Ban aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      <span className="min-w-0">
+        <span className="sr-only">{who}: </span>
+        {message.body}
+      </span>
+    </p>
+  );
+}
+
+/**
  * A conversation's messages, grouped by NZ day (spec §13): yours on the right, theirs on the left and
- * Rento Vroom's automated ones in the middle. New ones are read out as they arrive.
+ * Rento Vroom's automated ones in the middle. New ones are read out as they arrive. A message support
+ * removed shows as a notice; support staff still read it, marked removed.
  */
 export function MessageList({ messages, otherName, onReport, names }: MessageListProps) {
   // "Seen" shows once, under your latest message the other side has read.
@@ -86,6 +103,19 @@ export function MessageList({ messages, otherName, onReport, names }: MessageLis
               }
               const mine = message.from === 'ME';
               const who = names ? (mine ? names.me : names.them) : mine ? 'You' : otherName;
+              if (message.removed && !names) {
+                return (
+                  <li
+                    key={message.id}
+                    className={cn('flex animate-fade-up flex-col', mine ? 'items-end' : 'items-start')}
+                  >
+                    <RemovedMessage message={message} who={who} />
+                    <p className="mt-1 px-1 text-xs text-muted">
+                      <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
+                    </p>
+                  </li>
+                );
+              }
               return (
                 <li
                   key={message.id}
@@ -126,6 +156,16 @@ export function MessageList({ messages, otherName, onReport, names }: MessageLis
                     <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
                     {message.id === lastSeen && <span> · Seen</span>}
                   </p>
+                  {message.removed && (
+                    // Support staff: the Guest and Host see a notice in its place.
+                    <p className="mt-0.5 flex max-w-[min(85%,32rem)] items-start gap-1.5 px-1 text-xs text-danger">
+                      <Ban aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+                      <span>
+                        Removed by support, hidden from both sides
+                        {message.removed.reason && `: ${message.removed.reason}`}
+                      </span>
+                    </p>
+                  )}
                 </li>
               );
             })}

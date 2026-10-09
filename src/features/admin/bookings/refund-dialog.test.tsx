@@ -63,4 +63,56 @@ describe('RefundDialog', () => {
       }),
     );
   });
+
+  it('refunds one of the booking’s extra charges, up to what’s left of it', async () => {
+    const onConfirm = vi.fn(async (_refund: AdminRefundRequest) => {});
+    renderWithProviders(
+      <RefundDialog
+        open
+        onOpenChange={() => {}}
+        refundableCents={33_870}
+        tripPayoutSent={false}
+        charges={[
+          {
+            paymentId: '6652a1b2c3d4e5f6a7b8c9d0',
+            type: 'CLEANING',
+            description: 'Sand through the back seats.',
+            refundableCents: 8_000,
+            payoutSent: true,
+          },
+        ]}
+        guestName="Kiri"
+        onConfirm={onConfirm}
+      />,
+    );
+    const dialog = within(screen.getByRole('dialog', { name: 'Refund the Guest' }));
+    const target = within(dialog.getByRole('group', { name: 'What to refund' }));
+    expect(target.getByRole('radio', { name: /The booking/ })).toBeChecked();
+    await userEvent.click(target.getByRole('radio', { name: /Extra charge: Cleaning/ }));
+    expect(dialog.getByText('Up to $80.')).toBeInTheDocument();
+
+    await userEvent.type(dialog.getByLabelText('Amount (NZD)'), '90');
+    await userEvent.click(dialog.getByRole('radio', { name: /Comes off the Host’s payout/ }));
+    await userEvent.type(dialog.getByLabelText('Reason'), 'Charged by mistake');
+    await userEvent.click(dialog.getByRole('button', { name: 'Refund' }));
+    expect(await dialog.findByText('You can refund up to $80')).toBeInTheDocument();
+
+    // The Host's share of this charge was paid, so a Host-funded refund is taken back another way.
+    const recovery = within(dialog.getByRole('group', { name: 'How the Host pays it back' }));
+    expect(
+      recovery.getByText('The Host’s share of this charge has already been sent to them.'),
+    ).toBeInTheDocument();
+    await userEvent.clear(dialog.getByLabelText('Amount (NZD)'));
+    await userEvent.type(dialog.getByLabelText('Amount (NZD)'), '80');
+    await userEvent.click(dialog.getByRole('button', { name: 'Refund' }));
+    await vi.waitFor(() =>
+      expect(onConfirm.mock.calls[0]?.[0]).toEqual({
+        amountCents: 8000,
+        reason: 'Charged by mistake',
+        fundedBy: 'HOST',
+        paymentId: '6652a1b2c3d4e5f6a7b8c9d0',
+        recoverFrom: 'NEXT_PAYOUT',
+      }),
+    );
+  });
 });

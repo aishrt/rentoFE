@@ -13,9 +13,12 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
-import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
+import { AccountPageHeader } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatTripSpan } from '@/features/booking/booking-format';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { openedAsHost } from '@/features/host/host-links';
+import { AreaShell } from '@/features/host/area-shell';
 import { formatInboxTime, lastMessagePreview } from '@/features/messages/message-format';
 import { useThreads } from '@/features/messages/messages-api';
 import { PersonAvatar } from '@/features/messages/person-avatar';
@@ -29,11 +32,18 @@ const FILTERS = [
 type Filter = (typeof FILTERS)[number]['value'];
 const isFilter = (value: string | null): value is Filter => FILTERS.some((filter) => filter.value === value);
 
-function ConversationRow({ thread }: { thread: ThreadSummary }) {
+/**
+ * Which conversations a Host sees (`?show=`): by default all of them, or their guests' when the inbox was
+ * opened as a Host. Kept apart from `?as=`, which only says whose dashboard frames the page, so changing the
+ * filter never swaps the frame.
+ */
+const defaultFilter = (asHost: boolean): Filter => (asHost ? 'host' : 'all');
+
+function ConversationRow({ thread, opened }: { thread: ThreadSummary; opened: string }) {
   const unread = thread.unreadCount > 0;
   return (
     <Link
-      to={`/messages/${thread.ref}`}
+      to={`/messages/${thread.ref}${opened}`}
       viewTransition
       className={cn(
         'flex items-start gap-4 rounded-card border bg-surface p-4 shadow-xs transition-[border-color,box-shadow] duration-120 sm:p-5',
@@ -103,11 +113,23 @@ function ConversationsSkeleton() {
   );
 }
 
-function Inbox({ isHost }: { isHost: boolean }) {
+function Inbox({ isHost, asHost }: { isHost: boolean; asHost: boolean }) {
   const threads = useThreads();
   const [params, setParams] = useSearchParams();
-  const asParam = params.get('as');
-  const filter: Filter = isHost && isFilter(asParam) ? asParam : 'all';
+  const showParam = params.get('show');
+  const filter: Filter = !isHost ? 'all' : isFilter(showParam) ? showParam : defaultFilter(asHost);
+  // A conversation opens in the same dashboard as the inbox, for someone who has both.
+  const opened = isHost ? `?as=${asHost ? 'host' : 'guest'}` : '';
+  const choose = (value: Filter) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === defaultFilter(asHost)) next.delete('show');
+        else next.set('show', value);
+        return next;
+      },
+      { replace: true },
+    );
 
   let body;
   if (threads.isError) {
@@ -161,27 +183,30 @@ function Inbox({ isHost }: { isHost: boolean }) {
         <ul className="grid grid-cols-1 gap-3">
           {shown.map((thread, index) => (
             <li key={thread.ref} className="stagger-in" style={staggerIndex(index)}>
-              <ConversationRow thread={thread} />
+              <ConversationRow thread={thread} opened={opened} />
             </li>
           ))}
         </ul>
       );
   }
 
+  const description =
+    'One conversation for each booking. Keep it here: messages are part of the trip’s record if anything goes wrong.';
   return (
     // One column that never grows past the page: a long last message is cut off, not widening the inbox.
     <div className="grid grid-cols-1 gap-8">
-      <AccountPageHeader
-        title="Messages"
-        description="One conversation for each booking. Keep it here: messages are part of the trip’s record if anything goes wrong."
-      />
+      {asHost ? (
+        <HostPageHeader eyebrow="Hosting" title="Inbox" description={description} />
+      ) : (
+        <AccountPageHeader title="Messages" description={description} />
+      )}
       {isHost && (
         <SegmentedTabs
           idPrefix="messages"
           label="Conversations"
           options={FILTERS}
           value={filter}
-          onChange={(value) => setParams(value === 'all' ? {} : { as: value }, { replace: true })}
+          onChange={choose}
           className="max-w-md"
         />
       )}
@@ -198,19 +223,25 @@ function Inbox({ isHost }: { isHost: boolean }) {
   );
 }
 
-/** The inbox (spec §13, plan §12.6): every booking's conversation, as a Guest and as a Host. */
+/**
+ * The inbox (spec §13, plan §12.6): every booking's conversation, as a Guest and as a Host. Opened as a Host
+ * (`?as=host`, the Host area's Inbox) it sits in the Host's dashboard and starts on their guests; otherwise
+ * in the Guest's.
+ */
 export function MessagesPage() {
+  const [params] = useSearchParams();
+  const asHost = openedAsHost(params);
   return (
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
-      <PageMeta title="Messages" noindex />
-      <AccountShell>
+      <PageMeta title={asHost ? 'Inbox' : 'Messages'} noindex />
+      <AreaShell host={asHost}>
         <div className="max-w-4xl">
           <RequireSignedIn fallback={<ConversationsSkeleton />}>
-            {(user) => <Inbox isHost={user.hostStatus === 'APPROVED'} />}
+            {(user) => <Inbox isHost={user.hostStatus === 'APPROVED'} asHost={asHost} />}
           </RequireSignedIn>
         </div>
-      </AccountShell>
+      </AreaShell>
     </Container>
   );
 }

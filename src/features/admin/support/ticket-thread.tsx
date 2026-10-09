@@ -1,6 +1,7 @@
 import { Lock } from 'lucide-react';
 import type { StaffTicket } from '@/api/types';
 import { formatNzDateTime } from '@/features/booking/booking-format';
+import { TicketFiles } from '@/features/support/ticket-files';
 import { cn } from '@/lib/cn';
 
 type ThreadMessage = StaffTicket['thread'][number];
@@ -17,6 +18,7 @@ function InternalNote({ message }: { message: ThreadMessage }) {
           Internal note — only staff see this
         </p>
         <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-ink/85">{message.body}</p>
+        <TicketFiles files={message.attachments} />
         <p className="text-xs text-muted">
           {message.authorName} ·{' '}
           <time dateTime={message.createdAt}>{formatNzDateTime(message.createdAt)}</time>
@@ -43,6 +45,7 @@ function Message({ message }: { message: ThreadMessage }) {
           {staff ? `${message.authorName} · Rento Vroom support` : message.authorName}
         </p>
         <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.body}</p>
+        <TicketFiles files={message.attachments} onPrimary={staff} />
         <p className={cn('text-xs', staff ? 'text-accent' : 'text-muted')}>
           <time dateTime={message.createdAt}>{formatNzDateTime(message.createdAt)}</time>
         </p>

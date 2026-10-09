@@ -159,7 +159,7 @@ function Calendar({ vehicle }: { vehicle: HostVehicle }) {
   const detailDays = view === 'month' ? (dayRange ? [dayRange.start] : []) : days;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="grid min-w-0 content-start gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedTabs
@@ -222,9 +222,10 @@ function Calendar({ vehicle }: { vehicle: HostVehicle }) {
           )}
         </div>
 
+        {/* On a phone it sits just above the Host area's tab bar (HostShell): 3.5rem of tabs and their edge. */}
         <div
           aria-live="polite"
-          className="glass sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-3 border-t border-line px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:rounded-card sm:border sm:bg-surface sm:pb-3"
+          className="glass sticky bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 sm:static sm:mx-0 sm:rounded-card sm:border sm:bg-surface"
         >
           <p className="min-w-0 flex-1 text-sm text-ink">
             {selectionText ??

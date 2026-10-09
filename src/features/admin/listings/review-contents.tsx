@@ -2,13 +2,19 @@ import type { HostVehicle } from '@/api/types';
 import { Card } from '@/components/ui/card';
 import { formatNumber } from '@/lib/format';
 
-/** Links to each part of the long review page, with what's waiting, so staff can jump straight there. */
-export function ReviewContents({ vehicle }: { vehicle: HostVehicle }) {
+/**
+ * Links to each part of the long review page, with what's waiting, so staff can jump straight there. The
+ * key details the Host changed come first when there are any.
+ */
+export function ReviewContents({ vehicle, keyChanges = 0 }: { vehicle: HostVehicle; keyChanges?: number }) {
   const photos = vehicle.photos.filter((photo) => photo.status === 'PENDING').length;
   const documents = vehicle.documents.filter((document) => document.status === 'PENDING').length;
   const checks = vehicle.checklist.missing.length + vehicle.checklist.flags.length;
 
   const items: { id: string; label: string; note?: string }[] = [
+    ...(keyChanges > 0
+      ? [{ id: 'key-changes', label: 'Key details changed', note: formatNumber(keyChanges) }]
+      : []),
     { id: 'checks', label: 'Checks', note: checks > 0 ? formatNumber(checks) : undefined },
     { id: 'photos', label: 'Photos', note: photos > 0 ? `${formatNumber(photos)} waiting` : undefined },
     {

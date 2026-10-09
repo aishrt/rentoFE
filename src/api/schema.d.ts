@@ -5545,6 +5545,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/host/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calendar across all my cars
+         * @description The Host’s own cars with a calendar (not drafts, rejected or suspended listings), in the order they were added, each with its blocks between two NZ days: up to 62 days at a time. Blocks are as on each car’s own calendar. 400 VALIDATION_ERROR for a longer or backwards range.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The first NZ day, 2026-10-01 */
+                    from: string;
+                    /** @description The NZ day after the last one (exclusive), 2026-11-01 */
+                    to: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Each car’s calendar */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AllCarsCalendar"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/host/vehicles/{id}/blocks": {
         parameters: {
             query?: never;
@@ -6457,8 +6519,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Unsubscribe from marketing email and texts
-         * @description The link in every marketing email; works without signing in.
+         * Unsubscribe from marketing email and texts, or from unread-message emails
+         * @description The link in every marketing email and unread-message email; works without signing in. An email app’s one-click unsubscribe (RFC 8058) posts here with `?token=` and a form body instead.
          */
         post: {
             parameters: {
@@ -6473,12 +6535,14 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Unsubscribed */
-                204: {
+                /** @description What was turned off */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["UnsubscribeResponse"];
+                    };
                 };
                 /** @description Invalid input. `error.fields` has one message per invalid field. */
                 400: {
@@ -8743,7 +8807,7 @@ export interface paths {
         get: {
             parameters: {
                 query: {
-                    reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+                    reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
                 };
                 header?: never;
                 path: {
@@ -9112,7 +9176,7 @@ export interface paths {
         put?: never;
         /**
          * Send a message, with up to 6 photos
-         * @description Photos are uploaded first with POST /uploads/signature (purpose MESSAGE_PHOTO). The other side is emailed if it’s still unread after 10 minutes.
+         * @description Photos are uploaded first with POST /uploads/signature (purpose MESSAGE_PHOTO). The other side is emailed if it’s still unread after 10 minutes. 403 ACCOUNT_SUSPENDED while your account is suspended; 409 THREAD_CLOSED when the conversation can’t take messages (`readOnlyReason` says why).
          */
         post: {
             parameters: {
@@ -9150,6 +9214,15 @@ export interface paths {
                 };
                 /** @description Not signed in, or the session has ended */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -9771,7 +9844,7 @@ export interface paths {
         put?: never;
         /**
          * Flag new damage after the trip
-         * @description The Guest until they confirm the check-out; the Host until the damage-report window in settings closes. Open an incident to claim for it.
+         * @description Either party, once the check-out is recorded, until the damage-report window in settings closes (409 DAMAGE_WINDOW_CLOSED after it). Open an incident to claim for it.
          */
         post: {
             parameters: {
@@ -10666,7 +10739,7 @@ export interface paths {
         };
         /**
          * A member’s public profile and the published reviews about them
-         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. This is the public profile plan §11 lists as GET /users/{id}/profile. A closed or suspended account is not found.
+         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. This is the public profile plan §11 lists as GET /users/{id}/profile, open to visitors. A closed or suspended account is not found.
          */
         get: {
             parameters: {
@@ -10686,15 +10759,6 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["UserReviews"];
-                    };
-                };
-                /** @description Not signed in, or the session has ended */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not found */
@@ -12147,7 +12211,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Staff with the refunds permission: waive Host cancellation fees owed */
+        /**
+         * Admin: waive Host cancellation fees owed
+         * @description Some or all of what the Host owes; written to the audit log (plan §8.1, item 10).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -12974,6 +13041,149 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff with the refunds permission: every refund
+         * @description Refunds on every payment, newest first, by status, who funds them and why they were made, or by booking reference. A Host-funded refund says how it has been recovered from the Host (plan §8.1, item 15).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description A booking reference, or part of one */
+                    q?: string;
+                    status?: "PENDING" | "SUCCEEDED" | "FAILED";
+                    fundedBy?: "PLATFORM" | "HOST";
+                    kind?: "CANCELLATION" | "LATE_PAYMENT" | "STAFF";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminRefunds"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/extra-charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff with the refunds permission: unpaid extra charges
+         * @description Extra charges on any booking still being collected (PENDING) or that failed, newest first, with the last failure and the tries on the saved card (plan §8.1, item 6).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Both when left out */
+                    status?: "PENDING" | "FAILED";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminExtraCharges"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/payouts/{id}/hold": {
         parameters: {
             query?: never;
@@ -13574,6 +13784,96 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AdminReportResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/messages/{id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: remove a member’s message
+         * @description Only a reported message (409 NOT_REPORTED otherwise). Both sides then see “This message was removed by Rento Vroom support.” in its place, without its photos, also in the recipient’s new-message notice; staff still see it in the conversation, marked removed. 409 ALREADY_REMOVED, or SYSTEM_MESSAGE for Rento Vroom’s own messages.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RemoveMessageRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RemovedMessageResponse"];
                     };
                 };
                 /** @description Invalid input. `error.fields` has one message per invalid field. */
@@ -15637,6 +15937,8 @@ export interface components {
             released: string[];
             /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
             stillInReview?: string[];
+            /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
+            carSuspended?: string[];
         };
         LicenceReviewRequest: {
             /** @enum {string} */
@@ -16754,6 +17056,13 @@ export interface components {
             subject: string;
             message: string;
             bookingRef?: string | "";
+            /** @description Signed in only: photos and PDFs uploaded first with purpose SUPPORT_FILE */
+            attachments?: components["schemas"]["AttachmentInput"][];
+        };
+        AttachmentInput: {
+            key: string;
+            name?: string;
+            contentType?: string;
         };
         SupportTickets: {
             tickets: components["schemas"]["SupportTicketSummary"][];
@@ -16804,12 +17113,23 @@ export interface components {
                 /** @enum {string} */
                 from: "YOU" | "SUPPORT";
                 body: string;
+                attachments: components["schemas"]["Attachment"][];
                 /** Format: date-time */
                 createdAt: string;
             }[];
         };
+        Attachment: {
+            url: string;
+            name?: string;
+            contentType?: string;
+        };
         TicketReply: {
             body: string;
+            /**
+             * @description Photos and PDFs uploaded first with purpose SUPPORT_FILE
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
         };
         HelpArticles: {
             /** @description In the order admins set */
@@ -17174,6 +17494,22 @@ export interface components {
                 toAnswer: boolean;
             };
         };
+        AllCarsCalendar: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            vehicles: components["schemas"]["CalendarCar"][];
+        };
+        CalendarCar: {
+            id: string;
+            title: string;
+            photo: string | null;
+            /** @enum {string} */
+            status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description As on the car’s own calendar */
+            blocks: components["schemas"]["CalendarBlock"][];
+        };
         BlockResponse: {
             block: components["schemas"]["CalendarBlock"];
         };
@@ -17216,13 +17552,16 @@ export interface components {
             fields?: {
                 [key: string]: string;
             };
-            /** @description Attach the file to the car or booking with this once it is sent */
+            /** @description Attach the file to the car, booking or support ticket with this once it is sent */
             key: string;
             maxBytes: number;
         };
         UploadRequest: {
-            /** @enum {string} */
-            purpose: "VEHICLE_PHOTO" | "VEHICLE_DOCUMENT" | "MESSAGE_PHOTO" | "INSPECTION_PHOTO" | "INCIDENT_FILE";
+            /**
+             * @description SUPPORT_FILE: a photo or PDF for one of your support tickets, needing no car or booking
+             * @enum {string}
+             */
+            purpose: "VEHICLE_PHOTO" | "VEHICLE_DOCUMENT" | "MESSAGE_PHOTO" | "INSPECTION_PHOTO" | "INCIDENT_FILE" | "SUPPORT_FILE";
             /** @description For VEHICLE_PHOTO and VEHICLE_DOCUMENT */
             vehicleId?: string;
             /** @description For MESSAGE_PHOTO, INSPECTION_PHOTO and INCIDENT_FILE: its id or reference */
@@ -17334,6 +17673,8 @@ export interface components {
             marketingSms: boolean;
             /** @description A text when a message is unread after 10 minutes */
             unreadMessageSms: boolean;
+            /** @description An email when a message is unread after 10 minutes (on unless turned off) */
+            unreadMessageEmail: boolean;
         };
         NotificationPrefsPatch: {
             /** @description News and offers by email */
@@ -17342,6 +17683,12 @@ export interface components {
             marketingSms?: boolean;
             /** @description A text when a message is unread after 10 minutes */
             unreadMessageSms?: boolean;
+            /** @description An email when a message is unread after 10 minutes (on unless turned off) */
+            unreadMessageEmail?: boolean;
+        };
+        UnsubscribeResponse: {
+            /** @enum {string} */
+            unsubscribedFrom: "MARKETING" | "MESSAGE_EMAILS";
         };
         UnsubscribeRequest: {
             token: string;
@@ -17403,6 +17750,8 @@ export interface components {
             city?: string;
             pendingPhotos: number;
             pendingDocuments: number;
+            /** @description Key details the Host changed on the live listing, which sent it back for review */
+            keyChanges: ("regoPlate" | "vin" | "chassisNo" | "make" | "model" | "year")[];
             flags: number;
             /** Format: date-time */
             updatedAt: string;
@@ -17439,6 +17788,10 @@ export interface components {
         };
         AdminVehicle: {
             vehicle: components["schemas"]["HostVehicle"];
+            /** @description What the Host changed among the plate, VIN, chassis number, make, model and year since the listing was live (plan §3). Empty until they change one; cleared when staff approve or reject the listing. */
+            keyChanges: components["schemas"]["KeyChange"][];
+            /** @description While the car is suspended: its pending, confirmed and current bookings, for staff to keep or cancel (plan §8.2) */
+            upcomingBookings?: components["schemas"]["AdminBookingRow"][];
             host: {
                 id: string;
                 name: string;
@@ -17452,6 +17805,38 @@ export interface components {
                 emailVerified: boolean;
                 phoneVerified: boolean;
             };
+        };
+        KeyChange: {
+            /** @enum {string} */
+            field: "regoPlate" | "vin" | "chassisNo" | "make" | "model" | "year";
+            /** @description While the listing was live; left out when it had none */
+            before?: string;
+            /** @description Now; left out when the Host removed it */
+            after?: string;
+            /** Format: date-time */
+            changedAt: string;
+        };
+        AdminBookingRow: {
+            id: string;
+            ref: string;
+            /** @enum {string} */
+            status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            vehicleTitle: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            host: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            totalCents: number;
+            /** Format: date-time */
+            createdAt: string;
         };
         PhotoDecision: {
             /** @enum {string} */
@@ -17780,6 +18165,12 @@ export interface components {
             otherParty: {
                 firstName: string;
                 avatarUrl?: string;
+                verified?: boolean;
+                rating?: {
+                    avg: number;
+                    count: number;
+                };
+                tripCount?: number;
             };
             /** @description The Guest’s total, or the Host’s payout */
             amountCents: number;
@@ -17895,12 +18286,12 @@ export interface components {
         };
         AdminCancelRequest: {
             /** @enum {string} */
-            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
             note: string;
         };
         AdminCancellationPreview: {
             /** @enum {string} */
-            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
             allowed: boolean;
             /**
              * @description How the policy engine treats it: a no-show is a Guest or Host cancellation
@@ -17933,6 +18324,8 @@ export interface components {
             released: string[];
             /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
             stillInReview?: string[];
+            /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
+            carSuspended?: string[];
         };
         IdentityReviewRequest: {
             /** @enum {string} */
@@ -18054,11 +18447,13 @@ export interface components {
              * @description Your own messages: when the other side read it
              */
             readAt?: string;
-        };
-        Attachment: {
-            url: string;
-            name?: string;
-            contentType?: string;
+            /** @description Removed by support. The Guest and Host get the notice as the body and no photos; support staff still see the original. */
+            removed?: {
+                /** Format: date-time */
+                at: string;
+                /** @description Support staff only: why it was removed */
+                reason?: string;
+            };
         };
         MessageResponse: {
             message: components["schemas"]["Message"];
@@ -18068,11 +18463,6 @@ export interface components {
             body: string;
             /** @default [] */
             attachments: components["schemas"]["AttachmentInput"][];
-        };
-        AttachmentInput: {
-            key: string;
-            name?: string;
-            contentType?: string;
         };
         ReportResponse: {
             id: string;
@@ -18133,7 +18523,7 @@ export interface components {
             checkOut: components["schemas"]["ConditionReport"];
             /**
              * Format: date-time
-             * @description After check-out: new damage can be flagged until then
+             * @description After check-out: either party can flag new damage until then
              */
             damageWindowEndsAt?: string;
             /** @description The Guest must confirm their email address before check-in (plan §6.1) */
@@ -18175,8 +18565,17 @@ export interface components {
                 takenBy: "GUEST" | "HOST" | "STAFF";
                 /** Format: date-time */
                 takenAt: string;
+                /**
+                 * Format: date-time
+                 * @description When the photo says it was taken: more than an hour from takenAt shows a photo taken earlier
+                 */
+                exifTakenAt?: string;
                 /** Format: date-time */
                 uploadedAt: string;
+                /** @description Staff only: where the device was */
+                lat?: number;
+                /** @description Staff only */
+                lng?: number;
             }[];
             damagePins: {
                 id: string;
@@ -18219,6 +18618,12 @@ export interface components {
              * @description The device clock when it was taken
              */
             takenAt: string;
+            /**
+             * Format: date-time
+             * @description When the photo says it was taken (EXIF DateTimeOriginal), for a photo chosen from the device rather than taken with the in-app camera
+             */
+            exifTakenAt?: string;
+            /** @description Where the device was, if allowed */
             lat?: number;
             lng?: number;
         };
@@ -18302,7 +18707,7 @@ export interface components {
             paidAt?: string;
             /**
              * Format: date-time
-             * @description Usually in the Host’s bank by then
+             * @description Usually in the Host’s bank by then: from the transfer once paid, or from the scheduled date while it’s scheduled
              */
             expectedInBankBy?: string;
             booking: {
@@ -18835,28 +19240,6 @@ export interface components {
             /** Format: date-time */
             clearedAt?: string;
         };
-        AdminBookingRow: {
-            id: string;
-            ref: string;
-            /** @enum {string} */
-            status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
-            vehicleTitle: string;
-            guest: {
-                id: string;
-                name: string;
-            };
-            host: {
-                id: string;
-                name: string;
-            };
-            /** Format: date-time */
-            start: string;
-            /** Format: date-time */
-            end: string;
-            totalCents: number;
-            /** Format: date-time */
-            createdAt: string;
-        };
         SuspendRequest: {
             reason: string;
         };
@@ -18945,6 +19328,16 @@ export interface components {
             refundableCents: number;
             /** @description The trip’s payout was sent (or is being sent, or the booking ended without one), so a Host-funded refund comes off the Host’s next payout or is taken back from the transfer */
             tripPayoutSent?: boolean;
+            /** @description Paid extra charges with something left to refund (plan §8.1, item 11) */
+            refundableCharges: {
+                paymentId: string;
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                description: string;
+                refundableCents: number;
+                /** @description The Host’s share of the charge was paid, so a Host-funded refund is taken back another way */
+                payoutSent: boolean;
+            }[];
             /** @description After a Host-funded refund: how it’s recovered from the Host (plan §8.1, item 15) */
             hostRefund?: {
                 /** @enum {string} */
@@ -19018,6 +19411,8 @@ export interface components {
             reason: string;
         };
         AdminRefundRequest: {
+            /** @description One of the booking’s payments to refund, e.g. an extra charge (plan §8.1, item 11). Leave out for the booking’s own payment. */
+            paymentId?: string;
             amountCents: number;
             reason: string;
             /**
@@ -19049,6 +19444,87 @@ export interface components {
             payouts: components["schemas"]["AdminPayout"][];
             total: number;
             page: number;
+        };
+        AdminRefunds: {
+            refunds: components["schemas"]["AdminRefundRow"][];
+            total: number;
+            page: number;
+        };
+        AdminRefundRow: {
+            id: string;
+            paymentId: string;
+            /** @enum {string} */
+            paymentType: "BOOKING" | "EXTRA_CHARGE";
+            bookingRef: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            amountCents: number;
+            reason: string;
+            /**
+             * @description A cancellation’s own refund, a payment that arrived after its booking ended, or one staff issued. Older refunds have none.
+             * @enum {string}
+             */
+            kind?: "CANCELLATION" | "LATE_PAYMENT" | "STAFF";
+            /** @enum {string} */
+            fundedBy: "PLATFORM" | "HOST";
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED";
+            failureReason?: string;
+            /** @description Staff refunds */
+            issuedBy?: {
+                id: string;
+                name: string;
+            };
+            /** @description A Host-funded refund: how it has been recovered from the Host (plan §8.1, item 15) */
+            hostRecovery?: {
+                /** @description Taken off the Host’s payouts */
+                deductedCents: number;
+                /** @description Taken back from a paid payout’s Stripe transfer */
+                reversedCents: number;
+                /** @description Still owed: comes off the Host’s next payout */
+                owedCents: number;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminExtraCharges: {
+            charges: components["schemas"]["AdminExtraChargeRow"][];
+            total: number;
+            page: number;
+        };
+        AdminExtraChargeRow: {
+            id: string;
+            bookingRef: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            /** @enum {string} */
+            type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+            description: string;
+            amountCents: number;
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            /**
+             * @description Its payment, once the saved card has been tried
+             * @enum {string}
+             */
+            paymentStatus?: "PENDING" | "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
+            /** @description Why the last try failed */
+            failureReason?: string;
+            /** @description Tries on the saved card so far, while their record is kept (30 days) */
+            attempts?: number;
+            /**
+             * Format: date-time
+             * @description When the saved card is tried again
+             */
+            nextTryAt?: string;
+            /** @description The case it was charged from */
+            incidentRef?: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         AdminPayoutResponse: {
             payout: components["schemas"]["AdminPayout"];
@@ -19109,6 +19585,7 @@ export interface components {
                 from: "USER" | "STAFF";
                 authorName: string;
                 body: string;
+                attachments: components["schemas"]["Attachment"][];
                 internal: boolean;
                 /** Format: date-time */
                 createdAt: string;
@@ -19126,6 +19603,11 @@ export interface components {
              * @enum {string}
              */
             status?: "OPEN" | "PENDING" | "RESOLVED";
+            /**
+             * @description Photos and PDFs uploaded first with purpose SUPPORT_FILE. A reply has them only when the sender has an account to see them in (400 otherwise); a note always can
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
         };
         TicketUpdateRequest: {
             /** @enum {string} */
@@ -19157,6 +19639,12 @@ export interface components {
             /** @description A reported message’s booking, or the booking a member was reported from, to open its thread */
             bookingRef?: string;
             review?: components["schemas"]["ModerationReview"];
+            /** @description A reported message support removed: when, and why */
+            messageRemoved?: {
+                /** Format: date-time */
+                at: string;
+                reason?: string;
+            };
             resolution?: string;
             /** Format: date-time */
             createdAt: string;
@@ -19168,6 +19656,14 @@ export interface components {
             /** @enum {string} */
             status: "ACTIONED" | "DISMISSED";
             resolution: string;
+        };
+        RemovedMessageResponse: {
+            id: string;
+            /** @enum {boolean} */
+            removed: true;
+        };
+        RemoveMessageRequest: {
+            reason: string;
         };
         AdminFeaturedVehicles: {
             vehicleIds: string[];

@@ -77,6 +77,12 @@ export const CANCEL_REASONS: { value: AdminCancelRequest['reason']; label: strin
       'Treated as a Host cancellation: the Guest gets a full refund, and the Host cancellation fee comes off the Host’s next payout.',
   },
   {
+    value: 'HOST_CANCELLED',
+    label: 'Cancel for the Host',
+    description:
+      'The Host is at fault (for example, the car’s WOF or rego runs out before the trip, or the car was suspended for a problem the Host caused): a Host cancellation, with a full refund for the Guest and the Host cancellation fee taken from the Host’s next payout.',
+  },
+  {
     value: 'PLATFORM',
     label: 'Platform cancellation',
     description: 'Rento Vroom cancels: the Guest gets a full refund, and the Host pays no fee.',

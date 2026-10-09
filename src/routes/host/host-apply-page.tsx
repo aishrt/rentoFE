@@ -15,6 +15,7 @@ import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { sessionQueryKey } from '@/features/auth/use-session';
 import { HostApplicationForm } from '@/features/host/host-application-form';
 import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import { PhoneVerification } from '@/features/host/phone-verification';
 import { cn } from '@/lib/cn';
 
@@ -91,6 +92,8 @@ function HostApplication({ user }: { user: SessionUser }) {
   const [arrivedAs] = useState(user.hostStatus);
 
   if (arrivedAs && arrivedAs !== 'REJECTED') return <Navigate to="/host" replace />;
+  // Applying again happens in the Host area; a first application keeps its focused page.
+  const reapplying = arrivedAs === 'REJECTED';
 
   const onPhoneRequired = () => {
     setPhoneMissing(true);
@@ -98,8 +101,14 @@ function HostApplication({ user }: { user: SessionUser }) {
     phoneRef.current?.focus({ preventScroll: true });
   };
 
-  return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+  const application = (
+    <div
+      className={cn(
+        'grid gap-10 lg:gap-12',
+        // Beside the Host sidebar, the steps and what happens next share a row only on wider screens.
+        reapplying ? 'xl:grid-cols-[minmax(0,1fr)_20rem]' : 'lg:grid-cols-[minmax(0,1fr)_20rem]',
+      )}
+    >
       <div className="grid animate-fade-up gap-6">
         <HostPageHeader
           back={
@@ -154,8 +163,11 @@ function HostApplication({ user }: { user: SessionUser }) {
         </Section>
       </div>
 
-      <aside aria-labelledby="apply-next" className="lg:pt-33">
-        <Card variant="flat" className="p-6 lg:sticky lg:top-24">
+      <aside aria-labelledby="apply-next" className={reapplying ? 'xl:pt-33' : 'lg:pt-33'}>
+        <Card
+          variant="flat"
+          className={cn('p-6', reapplying ? 'xl:sticky xl:top-24' : 'lg:sticky lg:top-24')}
+        >
           <h2 id="apply-next" className="eyebrow text-primary">
             What happens next
           </h2>
@@ -179,6 +191,7 @@ function HostApplication({ user }: { user: SessionUser }) {
       </aside>
     </div>
   );
+  return reapplying ? <HostShell>{application}</HostShell> : application;
 }
 
 /**

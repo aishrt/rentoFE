@@ -109,7 +109,7 @@ export async function closeUserRequest(id: string): Promise<AdminUserDetail> {
   return (await unwrap(client.POST('/admin/users/{id}/close', path(id)))).user;
 }
 
-/** Needs the refunds permission. Without an amount, everything owed is waived. */
+/** Admin only (plan §8.1, item 10). Without an amount, everything owed is waived. */
 export async function waiveHostFeeRequest(input: {
   id: string;
   amountCents?: number;
@@ -158,11 +158,10 @@ export function userErrorMessage(error: unknown): string | null {
   return formErrorMessage(error);
 }
 
-export const NO_REFUNDS_PERMISSION =
-  'You need the refunds permission to waive fees. The admin can turn it on for you.';
+export const ADMIN_WAIVES_FEES = 'Only the admin can waive Host fees.';
 
-/** Waiving fees is the refunds permission's: a 403 means this staff member doesn't have it. */
+/** Waiving fees is the admin's (plan §8.1, item 10): a 403 means a support member tried it. */
 export function waiveFeeErrorMessage(error: unknown): string | null {
-  if (error instanceof ApiError && error.status === 403) return NO_REFUNDS_PERMISSION;
+  if (error instanceof ApiError && error.status === 403) return ADMIN_WAIVES_FEES;
   return userErrorMessage(error);
 }

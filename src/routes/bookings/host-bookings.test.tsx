@@ -75,7 +75,7 @@ describe('HostBookingsPage', () => {
     );
     renderWithRouter(routes, '/host/bookings');
 
-    const item = within(await screen.findByRole('listitem'));
+    const item = within(await within(await screen.findByRole('tabpanel')).findByRole('listitem'));
     expect(sent.find((entry) => entry.path === '/bookings')?.query.toString()).toBe(
       'role=host&group=requests',
     );
@@ -83,7 +83,35 @@ describe('HostBookingsPage', () => {
     expect(item.getByText('23 h left to answer')).toBeInTheDocument();
     expect(item.getByText('You’d earn')).toHaveTextContent('You’d earn NZ$800');
     expect(item.getByRole('link')).toHaveAttribute('href', `/host/bookings/${REF}`);
-    expect(screen.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
+    const hosting = within(screen.getByRole('navigation', { name: 'Hosting' }));
+    expect(hosting.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('shows the Guest’s verification, rating and trips on a request, where the Host answers it', async () => {
+    const verified = summary({
+      ...request,
+      otherParty: { firstName: 'Kiri', verified: true, rating: { avg: 4.8, count: 5 }, tripCount: 6 },
+    });
+    const newGuest = summary({
+      ...request,
+      ref: 'RV-NEW001',
+      otherParty: { firstName: 'Ana', verified: false, rating: { avg: 0, count: 0 }, tripCount: 0 },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.path === '/bookings'
+        ? { status: 200, body: { bookings: [verified, newGuest] } }
+        : undefined,
+    );
+    renderWithRouter(routes, '/host/bookings');
+
+    const [first, second] = (await within(await screen.findByRole('tabpanel')).findAllByRole('listitem')).map(
+      (element) => within(element),
+    );
+    expect(first!.getByText('Identity verified')).toBeInTheDocument();
+    expect(first!.getByText('6 trips completed')).toBeInTheDocument();
+    expect(first!.getByText(/4\.8/)).toBeInTheDocument();
+    expect(second!.getByText('Identity not verified yet')).toBeInTheDocument();
+    expect(second!.getByText('0 trips completed')).toBeInTheDocument();
   });
 
   it('accepts a request from its card and refreshes the list', async () => {
@@ -148,7 +176,7 @@ describe('HostBookingsPage', () => {
     );
     renderWithRouter(routes, '/host/bookings?tab=upcoming');
 
-    const item = within(await screen.findByRole('listitem'));
+    const item = within(await within(await screen.findByRole('tabpanel')).findByRole('listitem'));
     expect(item.getByText('Guest being verified')).toBeInTheDocument();
     expect(item.getByText('We’re verifying Kiri: up to 23 h')).toBeInTheDocument();
     expect(item.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();

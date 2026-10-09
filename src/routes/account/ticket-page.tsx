@@ -20,8 +20,11 @@ import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { StatusBadge } from '@/features/booking/booking-parts';
 import { Textarea } from '@/features/content/textarea';
+import { EvidencePicker } from '@/features/incidents/evidence-picker';
 import { useMyTicket, useReplyToTicket } from '@/features/support/support-api';
+import { TicketFiles } from '@/features/support/ticket-files';
 import { TICKET_CATEGORY, TICKET_STATUS } from '@/features/support/ticket-format';
+import { useTicketFiles } from '@/features/support/use-ticket-files';
 import { cn } from '@/lib/cn';
 
 function Conversation({ ticket }: { ticket: SupportTicket }) {
@@ -41,6 +44,7 @@ function Conversation({ ticket }: { ticket: SupportTicket }) {
                 {mine ? 'You' : 'Rento Vroom support'}
               </p>
               <p className="text-sm leading-relaxed whitespace-pre-line">{message.body}</p>
+              <TicketFiles files={message.attachments} onPrimary={mine} />
               <p className={cn('text-xs', mine ? 'text-accent' : 'text-muted')}>
                 {formatNzDateTime(message.createdAt)}
               </p>
@@ -54,8 +58,10 @@ function Conversation({ ticket }: { ticket: SupportTicket }) {
 
 function ReplyForm({ ticket }: { ticket: SupportTicket }) {
   const reply = useReplyToTicket(ticket.ref);
+  const files = useTicketFiles();
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const fields = reply.error instanceof ApiError ? reply.error.fields : undefined;
 
   const send = (event: FormEvent) => {
     event.preventDefault();
@@ -64,15 +70,19 @@ function ReplyForm({ ticket }: { ticket: SupportTicket }) {
       return;
     }
     setError(undefined);
-    reply.mutate(body.trim(), {
-      onSuccess: () => {
-        setBody('');
-        toast('Message sent', { description: 'Our support team will reply by email and here.' });
+    reply.mutate(
+      { body: body.trim(), attachments: files.attachments },
+      {
+        onSuccess: () => {
+          setBody('');
+          files.reset();
+          toast('Message sent', { description: 'Our support team will reply by email and here.' });
+        },
+        onError: (failure) => {
+          if (failure instanceof ApiError && failure.fields?.body) setError(failure.fields.body);
+        },
       },
-      onError: (failure) => {
-        if (failure instanceof ApiError && failure.fields?.body) setError(failure.fields.body);
-      },
-    });
+    );
   };
 
   return (
@@ -90,13 +100,20 @@ function ReplyForm({ ticket }: { ticket: SupportTicket }) {
             className="min-h-28"
           />
         </Field>
-        {reply.isError && !(reply.error instanceof ApiError && reply.error.fields?.body) && (
+        <div className="grid gap-2">
+          <p className="text-sm font-medium text-ink">Photos or documents (optional)</p>
+          <p className="text-sm text-muted">
+            Screenshots, receipts or photos. Only you and our team see them.
+          </p>
+          <EvidencePicker evidence={files} />
+        </div>
+        {reply.isError && !fields?.body && (
           <Alert variant="danger" role="alert">
-            {reply.error.message}
+            {fields?.attachments ?? reply.error.message}
           </Alert>
         )}
         <div className="flex justify-end">
-          <Button type="submit" loading={reply.isPending}>
+          <Button type="submit" loading={reply.isPending} disabled={files.uploading}>
             <Send aria-hidden="true" />
             Send
           </Button>

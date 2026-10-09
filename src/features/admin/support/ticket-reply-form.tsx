@@ -11,6 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { TICKET_STATUS } from '@/features/admin/ops/admin-labels';
+import { EvidencePicker } from '@/features/incidents/evidence-picker';
+import { useTicketFiles } from '@/features/support/use-ticket-files';
 import { cn } from '@/lib/cn';
 import { TICKET_STATUSES, useReplyToTicket, type TicketStatus } from './support-api';
 
@@ -20,9 +22,11 @@ const BODY_MAX = 5000;
 /**
  * A reply to the sender, which we email to them, or an internal note for the team, which nobody else
  * sees. A reply leaves the ticket waiting on them unless another status is chosen; a note leaves it as it is.
+ * Either can carry photos and PDFs, but a reply only when the sender has an account to see them in.
  */
 export function TicketReplyForm({ ticket, ticketRef }: { ticket: StaffTicket; ticketRef: string }) {
   const reply = useReplyToTicket(ticketRef);
+  const files = useTicketFiles();
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
   // Null until a status is chosen, so the default follows the Internal note switch.
@@ -35,7 +39,10 @@ export function TicketReplyForm({ ticket, ticketRef }: { ticket: StaffTicket; ti
     label: value === ticket.status ? `${TICKET_STATUS[value].label} (no change)` : TICKET_STATUS[value].label,
   }));
   const firstName = ticket.from.name.split(' ')[0] ?? ticket.from.name;
-  const fieldError = reply.error instanceof ApiError ? reply.error.fields?.body : undefined;
+  const fields = reply.error instanceof ApiError ? reply.error.fields : undefined;
+  const fieldError = fields?.body;
+  // Files on a reply are seen in the sender's account; a visitor from the Contact form has none.
+  const canAttach = internal || Boolean(ticket.from.userId);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -47,11 +54,17 @@ export function TicketReplyForm({ ticket, ticketRef }: { ticket: StaffTicket; ti
     setError(undefined);
     reply.mutate(
       // A reply always says its status, as the API would otherwise mark it waiting on them.
-      { body: text, internal, ...((!internal || status !== ticket.status) && { status }) },
+      {
+        body: text,
+        internal,
+        attachments: canAttach ? files.attachments : [],
+        ...((!internal || status !== ticket.status) && { status }),
+      },
       {
         onSuccess: () => {
           setBody('');
           setChosenStatus(null);
+          if (canAttach) files.reset();
           const now = TICKET_STATUS[status].label;
           if (internal) {
             toast('Note added', {
@@ -105,9 +118,17 @@ export function TicketReplyForm({ ticket, ticketRef }: { ticket: StaffTicket; ti
           />
         </Field>
 
+        {canAttach ? (
+          <EvidencePicker evidence={files} />
+        ) : (
+          <p className="text-sm text-muted">
+            {ticket.from.name} has no account to see files in. Add them to an internal note instead.
+          </p>
+        )}
+
         {reply.isError && !fieldError && (
           <Alert variant="danger" role="alert">
-            {reply.error.message}
+            {fields?.attachments ?? reply.error.message}
           </Alert>
         )}
 
@@ -124,7 +145,12 @@ export function TicketReplyForm({ ticket, ticketRef }: { ticket: StaffTicket; ti
               disabled={reply.isPending}
             />
           </Field>
-          <Button type="submit" loading={reply.isPending} className="w-full sm:w-auto">
+          <Button
+            type="submit"
+            loading={reply.isPending}
+            disabled={canAttach && files.uploading}
+            className="w-full sm:w-auto"
+          >
             {internal ? <NotebookPen aria-hidden="true" /> : <Send aria-hidden="true" />}
             {internal ? 'Add note' : 'Send reply'}
           </Button>

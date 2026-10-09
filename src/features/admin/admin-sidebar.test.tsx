@@ -59,8 +59,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const render = (path: string) => {
-  mockApi({ 'POST /auth/session': { status: 200, body: { user: adminUser } } });
+const render = (path: string, user: object = adminUser) => {
+  mockApi({ 'POST /auth/session': { status: 200, body: { user } } });
   return renderWithRouter([{ path: '*', element: <AdminSidebar /> }], path);
 };
 
@@ -96,5 +96,20 @@ describe('AdminSidebar', () => {
     nav.scrollTop = CONTENT_HEIGHT - LIST_HEIGHT;
     fireEvent.scroll(nav);
     expect(nav).not.toHaveAttribute('data-more-end');
+  });
+
+  it('has the sections of plan §12.6, leaving the administrator’s out for the support team', async () => {
+    const admin = render('/admin/refunds');
+    expect(await screen.findByRole('link', { name: 'Refunds' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Refunds' })).toHaveAttribute('href', '/admin/refunds');
+    expect(await screen.findByRole('link', { name: 'FAQs & help' })).toHaveAttribute('href', '/admin/help');
+    admin.unmount();
+
+    render('/admin', { ...adminUser, roles: ['SUPPORT'] });
+    // Refunds go by the refunds permission, which the page asks for; FAQs and help are the admin's.
+    expect(await screen.findByRole('link', { name: 'Refunds' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'FAQs & help' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Content' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
   });
 });

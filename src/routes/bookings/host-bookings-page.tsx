@@ -22,7 +22,8 @@ import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-car
 import { hostAnswers } from '@/features/booking/booking-format';
 import { acceptedToast } from '@/features/booking/accepted-toast';
 import { DeclineDialogContent } from '@/features/booking/decline-dialog';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 
 const TABS = [
   { value: 'requests', label: 'Requests' },
@@ -116,7 +117,7 @@ function BookingList({ group }: { group: Tab }) {
         description={EMPTY[group]}
         actions={
           <Button asChild variant="secondary">
-            <Link to="/host">Your cars</Link>
+            <Link to="/host/vehicles">Your cars</Link>
           </Button>
         }
       />
@@ -145,7 +146,6 @@ function HostBookings() {
 
   return (
     <div className="grid gap-8">
-      <HostSubNav />
       <HostPageHeader
         eyebrow="Hosting"
         title="Bookings"
@@ -194,7 +194,9 @@ export function HostBookingsPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Bookings" noindex />
-      <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>
+      <HostShell>
+        <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>
+      </HostShell>
     </Container>
   );
 }

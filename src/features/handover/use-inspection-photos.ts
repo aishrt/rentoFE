@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/api/client';
-import type { InspectionAngle, InspectionStage } from '@/api/types';
+import type { InspectionAngle, InspectionRequest, InspectionStage } from '@/api/types';
 import { contentTypeOf, uploadFile, uploadProblem } from '@/features/host/upload';
+import { readExifTakenAt } from './exif';
 import { clearPhotos, listPhotos, removePhoto, savePhoto, type StoredPhoto } from './photo-store';
+import type { DeviceLocation } from './use-device-location';
 
 /** Where a photo is: on the server, on its way, waiting for a connection, or refused. */
 export type PhotoStatus = 'uploaded' | 'uploading' | 'waiting' | 'failed';
@@ -12,6 +14,13 @@ export interface InspectionPhoto extends StoredPhoto {
   progress: number;
   previewUrl: string;
   error?: string;
+}
+
+interface AddOptions {
+  /** Replaces the angle's earlier photo: a retake. */
+  replace?: boolean;
+  /** Where the device is, if the person allowed it. */
+  location?: DeviceLocation | null;
 }
 
 const RETRY_MS = 20_000;
@@ -120,11 +129,21 @@ export function useInspectionPhotos(bookingRef: string, stage: InspectionStage) 
     };
   }, [upload]);
 
-  /** Keeps a photo just taken and starts its upload. Resolves with why it can't be used, or null. */
+  /**
+   * Keeps a photo just taken and starts its upload, with the device's clock and location and, for a photo
+   * chosen from the device, the date it says it was taken (plan §3). Resolves with why it can't be used,
+   * or null.
+   */
   const add = useCallback(
-    async (angle: InspectionAngle, file: File, { replace = false } = {}): Promise<string | null> => {
+    async (
+      angle: InspectionAngle,
+      file: File,
+      { replace = false, location }: AddOptions = {},
+    ): Promise<string | null> => {
       const problem = uploadProblem(file, 'INSPECTION_PHOTO');
       if (problem) return problem;
+      const takenAt = new Date().toISOString();
+      const exifTakenAt = await readExifTakenAt(file);
       if (replace) {
         for (const old of current.current.filter((photo) => photo.angle === angle)) {
           URL.revokeObjectURL(old.previewUrl);
@@ -140,7 +159,9 @@ export function useInspectionPhotos(bookingRef: string, stage: InspectionStage) 
         blob: file,
         name: file.name || `${angle.toLowerCase()}.jpg`,
         contentType: contentTypeOf(file),
-        takenAt: new Date().toISOString(),
+        takenAt,
+        ...(exifTakenAt && { exifTakenAt }),
+        ...(location && { lat: location.lat, lng: location.lng }),
         status: 'waiting',
         progress: 0,
         previewUrl: URL.createObjectURL(file),
@@ -176,6 +197,19 @@ function stored(photo: InspectionPhoto): StoredPhoto {
     name: photo.name,
     contentType: photo.contentType,
     takenAt: photo.takenAt,
+    ...(photo.exifTakenAt && { exifTakenAt: photo.exifTakenAt }),
+    ...(photo.lat !== undefined && photo.lng !== undefined && { lat: photo.lat, lng: photo.lng }),
     ...(photo.key && { key: photo.key }),
+  };
+}
+
+/** An uploaded photo as the inspection and damage requests send it (plan §3, conditionReports.photos). */
+export function photoInput(photo: StoredPhoto & { key: string }): InspectionRequest['photos'][number] {
+  return {
+    angle: photo.angle,
+    key: photo.key,
+    takenAt: photo.takenAt,
+    ...(photo.exifTakenAt && { exifTakenAt: photo.exifTakenAt }),
+    ...(photo.lat !== undefined && photo.lng !== undefined && { lat: photo.lat, lng: photo.lng }),
   };
 }

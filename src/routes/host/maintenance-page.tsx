@@ -23,7 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostVehicle } from '@/features/host/host-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import { vehiclePath } from '@/features/host/use-step-save';
 import { vehicleDisplayTitle } from '@/features/host/vehicle-labels';
 
@@ -222,7 +223,7 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
 function Header({ eyebrow }: { eyebrow: ReactNode }) {
   return (
     <HostPageHeader
-      back={<BackLink to="/host">My vehicles</BackLink>}
+      back={<BackLink to="/host/vehicles">My vehicles</BackLink>}
       eyebrow={eyebrow}
       title="Maintenance reminders"
       description="Reminders you set for this car: we email you at 9 am when one is near."
@@ -294,12 +295,13 @@ export function MaintenancePage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Maintenance reminders" noindex />
-      <div className="grid gap-8">
-        <HostSubNav />
-        <RequireSignedIn fallback={<MaintenanceSkeleton />}>
-          {() => <Maintenance vehicleId={id} />}
-        </RequireSignedIn>
-      </div>
+      <HostShell>
+        <div className="grid gap-8">
+          <RequireSignedIn fallback={<MaintenanceSkeleton />}>
+            {() => <Maintenance vehicleId={id} />}
+          </RequireSignedIn>
+        </div>
+      </HostShell>
     </Container>
   );
 }

@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 import type { Message, Messages } from '@/api/types';
 
 /*
@@ -12,6 +12,12 @@ export const unreadMessagesQueryKey = [...threadsQueryKey, 'unread'] as const;
 export const threadQueryKey = (ref: string) => [...threadsQueryKey, 'thread', ref] as const;
 export const messagesQueryKey = (ref: string) => [...threadsQueryKey, 'messages', ref] as const;
 
+/**
+ * A conversation's messages as cached: the pages loaded so far, newest page first, each oldest message first
+ * (useMessages). A page's param is the message it comes before, or '' for the newest.
+ */
+export type MessagePages = InfiniteData<Messages, string>;
+
 interface MessageEvent {
   ref: string;
   message: Message;
@@ -24,13 +30,23 @@ interface ReadEvent {
   self?: boolean;
 }
 
-/** Adds a message that arrived live to its open conversation, unless the page already has it. */
+/** Adds a message that arrived live to the end of its open conversation, unless the page already has it. */
 export function addMessage(queryClient: QueryClient, ref: string, message: Message) {
-  queryClient.setQueryData<Messages>(messagesQueryKey(ref), (current) =>
-    current && !current.messages.some((existing) => existing.id === message.id)
-      ? { ...current, messages: [...current.messages, message] }
-      : current,
-  );
+  queryClient.setQueryData<MessagePages>(messagesQueryKey(ref), (current) => {
+    const [newest, ...older] = current?.pages ?? [];
+    if (!current || !newest) return current;
+    // One already shown is replaced by the server's version, e.g. a message support removed.
+    if (current.pages.some((page) => page.messages.some((existing) => existing.id === message.id))) {
+      return {
+        ...current,
+        pages: current.pages.map((page) => ({
+          ...page,
+          messages: page.messages.map((existing) => (existing.id === message.id ? message : existing)),
+        })),
+      };
+    }
+    return { ...current, pages: [{ ...newest, messages: [...newest.messages, message] }, ...older] };
+  });
 }
 
 /** Applies a live messaging event: a new message, or a conversation read. */
@@ -42,7 +58,8 @@ export function applyMessagingEvent(queryClient: QueryClient, event: string, pay
     void queryClient.invalidateQueries({ queryKey: unreadMessagesQueryKey });
     if (message.from === 'SYSTEM') {
       // A booking update (confirmed, cancelled, the trip ended): the open conversation's state may have
-      // changed with it, such as contact details now showing in the banner and in earlier messages.
+      // changed with it, such as contact details now showing in the banner and in earlier messages. Every
+      // page loaded is fetched again, so earlier messages stay on screen.
       void queryClient.invalidateQueries({ queryKey: threadQueryKey(ref) });
       void queryClient.invalidateQueries({ queryKey: messagesQueryKey(ref) });
     }
@@ -52,15 +69,18 @@ export function applyMessagingEvent(queryClient: QueryClient, event: string, pay
     const { ref, at, self } = payload as ReadEvent;
     if (!self) {
       // The other side read the conversation: everything sent before then shows "Seen".
-      queryClient.setQueryData<Messages>(messagesQueryKey(ref), (current) =>
+      queryClient.setQueryData<MessagePages>(messagesQueryKey(ref), (current) =>
         current
           ? {
               ...current,
-              messages: current.messages.map((message) =>
-                message.from === 'ME' && !message.readAt && message.createdAt <= at
-                  ? { ...message, readAt: at }
-                  : message,
-              ),
+              pages: current.pages.map((page) => ({
+                ...page,
+                messages: page.messages.map((message) =>
+                  message.from === 'ME' && !message.readAt && message.createdAt <= at
+                    ? { ...message, readAt: at }
+                    : message,
+                ),
+              })),
             }
           : current,
       );

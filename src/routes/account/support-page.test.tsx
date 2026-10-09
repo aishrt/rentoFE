@@ -1,16 +1,32 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SupportTicket, SupportTicketSummary } from '@/api/types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AttachmentInput, SupportTicket, SupportTicketSummary } from '@/api/types';
 import { ticket, ticketSummary } from '@/features/account/test-fixtures';
+import type * as UploadModule from '@/features/host/upload';
+import { uploadFile } from '@/features/host/upload';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
 import { SupportPage } from './support-page';
 import { TicketPage } from './ticket-page';
 
+// Uploads go through XMLHttpRequest, which these tests don't run: each file gets a key straight away.
+vi.mock('@/features/host/upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof UploadModule>()),
+  uploadFile: vi.fn(async () => 'support/u1/0b6a3c1e.pdf'),
+}));
+
+beforeEach(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:preview');
+  URL.revokeObjectURL = vi.fn();
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+/** A private file as the API gives it: a signed link that works for 10 minutes. */
+const signed = (key: string) => `http://localhost:4000/api/v1/files/private/${key}?e=1791543710&s=sig`;
 
 function mockSupport({
   tickets = [ticketSummary()],
@@ -25,12 +41,18 @@ function mockSupport({
       case 'GET /support/tickets/ST-4HX8PA':
         return { status: 200, body: { ticket: current() } };
       case 'POST /support/tickets/ST-4HX8PA/messages': {
-        const { body } = request.body as { body: string };
+        const { body, attachments } = request.body as { body: string; attachments: AttachmentInput[] };
         const replied = ticket({
           status: 'OPEN',
           messages: [
             ...current().messages,
-            { id: '2', from: 'YOU', body, createdAt: '2026-10-06T01:00:00.000Z' },
+            {
+              id: '2',
+              from: 'YOU',
+              body,
+              attachments: attachments.map((file) => ({ ...file, url: signed(file.key) })),
+              createdAt: '2026-10-06T01:00:00.000Z',
+            },
           ],
         });
         return { status: 200, body: { ticket: replied } };
@@ -115,7 +137,59 @@ describe('TicketPage', () => {
     expect(screen.getByLabelText('Your reply')).toHaveValue('');
     expect(sent.find((request) => request.path.endsWith('/messages'))?.body).toEqual({
       body: 'Thanks, found it.',
+      attachments: [],
     });
+  });
+
+  it('shows the files on each message, and sends a reply with a document', async () => {
+    const withFiles = ticket({
+      messages: [
+        ticket().messages[0]!,
+        {
+          ...ticket().messages[1]!,
+          attachments: [
+            { url: signed('support/s1/map.jpg'), name: 'map.jpg', contentType: 'image/jpeg' },
+            {
+              url: signed('support/s1/directions.pdf'),
+              name: 'directions.pdf',
+              contentType: 'application/pdf',
+            },
+          ],
+        },
+      ],
+    });
+    const sent = mockSupport({ current: () => withFiles });
+    render('/account/support/ST-4HX8PA');
+
+    const files = within(await screen.findByRole('list', { name: 'Files' }));
+    expect(files.getByRole('img', { name: 'map.jpg' })).toHaveAttribute('src', signed('support/s1/map.jpg'));
+    expect(files.getByRole('link', { name: 'directions.pdf' })).toHaveAttribute(
+      'href',
+      signed('support/s1/directions.pdf'),
+    );
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await userEvent.upload(input, new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' }));
+    const toSend = within(await screen.findByRole('list', { name: 'Files to send' }));
+    expect(await toSend.findByText('receipt.pdf')).toBeInTheDocument();
+    // Into the person's own support folder: no booking or car.
+    expect(vi.mocked(uploadFile)).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: 'SUPPORT_FILE', filename: 'receipt.pdf' }),
+    );
+    expect(vi.mocked(uploadFile).mock.calls[0]![0]).not.toHaveProperty('bookingId');
+
+    await userEvent.type(screen.getByLabelText('Your reply'), 'Here’s the receipt.');
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByRole('link', { name: 'receipt.pdf' })).toHaveAttribute(
+      'href',
+      signed('support/u1/0b6a3c1e.pdf'),
+    );
+    expect(sent.find((request) => request.path.endsWith('/messages'))?.body).toEqual({
+      body: 'Here’s the receipt.',
+      attachments: [{ key: 'support/u1/0b6a3c1e.pdf', name: 'receipt.pdf', contentType: 'application/pdf' }],
+    });
+    expect(screen.queryByRole('list', { name: 'Files to send' })).not.toBeInTheDocument();
   });
 
   it('says a resolved request opens again with a reply', async () => {

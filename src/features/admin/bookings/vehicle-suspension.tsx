@@ -21,26 +21,26 @@ import { ReasonDialog } from './reason-dialog';
 
 type Vehicle = AdminVehicleSuspension['vehicle'];
 
-interface SuspensionActionProps {
-  vehicle: Vehicle;
-  /** The car was suspended: its upcoming bookings, for staff to keep or cancel. */
-  onSuspended: (result: AdminVehicleSuspension) => void;
-  onLifted: () => void;
-}
-
 /**
  * Suspend a live or switched-off car, or lift its suspension (plan §8.2). A suspended car is hidden from
- * search at once and can't be booked; the Host is emailed the reason.
+ * search at once and can't be booked; the Host is emailed the reason. The car's page then lists its
+ * upcoming bookings for as long as it's suspended (SuspendedCarBookings).
  */
-export function SuspensionAction({ vehicle, onSuspended, onLifted }: SuspensionActionProps) {
+export function SuspensionAction({ vehicle }: { vehicle: Vehicle }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
-  // The listing shows its new status straight away, then refreshes with the note the Host was sent.
-  const refresh = (status: Vehicle['status']) => {
+  // The listing shows its new status and upcoming bookings straight away, then refreshes with the note the
+  // Host was sent.
+  const refresh = ({ vehicle: { status }, upcomingBookings }: AdminVehicleSuspension) => {
     queryClient.setQueryData<AdminVehicle>(
       adminVehicleQueryKey(vehicle.id),
-      (previous) => previous && { ...previous, vehicle: { ...previous.vehicle, status } },
+      (previous) =>
+        previous && {
+          ...previous,
+          vehicle: { ...previous.vehicle, status },
+          upcomingBookings: status === 'SUSPENDED' ? upcomingBookings : undefined,
+        },
     );
     void queryClient.invalidateQueries({ queryKey: adminVehicleQueryKey(vehicle.id) });
     void queryClient.invalidateQueries({ queryKey: reviewQueueQueryKey });
@@ -50,8 +50,7 @@ export function SuspensionAction({ vehicle, onSuspended, onLifted }: SuspensionA
   const suspend = async (reason: string) => {
     const result = await suspendVehicleRequest(vehicle.id, reason);
     setOpen(false);
-    refresh(result.vehicle.status);
-    onSuspended(result);
+    refresh(result);
     const upcoming = result.upcomingBookings.length;
     toast('Car suspended', {
       description:
@@ -64,8 +63,7 @@ export function SuspensionAction({ vehicle, onSuspended, onLifted }: SuspensionA
   const lift = async () => {
     const result = await unsuspendVehicleRequest(vehicle.id);
     setOpen(false);
-    refresh(result.vehicle.status);
-    onLifted();
+    refresh(result);
     toast('Suspension lifted', {
       description:
         result.vehicle.status === 'ACTIVE'
@@ -139,19 +137,17 @@ function LiftBody({ onConfirm }: { onConfirm: () => Promise<void> }) {
 }
 
 /**
- * After a suspension: the car's upcoming bookings, which still stand. Staff keep each one, or open it and
- * cancel it as a platform cancellation (plan §8.2).
+ * While a car is suspended: its upcoming bookings (requests, confirmed trips and trips under way), which
+ * still stand. Staff keep each one, or open it and cancel it as a platform cancellation (plan §8.2). Shown
+ * from the car's record each time its page opens, so they're there to come back to.
  */
 export function SuspendedCarBookings({
-  result,
-  onDone,
+  bookings,
   className,
 }: {
-  result: AdminVehicleSuspension;
-  onDone: () => void;
+  bookings: NonNullable<AdminVehicle['upcomingBookings']>;
   className?: string;
 }) {
-  const bookings = result.upcomingBookings;
   return (
     <ReviewSection
       id="suspension-bookings"
@@ -161,11 +157,6 @@ export function SuspendedCarBookings({
         bookings.length > 0
           ? 'The car is suspended, but these bookings still stand. Keep each one, or open it and cancel it as a platform cancellation, which refunds the Guest in full.'
           : 'The car is suspended. It has no upcoming bookings, so there’s nothing else to do.'
-      }
-      aside={
-        <Button variant="ghost" size="sm" onClick={onDone}>
-          Done
-        </Button>
       }
     >
       {bookings.length > 0 && (

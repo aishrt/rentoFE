@@ -1,5 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
+import type { components } from '@/api/schema';
 import type {
   BlockInput,
   CalendarBlock,
@@ -28,7 +29,12 @@ export const hostKeys = {
   calendar: (id: string) => ['host', 'vehicles', id, 'calendar'] as const,
   calendarRange: (id: string, from: string, to: string) =>
     ['host', 'vehicles', id, 'calendar', from, to] as const,
+  allCarsCalendar: (from: string, to: string) => ['host', 'calendar', from, to] as const,
 };
+
+/** The Calendar tab across all the Host's cars: each car with its blocks (GET /host/calendar). */
+export type AllCarsCalendar = components['schemas']['AllCarsCalendar'];
+export type CalendarCar = components['schemas']['CalendarCar'];
 
 /** Shared with the public pages, which read the same policies (features/content). */
 export const policiesQueryKey = ['policies'] as const;
@@ -104,6 +110,11 @@ export async function getCalendarRequest(id: string, from: string, to: string): 
   return unwrap(
     client.GET('/host/vehicles/{id}/calendar', { params: { path: { id }, query: { from, to } } }),
   );
+}
+
+/** Every car with a calendar. `from` and `to` are NZ days, `to` exclusive and at most 62 days later. */
+export async function getAllCarsCalendarRequest(from: string, to: string): Promise<AllCarsCalendar> {
+  return unwrap(client.GET('/host/calendar', { params: { query: { from, to } } }));
 }
 
 export async function addBlockRequest(id: string, body: BlockInput): Promise<CalendarBlock> {

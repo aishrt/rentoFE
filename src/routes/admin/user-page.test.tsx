@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminBookingRow, AdminUserDetail } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
+import { sessionQueryKey } from '@/features/auth/use-session';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminUserPage } from './user-page';
 
@@ -212,7 +213,8 @@ describe('AdminUserPage', () => {
       '/admin/vehicles?view=all&hostId=u10',
     );
     expect(host.getByText('4.9 (9)')).toBeInTheDocument();
-    expect(host.getByRole('button', { name: 'Waive fees' })).toBeInTheDocument();
+    // The admin's (plan §8.1, item 10).
+    expect(await host.findByRole('button', { name: 'Waive fees' })).toBeInTheDocument();
 
     const flags = await region('Risk flags');
     expect(flags.getByText('3 cancellations in 30 days')).toBeInTheDocument();
@@ -373,7 +375,7 @@ describe('AdminUserPage', () => {
     });
     render();
 
-    await userEvent.click((await region('Host')).getByRole('button', { name: 'Waive fees' }));
+    await userEvent.click(await (await region('Host')).findByRole('button', { name: 'Waive fees' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Waive Host cancellation fees?' }));
     expect(dialog.getByText(/Aroha owes \$45\.50/)).toBeInTheDocument();
 
@@ -392,28 +394,40 @@ describe('AdminUserPage', () => {
     expect(await (await region('Host')).findByText('$25.50')).toBeInTheDocument();
   });
 
-  it('waives everything owed when the amount is empty, and explains a missing refunds permission', async () => {
+  it('waives everything owed when the amount is empty', async () => {
     let sent: unknown;
     mockApi({
-      'POST /auth/session': session(supportUser),
+      'POST /auth/session': session(),
       'GET /admin/users/u10': { status: 200, body: { user: aroha } },
       'POST /admin/users/u10/waive-host-fee': (init) => {
         sent = JSON.parse(String(init?.body));
-        return {
-          status: 403,
-          body: { error: { code: 'FORBIDDEN', message: "You don't have access to this." } },
-        };
+        return { status: 200, body: { user: { ...aroha, host: { ...aroha.host!, feesOwedCents: 0 } } } };
       },
     });
     render();
 
-    await userEvent.click((await region('Host')).getByRole('button', { name: 'Waive fees' }));
+    await userEvent.click(await (await region('Host')).findByRole('button', { name: 'Waive fees' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Waive Host cancellation fees?' }));
     await userEvent.type(dialog.getByLabelText('Reason'), 'Goodwill.');
     await userEvent.click(dialog.getByRole('button', { name: 'Waive fees' }));
 
-    expect(await dialog.findByRole('alert')).toHaveTextContent(/You need the refunds permission/);
+    expect(await screen.findByText('Fees waived')).toBeInTheDocument();
     expect(sent).toEqual({ reason: 'Goodwill.' });
+  });
+
+  it('leaves waiving Host fees to the admin (plan §8.1, item 10), even with the refunds permission', async () => {
+    mockApi({
+      'POST /auth/session': session({ ...supportUser }),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+    });
+    const { queryClient } = render();
+
+    const host = await region('Host');
+    expect(host.getByText('$45.50')).toBeInTheDocument();
+    // Once the page knows who's looking.
+    await vi.waitFor(() => expect(queryClient.getQueryData(sessionQueryKey)).toBeTruthy());
+    expect(host.queryByRole('button', { name: 'Waive fees' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it("shows why an account can't be closed yet", async () => {

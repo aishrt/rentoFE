@@ -16,6 +16,11 @@ export interface StoredPhoto {
   contentType: string;
   /** The device clock when it was taken, shown on the photo. */
   takenAt: string;
+  /** When a photo chosen from the device says it was taken (its EXIF date); camera shots have none. */
+  exifTakenAt?: string;
+  /** Where the device was, when the person allowed it. */
+  lat?: number;
+  lng?: number;
   /** The upload's key once it's stored; until then the photo waits here. */
   key?: string;
 }

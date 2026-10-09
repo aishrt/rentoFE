@@ -14,8 +14,8 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { PersonAvatar } from '@/features/messages/person-avatar';
+import { ReportLink } from '@/features/reviews/report-link';
 import { ReportReviewButton } from '@/features/reviews/report-review-button';
 import { ReviewCard } from '@/features/reviews/review-card';
 import { useMemberProfile } from '@/features/reviews/reviews-api';
@@ -154,6 +154,14 @@ function Member({ memberId }: { memberId: string }) {
               <span>Member since {profile.joinedYear}</span>
             </p>
           </div>
+          <ReportLink
+            targetType="USER"
+            targetId={profile.id}
+            subject={name}
+            label={`Report ${name}`}
+            ownerId={profile.id}
+            className="text-muted sm:ml-auto sm:self-start"
+          />
         </div>
         <div className="grid gap-6 border-t border-line pt-6 sm:grid-cols-2">
           {profile.asHost && (
@@ -214,8 +222,8 @@ function MemberSkeleton() {
 /**
  * A member's public profile (plan §6.2, §11): only their first name, photo, whether their identity is
  * verified, the year they joined, and their rating and trips as a guest and as a host (with a host's
- * response rate), then the published reviews about them in each role. Members only, and kept out of
- * search results.
+ * response rate), then the published reviews about them in each role. Open to visitors, as the listing that
+ * links to a Host's profile is, and kept out of search results.
  */
 export function MemberPage() {
   const { id = '' } = useParams();
@@ -227,9 +235,7 @@ export function MemberPage() {
         <BackLink to="/" previous>
           Back
         </BackLink>
-        <RequireSignedIn fallback={<MemberSkeleton />}>
-          {() => <Member key={id} memberId={id} />}
-        </RequireSignedIn>
+        <Member key={id} memberId={id} />
       </div>
     </Container>
   );

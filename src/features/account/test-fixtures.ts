@@ -89,8 +89,20 @@ export function ticket(overrides: Partial<SupportTicket> = {}): SupportTicket {
   return {
     ...ticketSummary(),
     messages: [
-      { id: '0', from: 'YOU', body: 'Is it at the airport?', createdAt: '2026-10-05T01:00:00.000Z' },
-      { id: '1', from: 'SUPPORT', body: 'It’s at the Host’s home.', createdAt: '2026-10-05T02:00:00.000Z' },
+      {
+        id: '0',
+        from: 'YOU',
+        body: 'Is it at the airport?',
+        attachments: [],
+        createdAt: '2026-10-05T01:00:00.000Z',
+      },
+      {
+        id: '1',
+        from: 'SUPPORT',
+        body: 'It’s at the Host’s home.',
+        attachments: [],
+        createdAt: '2026-10-05T02:00:00.000Z',
+      },
     ],
     ...overrides,
   };

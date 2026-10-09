@@ -11,7 +11,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostVehicle } from '@/features/host/host-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import { vehiclePath } from '@/features/host/use-step-save';
 import { CalendarSkeleton, VehicleCalendar } from '@/features/host/vehicle-calendar';
 import { vehicleDisplayTitle } from '@/features/host/vehicle-labels';
@@ -84,14 +85,9 @@ export function VehicleCalendarPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Calendar" noindex />
-      <RequireSignedIn fallback={<CalendarSkeleton />}>
-        {() => (
-          <>
-            <HostSubNav className="mb-8" />
-            <CarCalendar id={id} />
-          </>
-        )}
-      </RequireSignedIn>
+      <HostShell>
+        <RequireSignedIn fallback={<CalendarSkeleton />}>{() => <CarCalendar id={id} />}</RequireSignedIn>
+      </HostShell>
     </Container>
   );
 }

@@ -12,8 +12,19 @@ import { EmptyList, ListSkeleton, LoadError } from '@/features/admin/ops/query-f
 import { StatusBadge } from '@/features/booking/booking-parts';
 import { formatNzDate, formatNzd } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
-import { isForbidden, pageFrom, PAYMENTS_PAGE_SIZE, useAdminPayments, type PaymentView } from './finance-api';
+import { EXTRA_CHARGE_STATUS } from '@/features/admin/bookings/bookings-labels';
+import {
+  isForbidden,
+  pageFrom,
+  PAYMENTS_PAGE_SIZE,
+  useAdminPayments,
+  type ExtraChargeFilters,
+  type PaymentFilters,
+  type PaymentsTabView,
+  type PaymentView,
+} from './finance-api';
 import { FUNDED_BY, PAYMENT_VIEWS, REFUND_STATUS, stripeText } from './finance-labels';
+import { UnpaidCharges } from './unpaid-charges';
 
 const VIEW_PREFIX = 'payment-view';
 const ANY = 'ANY';
@@ -27,6 +38,11 @@ const STATUS_OPTIONS = [
   { value: ANY, label: 'Any status' },
   ...Object.entries(PAYMENT_STATUS).map(([value, status]) => ({ value, label: status.label })),
 ];
+const CHARGE_STATUSES = ['PENDING', 'FAILED'] as const;
+const CHARGE_STATUS_OPTIONS = [
+  { value: ANY, label: 'Any status' },
+  ...CHARGE_STATUSES.map((value) => ({ value, label: EXTRA_CHARGE_STATUS[value].label })),
+];
 
 const EMPTY: Record<PaymentView, { title: string; description: string }> = {
   all: { title: 'No payments', description: 'Guests’ payments for bookings and extra charges show here.' },
@@ -38,7 +54,7 @@ const EMPTY: Record<PaymentView, { title: string; description: string }> = {
   'refunds-failed': { title: 'No failed refunds', description: 'Refunds Stripe couldn’t send show here.' },
 };
 
-const viewFrom = (value: string | null): PaymentView =>
+const viewFrom = (value: string | null): PaymentsTabView =>
   PAYMENT_VIEWS.find((view) => view.value === value)?.value ?? 'all';
 
 const typeFrom = (value: string | null) =>
@@ -46,6 +62,9 @@ const typeFrom = (value: string | null) =>
 
 const statusFrom = (value: string | null) =>
   value && value in PAYMENT_STATUS ? (value as AdminPayment['status']) : undefined;
+
+const chargeStatusFrom = (value: string | null): ExtraChargeFilters['status'] =>
+  CHARGE_STATUSES.find((status) => status === value);
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -154,14 +173,78 @@ function PaymentRow({ payment }: { payment: AdminPayment }) {
   );
 }
 
-/** Guests' payments (spec §18): all, failed, disputed, or with a refund that failed. */
+/** Guests' payments in one view (spec §18): a page of them, each with any failure, dispute and refunds. */
+function PaymentsList({ filters, onPage }: { filters: PaymentFilters; onPage: (page: number) => void }) {
+  const payments = useAdminPayments(filters);
+
+  if (payments.isPending) return <ListSkeleton label="Loading payments" />;
+
+  if (payments.isError) {
+    return isForbidden(payments.error) ? (
+      <EmptyList
+        icon={<Lock />}
+        title="Payments need the refunds permission"
+        description="Ask the admin for the refunds permission to see payments."
+      />
+    ) : (
+      <LoadError
+        title="We couldn't load the payments"
+        error={payments.error}
+        onRetry={() => payments.refetch()}
+        retrying={payments.isFetching}
+      />
+    );
+  }
+
+  if (payments.data.payments.length === 0) {
+    return <EmptyList title={EMPTY[filters.view].title} description={EMPTY[filters.view].description} />;
+  }
+
+  return (
+    <div aria-busy={payments.isPlaceholderData}>
+      <DataTable label="Payments" className={cn(payments.isPlaceholderData && 'opacity-60')}>
+        <thead>
+          <tr>
+            <Th>Date</Th>
+            <Th>Booking</Th>
+            <Th>Guest</Th>
+            <Th>Type</Th>
+            <Th align="right">Amount</Th>
+            <Th align="right">Refunded</Th>
+            <Th>Status</Th>
+            <Th>Method</Th>
+            <Th>Failure or dispute</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {payments.data.payments.map((payment) => (
+            <PaymentRow key={payment.id} payment={payment} />
+          ))}
+        </tbody>
+      </DataTable>
+      <Pagination
+        page={payments.data.page}
+        total={payments.data.total}
+        pageSize={PAYMENTS_PAGE_SIZE}
+        onChange={onPage}
+        noun="payments"
+      />
+    </div>
+  );
+}
+
+/**
+ * Guests' payments (spec §18): all, failed, disputed, or with a refund that failed; and the extra charges
+ * on any booking still to be paid (plan §8.1, item 6).
+ */
 export function PaymentsPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = viewFrom(searchParams.get('view'));
+  const charges = view === 'unpaid-charges';
   const type = typeFrom(searchParams.get('type'));
   const status = view === 'all' ? statusFrom(searchParams.get('status')) : undefined;
+  const chargeStatus = charges ? chargeStatusFrom(searchParams.get('status')) : undefined;
   const page = pageFrom(searchParams.get('page'));
-  const payments = useAdminPayments({ view, type, status, page });
 
   /** Changes filters in the address; any change but the page's goes back to page 1. */
   const update = (changes: Record<string, string | undefined>) =>
@@ -177,6 +260,7 @@ export function PaymentsPanel() {
       },
       { replace: true },
     );
+  const onPage = (next: number) => update({ page: next > 1 ? String(next) : undefined });
 
   return (
     <div>
@@ -191,32 +275,51 @@ export function PaymentsPanel() {
             label="Which payments"
             options={PAYMENT_VIEWS}
             value={view}
-            onChange={(next) => update({ view: next === 'all' ? undefined : next, status: undefined })}
+            // Extra charges have no payment type, and their own statuses.
+            onChange={(next) =>
+              update({
+                view: next === 'all' ? undefined : next,
+                status: undefined,
+                ...(next === 'unpaid-charges' && { type: undefined }),
+              })
+            }
             className="min-w-max"
           />
         </div>
-        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
-          <Field label="Type" className="sm:w-48">
+        {charges ? (
+          <Field label="Status" className="w-full sm:w-56">
             <Select
-              value={type ?? ANY}
-              onChange={(next) => update({ type: next === ANY ? undefined : next })}
-              options={TYPE_OPTIONS}
-              icon={<Tag />}
-              listLabel="Payment types"
+              value={chargeStatus ?? ANY}
+              onChange={(next) => update({ status: next === ANY ? undefined : next })}
+              options={CHARGE_STATUS_OPTIONS}
+              icon={<CreditCard />}
+              listLabel="Extra charge statuses"
             />
           </Field>
-          {view === 'all' && (
-            <Field label="Status" className="sm:w-48">
+        ) : (
+          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+            <Field label="Type" className="sm:w-48">
               <Select
-                value={status ?? ANY}
-                onChange={(next) => update({ status: next === ANY ? undefined : next })}
-                options={STATUS_OPTIONS}
-                icon={<CreditCard />}
-                listLabel="Payment statuses"
+                value={type ?? ANY}
+                onChange={(next) => update({ type: next === ANY ? undefined : next })}
+                options={TYPE_OPTIONS}
+                icon={<Tag />}
+                listLabel="Payment types"
               />
             </Field>
-          )}
-        </div>
+            {view === 'all' && (
+              <Field label="Status" className="sm:w-48">
+                <Select
+                  value={status ?? ANY}
+                  onChange={(next) => update({ status: next === ANY ? undefined : next })}
+                  options={STATUS_OPTIONS}
+                  icon={<CreditCard />}
+                  listLabel="Payment statuses"
+                />
+              </Field>
+            )}
+          </div>
+        )}
       </div>
 
       <div
@@ -225,58 +328,10 @@ export function PaymentsPanel() {
         aria-labelledby={tabId(VIEW_PREFIX, view)}
         className="mt-6"
       >
-        {payments.isPending && <ListSkeleton label="Loading payments" />}
-
-        {payments.isError &&
-          (isForbidden(payments.error) ? (
-            <EmptyList
-              icon={<Lock />}
-              title="Payments need the refunds permission"
-              description="Ask the admin for the refunds permission to see payments."
-            />
-          ) : (
-            <LoadError
-              title="We couldn't load the payments"
-              error={payments.error}
-              onRetry={() => payments.refetch()}
-              retrying={payments.isFetching}
-            />
-          ))}
-
-        {payments.data?.payments.length === 0 && (
-          <EmptyList title={EMPTY[view].title} description={EMPTY[view].description} />
-        )}
-
-        {payments.data && payments.data.payments.length > 0 && (
-          <div aria-busy={payments.isPlaceholderData}>
-            <DataTable label="Payments" className={cn(payments.isPlaceholderData && 'opacity-60')}>
-              <thead>
-                <tr>
-                  <Th>Date</Th>
-                  <Th>Booking</Th>
-                  <Th>Guest</Th>
-                  <Th>Type</Th>
-                  <Th align="right">Amount</Th>
-                  <Th align="right">Refunded</Th>
-                  <Th>Status</Th>
-                  <Th>Method</Th>
-                  <Th>Failure or dispute</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.data.payments.map((payment) => (
-                  <PaymentRow key={payment.id} payment={payment} />
-                ))}
-              </tbody>
-            </DataTable>
-            <Pagination
-              page={payments.data.page}
-              total={payments.data.total}
-              pageSize={PAYMENTS_PAGE_SIZE}
-              onChange={(next) => update({ page: next > 1 ? String(next) : undefined })}
-              noun="payments"
-            />
-          </div>
+        {charges ? (
+          <UnpaidCharges filters={{ status: chargeStatus, page }} onPage={onPage} />
+        ) : (
+          <PaymentsList filters={{ view, type, status, page }} onPage={onPage} />
         )}
       </div>
     </div>

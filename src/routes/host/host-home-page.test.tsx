@@ -1,5 +1,4 @@
 import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicleSummary } from '@/api/types';
 import { confirmedBooking, readiness, summary as bookingSummary } from '@/features/booking/test-fixtures';
@@ -44,9 +43,31 @@ describe('HostHomePage', () => {
       await screen.findByRole('heading', { name: 'Earn from your car when you’re not using it' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start hosting' })).toHaveAttribute('href', '/host/apply');
+    // Not a Host yet: no Host area around it.
+    expect(screen.queryByRole('navigation', { name: 'Hosting' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hosting, quick links' })).not.toBeInTheDocument();
   });
 
-  it('shows the application under review, and each car with its status and what is left', async () => {
+  it('is Today in the Host area, with the places the phone’s tabs leave out', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: hostUser } },
+      'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
+    });
+    render();
+
+    const sidebar = within(await screen.findByRole('navigation', { name: 'Hosting' }));
+    expect(sidebar.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
+    const tabs = within(screen.getByRole('navigation', { name: 'Hosting, quick links' }));
+    expect(tabs.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
+    const more = within(screen.getByRole('navigation', { name: 'More hosting' }));
+    expect(more.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['Bookings', '/host/bookings'],
+      ['Reviews', '/account/reviews?as=host'],
+      ['Profile', '/host/profile'],
+    ]);
+  });
+
+  it('shows the application under review, and the cars at a glance with the way to My vehicles', async () => {
     mockApi({
       'POST /auth/session': { status: 200, body: { user: hostUser } },
       'GET /host/vehicles': {
@@ -69,26 +90,14 @@ describe('HostHomePage', () => {
     render();
 
     expect(await screen.findByText('Your application is under review')).toBeInTheDocument();
-    const [draft, live] = await screen.findAllByRole('listitem');
-    expect(within(draft!).getByText('Draft')).toBeInTheDocument();
-    expect(within(draft!).getByText(/5 things left to add · you reached documents/)).toBeInTheDocument();
-    expect(within(draft!).getByRole('link', { name: /Continue listing/ })).toHaveAttribute(
+    const cars = within(await screen.findByRole('region', { name: 'My vehicles' }));
+    expect(cars.getByText('2 cars · 1 live · 1 draft to finish')).toBeInTheDocument();
+    expect(cars.getByRole('link', { name: /Your new listing/ })).toHaveAttribute('href', '/host/vehicles/v1');
+    expect(cars.getByRole('link', { name: /2021 Toyota Corolla/ })).toHaveAttribute(
       'href',
-      '/host/vehicles/v1',
+      '/host/vehicles/v2',
     );
-    expect(within(live!).getByText('Live')).toBeInTheDocument();
-    expect(within(live!).getByText('New photos or documents waiting for approval')).toBeInTheDocument();
-    expect(within(live!).getByRole('link', { name: 'Calendar' })).toHaveAttribute(
-      'href',
-      '/host/vehicles/v2/calendar',
-    );
-    expect(within(live!).getByRole('link', { name: 'Maintenance' })).toHaveAttribute(
-      'href',
-      '/host/vehicles/v2/maintenance',
-    );
-    // A draft has no calendar or maintenance yet.
-    expect(within(draft!).queryByRole('link', { name: 'Calendar' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Add a car' })).toHaveAttribute('href', '/host/vehicles/new');
+    expect(cars.getByRole('link', { name: 'All vehicles' })).toHaveAttribute('href', '/host/vehicles');
   });
 
   it('asks an applicant to verify their identity before the application is approved', async () => {
@@ -144,25 +153,15 @@ describe('HostHomePage', () => {
     expect(screen.queryByRole('link', { name: 'Add a car' })).not.toBeInTheDocument();
   });
 
-  it('deletes a draft after asking once', async () => {
-    let listed = [summary({})];
-    const remove = vi.fn();
+  it('asks a Host with no cars yet to add their first', async () => {
     mockApi({
       'POST /auth/session': { status: 200, body: { user: hostUser } },
-      'GET /host/vehicles': () => ({ status: 200, body: { vehicles: listed } }),
-      'DELETE /host/vehicles/v1': () => {
-        remove();
-        listed = [];
-        return { status: 204 };
-      },
+      'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
     });
     render();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete the draft Your new listing' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Yes, delete' }));
-
-    expect(await screen.findByText('Add your first car')).toBeInTheDocument();
-    expect(remove).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('heading', { name: 'Add your first car' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add a car' })).toHaveAttribute('href', '/host/vehicles/new');
   });
 
   it('shows an approved Host what to do, urgent first', async () => {

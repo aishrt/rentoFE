@@ -13,8 +13,9 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Spinner } from '@/components/ui/spinner';
 
 /**
- * The unsubscribe link in a marketing email (plan §7; NZ Unsolicited Electronic Messages Act 2007): it works
- * without signing in and turns off marketing email and texts at once. Booking messages still arrive.
+ * The unsubscribe link in a marketing email (plan §7; NZ Unsolicited Electronic Messages Act 2007), or in an
+ * unread-message email: it works without signing in and turns off marketing email and texts, or those emails,
+ * at once. Booking messages still arrive.
  */
 export function UnsubscribePage() {
   const [params] = useSearchParams();
@@ -43,7 +44,9 @@ export function UnsubscribePage() {
           title={unsubscribe.isSuccess ? 'You’re unsubscribed' : 'That link didn’t work'}
           description={
             unsubscribe.isSuccess
-              ? 'We won’t send you news or offers. Messages about your bookings and account still reach you.'
+              ? unsubscribe.data.unsubscribedFrom === 'MESSAGE_EMAILS'
+                ? 'We won’t email you about unread messages. You’ll still see them in the app, and messages about your bookings and account still reach you.'
+                : 'We won’t send you news or offers. Messages about your bookings and account still reach you.'
               : 'Sign in and change what we send you in your account settings.'
           }
           actions={

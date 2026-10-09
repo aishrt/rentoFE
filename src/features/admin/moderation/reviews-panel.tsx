@@ -37,10 +37,50 @@ const EMPTY: Record<ReviewState, { title: string; description: string }> = {
     description:
       'Reviews on Rento Vroom show here, newest first, so one that breaks the rules can be hidden.',
   },
-  HIDDEN: { title: 'No hidden reviews', description: 'Reviews the team has hidden are listed here.' },
+  HIDDEN: {
+    title: 'No hidden reviews',
+    description: 'Reviews the team has hidden are listed here, to restore one hidden by mistake.',
+  },
 };
 
 type Decision = { review: ModerationReview; action: ReviewAction };
+
+/** The words for each decision. Clearing a hidden review restores it (moderation-api). */
+function decisionCopy(decision: Decision | null) {
+  const author = decision?.review.author.firstName ?? '';
+  if (decision?.action === 'HIDE') {
+    return {
+      title: `Hide ${author}’s review?`,
+      description: 'It won’t be shown on Rento Vroom or count towards a rating.',
+      confirmLabel: 'Hide review',
+      tone: 'danger' as const,
+      notesLabel: 'Why it’s hidden',
+      toast: 'Review hidden',
+      toastDescription: `${author}’s review won’t be shown.`,
+    };
+  }
+  if (decision?.review.status === 'HIDDEN') {
+    return {
+      title: `Restore ${author}’s review?`,
+      description:
+        'It’s published again like any other review, and counts towards the rating again. Why it was hidden stays in the audit log.',
+      confirmLabel: 'Restore review',
+      tone: 'primary' as const,
+      notesLabel: 'Why it’s restored',
+      toast: 'Review restored',
+      toastDescription: `${author}’s review is published again, like any other.`,
+    };
+  }
+  return {
+    title: `Publish ${author}’s review?`,
+    description: 'It’s released like any other review.',
+    confirmLabel: 'Publish review',
+    tone: 'primary' as const,
+    notesLabel: 'Why it’s fine to publish',
+    toast: 'Review published',
+    toastDescription: `${author}’s review is released like any other.`,
+  };
+}
 
 interface ReviewsPanelProps {
   state: ReviewState;
@@ -49,7 +89,7 @@ interface ReviewsPanelProps {
 
 /**
  * Reviews held back before publishing, to publish or hide with a reason; published ones, newest first, to
- * hide one that breaks the rules; and the hidden ones.
+ * hide one that breaks the rules; and the hidden ones, to restore one hidden by mistake.
  */
 export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
   const queryClient = useQueryClient();
@@ -66,18 +106,14 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
   const decide = async (notes: string | undefined) => {
     if (!decision) return;
     const { review, action } = decision;
+    const done = decisionCopy(decision);
     try {
       await moderateReviewRequest({ id: review.id, action, reason: notes ?? '' });
     } catch (error) {
       throw asNotesError(error, 'reason');
     }
     setDialogOpen(false);
-    toast(action === 'CLEAR' ? 'Review published' : 'Review hidden', {
-      description:
-        action === 'CLEAR'
-          ? `${review.author.firstName}’s review is released like any other.`
-          : `${review.author.firstName}’s review won’t be shown.`,
-    });
+    toast(done.toast, { description: done.toastDescription });
     // It leaves this list straight away; both lists then refresh.
     queryClient.setQueryData<{ reviews: ModerationReview[] }>(
       moderationReviewsQueryKey(state),
@@ -87,8 +123,7 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
   };
 
   const count = reviews.data?.length;
-  const author = decision?.review.author.firstName ?? '';
-  const hiding = decision?.action === 'HIDE';
+  const copy = decisionCopy(decision);
 
   return (
     <div className="grid gap-6">
@@ -131,9 +166,12 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
                 state={state}
                 className="stagger-in"
                 style={staggerIndex(index)}
-                // A hidden review stays hidden: clearing it wouldn't show it again.
                 onPublish={state === 'HELD' ? () => start(review, 'CLEAR') : undefined}
                 onHide={state !== 'HIDDEN' ? () => start(review, 'HIDE') : undefined}
+                // Clearing a hidden review publishes it again and recounts the ratings.
+                onRestore={
+                  state === 'HIDDEN' && review.status === 'HIDDEN' ? () => start(review, 'CLEAR') : undefined
+                }
               />
             ))}
           </ul>
@@ -143,16 +181,12 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
       <DecisionDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        title={hiding ? `Hide ${author}’s review?` : `Publish ${author}’s review?`}
-        description={
-          hiding
-            ? 'It won’t be shown on Rento Vroom or count towards a rating.'
-            : 'It’s released like any other review.'
-        }
-        confirmLabel={hiding ? 'Hide review' : 'Publish review'}
-        tone={hiding ? 'danger' : 'primary'}
+        title={copy.title}
+        description={copy.description}
+        confirmLabel={copy.confirmLabel}
+        tone={copy.tone}
         notes="required"
-        notesLabel={hiding ? 'Why it’s hidden' : 'Why it’s fine to publish'}
+        notesLabel={copy.notesLabel}
         notesDescription="Kept in the audit log."
         onConfirm={decide}
       />

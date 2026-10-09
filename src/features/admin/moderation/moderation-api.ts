@@ -4,8 +4,8 @@ import type { AdminReport } from '@/api/types';
 
 /*
  * Moderation (plan §12.6): what members reported (a person, a message, a review or a listing), the
- * reviews held back before publishing, and published ones to hide. Staff resolve or moderate each one with
- * a note, which the API keeps in the audit log.
+ * reviews held back before publishing, published ones to hide and hidden ones to restore, and messages to
+ * remove. Staff resolve or moderate each one with a note, which the API keeps in the audit log.
  */
 
 export type ReportStatus = AdminReport['status'];
@@ -66,7 +66,10 @@ export function useModerationReviews(state: ReviewState) {
   });
 }
 
-/** Publishes a held review (CLEAR) or hides one (HIDE), with the reason. */
+/**
+ * Publishes a held review (CLEAR) or hides one (HIDE), with the reason. Clearing a hidden review restores
+ * it: it's published again like any other, and counts towards the ratings.
+ */
 export async function moderateReviewRequest(input: {
   id: string;
   action: ReviewAction;
@@ -94,6 +97,40 @@ export async function hideReportedReviewRequest(input: {
     id: input.reportId,
     status: 'ACTIONED',
     resolution: `Hid the review. ${input.reason}`.slice(0, MODERATION_NOTE_MAX),
+  });
+}
+
+/**
+ * Removes a reported member's message: both sides see "This message was removed by Rento Vroom support" in
+ * its place, and staff still see it in the conversation, marked removed.
+ */
+export async function removeMessageRequest(input: { id: string; reason: string }): Promise<void> {
+  await unwrap(
+    client.POST('/admin/moderation/messages/{id}/remove', {
+      params: { path: { id: input.id } },
+      body: { reason: input.reason },
+    }),
+  );
+}
+
+/**
+ * Removes a reported message with the reason, then closes the report as actioned with the same note, so
+ * it's written once. A message removed already (from its conversation) just closes the report.
+ */
+export async function removeReportedMessageRequest(input: {
+  reportId: string;
+  messageId: string;
+  reason: string;
+}): Promise<AdminReport> {
+  try {
+    await removeMessageRequest({ id: input.messageId, reason: input.reason });
+  } catch (error) {
+    if (!(error instanceof ApiError && error.code === 'ALREADY_REMOVED')) throw error;
+  }
+  return resolveReportRequest({
+    id: input.reportId,
+    status: 'ACTIONED',
+    resolution: `Removed the message. ${input.reason}`.slice(0, MODERATION_NOTE_MAX),
   });
 }
 

@@ -1,11 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { DollarSign } from 'lucide-react';
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '@/api/client';
-import type { AdminRefundRequest } from '@/api/types';
+import type { AdminBookingDetail, AdminRefundRequest } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
@@ -17,7 +17,7 @@ import { formatNzd } from '@/features/booking/booking-format';
 import { ChoiceCards } from '@/features/host/choice-cards';
 import { actionErrorMessage } from './bookings-api';
 import { dollarsToCents } from '@/features/admin/ops/admin-labels';
-import { FUNDED_BY } from './bookings-labels';
+import { EXTRA_CHARGE_TYPE, FUNDED_BY } from './bookings-labels';
 
 const REASON_MAX = 500;
 const FUNDERS = ['PLATFORM', 'HOST'] as const;
@@ -91,6 +91,8 @@ interface RefundDialogProps {
   refundableCents: number;
   /** The trip's payout has been sent, so a Host-funded refund is taken back another way. */
   tripPayoutSent?: boolean;
+  /** Paid extra charges that can be refunded too (plan §8.1, item 11). */
+  charges?: AdminBookingDetail['refundableCharges'];
   guestName: string;
   /** Sends the refund. An API error it throws shows in the dialog. */
   onConfirm: (refund: AdminRefundRequest) => Promise<void>;
@@ -106,6 +108,7 @@ export function RefundDialog({
   onOpenChange,
   refundableCents,
   tripPayoutSent = false,
+  charges = [],
   guestName,
   onConfirm,
 }: RefundDialogProps) {
@@ -113,21 +116,52 @@ export function RefundDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title="Refund the Guest"
-        description={`Back to the card ${guestName} paid with. Up to ${formatNzd(refundableCents)} can still be refunded. We’ll email them.`}
+        description={`Back to the card ${guestName} paid with. We’ll email them.`}
       >
-        <RefundForm refundableCents={refundableCents} tripPayoutSent={tripPayoutSent} onConfirm={onConfirm} />
+        <RefundForm
+          refundableCents={refundableCents}
+          tripPayoutSent={tripPayoutSent}
+          charges={charges}
+          onConfirm={onConfirm}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
+/** The booking's own payment, or one of its paid extra charges. */
+const BOOKING_PAYMENT = 'BOOKING';
+
 function RefundForm({
   refundableCents,
   tripPayoutSent,
+  charges = [],
   onConfirm,
-}: Pick<RefundDialogProps, 'refundableCents' | 'tripPayoutSent' | 'onConfirm'>) {
+}: Pick<RefundDialogProps, 'refundableCents' | 'tripPayoutSent' | 'charges' | 'onConfirm'>) {
   const confirm = useMutation({ mutationFn: onConfirm });
-  const schema = useMemo(() => refundSchema(refundableCents), [refundableCents]);
+  const [target, setTarget] = useState(
+    refundableCents > 0 || charges.length === 0 ? BOOKING_PAYMENT : charges[0]!.paymentId,
+  );
+  const charge = charges.find((candidate) => candidate.paymentId === target);
+  const maxCents = charge ? charge.refundableCents : refundableCents;
+  const payoutSent = charge ? charge.payoutSent : tripPayoutSent;
+  const schema = refundSchema(maxCents);
+  const targets = [
+    ...(refundableCents > 0
+      ? [
+          {
+            value: BOOKING_PAYMENT,
+            label: 'The booking',
+            description: `Up to ${formatNzd(refundableCents)} of the trip’s payment.`,
+          },
+        ]
+      : []),
+    ...charges.map((option) => ({
+      value: option.paymentId,
+      label: `Extra charge: ${EXTRA_CHARGE_TYPE[option.type]}`,
+      description: `${option.description} Up to ${formatNzd(option.refundableCents)}.`,
+    })),
+  ];
   const {
     register,
     control,
@@ -139,7 +173,7 @@ function RefundForm({
     defaultValues: { amount: '', fundedBy: '', recoverFrom: 'NEXT_PAYOUT', reason: '' },
   });
   const funder = useWatch({ control, name: 'fundedBy' });
-  const askRecovery = Boolean(tripPayoutSent) && funder === 'HOST';
+  const askRecovery = Boolean(payoutSent) && funder === 'HOST';
 
   const onSubmit = handleSubmit(async ({ amount, fundedBy, recoverFrom, reason }) => {
     const amountCents = dollarsToCents(amount);
@@ -149,7 +183,8 @@ function RefundForm({
         amountCents,
         reason,
         fundedBy,
-        ...(fundedBy === 'HOST' && tripPayoutSent && { recoverFrom }),
+        ...(charge && { paymentId: charge.paymentId }),
+        ...(fundedBy === 'HOST' && payoutSent && { recoverFrom }),
       });
     } catch (error) {
       applyFieldErrors(error, ['reason'] as const, setError);
@@ -170,9 +205,19 @@ function RefundForm({
       )}
       <fieldset disabled={confirm.isPending} className="grid min-w-0 gap-5">
         <legend className="sr-only">Refund</legend>
+        {targets.length > 1 && (
+          <ChoiceCards
+            legend="What to refund"
+            name="target"
+            value={target}
+            onChange={setTarget}
+            choices={targets}
+            columns={1}
+          />
+        )}
         <Field
           label="Amount (NZD)"
-          description={`Up to ${formatNzd(refundableCents)}.`}
+          description={`Up to ${formatNzd(maxCents)}.`}
           error={errors.amount?.message}
         >
           <Input
@@ -208,7 +253,11 @@ function RefundForm({
               <ChoiceCards
                 ref={field.ref}
                 legend="How the Host pays it back"
-                description="This trip’s payout has already been sent to the Host."
+                description={
+                  charge
+                    ? 'The Host’s share of this charge has already been sent to them.'
+                    : 'This trip’s payout has already been sent to the Host.'
+                }
                 name={field.name}
                 value={isRecovery(field.value) ? field.value : ''}
                 onChange={field.onChange}

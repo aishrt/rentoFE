@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AngleIllustration } from '@/features/host/angle-illustrations';
 import { ANGLE_DRAWINGS, ANGLE_HINTS, ANGLE_LABELS, takenLabel } from './angles';
+import { CameraGuide } from './camera-guide';
+import { PhotoDateNote } from './photo-date-note';
+import { useCameraProblem, type CameraProblem } from './use-camera-problem';
 import type { InspectionPhoto } from './use-inspection-photos';
 
 /** A photo's upload state, in words. */
@@ -47,15 +50,35 @@ interface PhotoCaptureProps {
   onTake: (file: File) => Promise<string | null>;
 }
 
+/** Why the button opens the device's own camera or files instead of the in-app camera. */
+const CAMERA_PROBLEMS: Record<Exclude<CameraProblem, 'unsupported'>, { title: string; text: string }> = {
+  denied: {
+    title: 'Camera access is off',
+    text: 'To take the photos here, allow camera access for this site in your browser’s settings. Or take or choose each photo with the button below.',
+  },
+  missing: {
+    title: 'There’s no camera to use here',
+    text: 'Choose each photo from this device instead. A photo taken earlier shows its own date on the handover.',
+  },
+  failed: {
+    title: 'The camera didn’t start',
+    text: 'Another app may be using it. Try again, or take or choose the photo with the button below.',
+  },
+};
+
 /**
  * One angle of the inspection (plan §12.6): what to photograph, with an example drawing, then the photo
- * with the time it was taken. Opens the phone's camera; on a computer it asks for a file.
+ * with the time it was taken. Opens the in-app camera full screen; where that can't be used, the phone's
+ * own camera or, on a computer, a file.
  */
 export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoCaptureProps) {
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraProblem, setCameraProblem] = useCameraProblem();
   const label = ANGLE_LABELS[angle];
+  const explained = cameraProblem && cameraProblem !== 'unsupported' ? CAMERA_PROBLEMS[cameraProblem] : null;
 
   const take = async (file: File | undefined) => {
     if (!file) return;
@@ -63,6 +86,11 @@ export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoC
     setProblem(await onTake(file));
     setBusy(false);
     if (input.current) input.current.value = '';
+  };
+
+  const start = () => {
+    if (cameraProblem) input.current?.click();
+    else setCameraOpen(true);
   };
 
   return (
@@ -86,8 +114,9 @@ export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoC
               alt={`${label} at check-in`}
               className="aspect-4/3 w-full rounded-card bg-canvas object-cover"
             />
-            <figcaption className="text-xs text-muted">
-              At check-in · {takenLabel(earlier.takenAt)}
+            <figcaption className="grid gap-1 text-xs text-muted">
+              <span>At check-in · {takenLabel(earlier.takenAt)}</span>
+              <PhotoDateNote photo={earlier} />
             </figcaption>
           </figure>
         )}
@@ -108,6 +137,7 @@ export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoC
               <>
                 <span>{takenLabel(photo.takenAt)}</span>
                 <PhotoStatusBadge photo={photo} />
+                <PhotoDateNote photo={photo} className="basis-full" />
               </>
             ) : (
               <span>{earlier ? 'Now: take the same shot' : 'Example of the shot'}</span>
@@ -126,6 +156,44 @@ export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoC
           {photo.error} Please take it again.
         </Alert>
       )}
+      {explained && (
+        <Alert
+          variant="info"
+          role="status"
+          title={explained.title}
+          action={
+            cameraProblem === 'failed' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setCameraProblem(null);
+                  setCameraOpen(true);
+                }}
+              >
+                Try the camera again
+              </Button>
+            )
+          }
+        >
+          {explained.text}
+        </Alert>
+      )}
+      {cameraOpen && (
+        <CameraGuide
+          angle={angle}
+          position={position}
+          onCapture={(file) => {
+            setCameraOpen(false);
+            void take(file);
+          }}
+          onUnavailable={(reason) => {
+            setCameraOpen(false);
+            setCameraProblem(reason);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
 
       <input
         ref={input}
@@ -141,7 +209,7 @@ export function PhotoCapture({ angle, position, photo, earlier, onTake }: PhotoC
         variant={photo ? 'secondary' : 'primary'}
         size="lg"
         loading={busy}
-        onClick={() => input.current?.click()}
+        onClick={start}
         className="justify-self-start"
       >
         {photo ? <RotateCcw aria-hidden="true" /> : <Camera aria-hidden="true" />}

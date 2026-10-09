@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicProfile, Review } from '@/api/types';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
@@ -134,9 +135,46 @@ describe('MemberPage', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
-  it('sends visitors to log in first', async () => {
+  it('is open to visitors, as the listing that links to it is, and sends them to log in to report', async () => {
     mockProfile({ status: 200, body: { profile: hana, reviews: [] } }, null);
     render();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hana' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Report Hana' }));
     expect(await screen.findByText('Log in page')).toBeInTheDocument();
+  });
+
+  it('reports a member to the support team', async () => {
+    const sent = mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /users/host-1/reviews':
+          return { status: 200, body: { profile: hana, reviews: [] } };
+        case 'POST /reports':
+          return { status: 201, body: { report: { id: 'r1' } } };
+        default:
+          return undefined;
+      }
+    });
+    render();
+    await userEvent.click(await screen.findByRole('button', { name: 'Report Hana' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await userEvent.click(dialog.getAllByRole('radio')[0]!);
+    await userEvent.click(dialog.getByRole('button', { name: 'Send report' }));
+    await vi.waitFor(() =>
+      expect(sent.find((entry) => entry.path === '/reports')?.body).toMatchObject({
+        targetType: 'USER',
+        targetId: 'host-1',
+      }),
+    );
+  });
+
+  it('doesn’t offer members a report on their own profile', async () => {
+    mockProfile({ status: 200, body: { profile: { ...hana, id: guestUser.id }, reviews: [] } });
+    render();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hana' })).toBeInTheDocument();
+    await vi.waitFor(() => expect(screen.getByText('Member since 2024')).toBeInTheDocument());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('button', { name: 'Report Hana' })).not.toBeInTheDocument();
   });
 });

@@ -43,3 +43,18 @@ export const ANGLE_DRAWINGS: Record<InspectionAngle, PhotoType> = {
 
 /** "Taken Mon, 12 Oct 2026, 10:04 am": the capture time shown on every photo (plan §12.6). */
 export const takenLabel = (iso: string) => `Taken ${formatNzDateTimeWithYear(iso)}`;
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * "Photo taken earlier: Mon, 5 Jan 2026, 9:30 am" when the date a photo carries (its EXIF date) is more than
+ * an hour from when it came into the inspection, so an old gallery photo can't pass for a new one (plan §3,
+ * conditionReports). A camera clock ahead says "dated later" instead. Null when there's nothing to say.
+ */
+export function photoDateNote(photo: { takenAt: string; exifTakenAt?: string }): string | null {
+  if (!photo.exifTakenAt) return null;
+  const gap = new Date(photo.exifTakenAt).getTime() - new Date(photo.takenAt).getTime();
+  if (!(Math.abs(gap) > HOUR_MS)) return null;
+  const when = formatNzDateTimeWithYear(photo.exifTakenAt);
+  return gap < 0 ? `Photo taken earlier: ${when}` : `Photo dated later: ${when}`;
+}

@@ -18,7 +18,8 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { applyFieldErrors, formErrorMessage } from '@/features/account/form-errors';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import {
   hostProfileSchema,
   useHostProfile,
@@ -144,9 +145,9 @@ function HostProfileView() {
 
   if (profile.isPending) {
     return (
-      <div aria-busy="true" className="grid gap-6 lg:grid-cols-3">
+      <div aria-busy="true" className="grid gap-6 xl:grid-cols-3">
         <span className="sr-only">Loading your profile</span>
-        <Skeleton className="h-96 rounded-card lg:col-span-2" />
+        <Skeleton className="h-96 rounded-card xl:col-span-2" />
         <Skeleton className="h-96 rounded-card" />
       </div>
     );
@@ -189,8 +190,8 @@ function HostProfileView() {
   }
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2">
+    <div className="grid items-start gap-6 xl:grid-cols-3">
+      <div className="xl:col-span-2">
         <ProfileForm host={host} />
       </div>
       <div className="grid gap-4">
@@ -251,20 +252,21 @@ export function HostProfilePage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Host profile" noindex />
-      <div className="grid gap-8">
-        <HostSubNav />
-        <HostPageHeader
-          eyebrow="Hosting"
-          title="Profile"
-          description="What guests read about you, and your GST details."
-        />
-        {/* The tabs and heading line up with the other Host pages; the form keeps a narrower width. */}
-        <div className="max-w-5xl">
-          <RequireSignedIn fallback={<Skeleton className="h-96 rounded-card" />}>
-            {() => <HostProfileView />}
-          </RequireSignedIn>
+      <HostShell>
+        <div className="grid gap-8">
+          <HostPageHeader
+            eyebrow="Hosting"
+            title="Profile"
+            description="What guests read about you, and your GST details."
+          />
+          {/* The heading lines up with the other Host pages; the form keeps a narrower width. */}
+          <div className="max-w-5xl">
+            <RequireSignedIn fallback={<Skeleton className="h-96 rounded-card" />}>
+              {() => <HostProfileView />}
+            </RequireSignedIn>
+          </div>
         </div>
-      </div>
+      </HostShell>
     </Container>
   );
 }

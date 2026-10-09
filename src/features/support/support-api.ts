@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
-import type { SupportTicket } from '@/api/types';
+import type { AttachmentInput, SupportTicket } from '@/api/types';
 
 /*
  * Help and support (spec §8): the help centre's articles, and the user's own support requests with their
@@ -50,17 +50,19 @@ export function useMyTicket(ref: string) {
     queryFn: async ({ signal }) =>
       (await unwrap(client.GET('/support/tickets/{ref}', { params: { path: { ref } }, signal }))).ticket,
     enabled: ref !== '',
+    // File links work for 10 minutes; a refresh brings fresh ones and any reply from support.
+    refetchInterval: 5 * 60_000,
   });
 }
 
-/** Adds the user's reply; the ticket goes back to the support team. */
+/** Adds the user's reply, with any files they uploaded for it; the ticket goes back to the support team. */
 export function useReplyToTicket(ref: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: string): Promise<SupportTicket> =>
+    mutationFn: async (reply: { body: string; attachments: AttachmentInput[] }): Promise<SupportTicket> =>
       (
         await unwrap(
-          client.POST('/support/tickets/{ref}/messages', { params: { path: { ref } }, body: { body } }),
+          client.POST('/support/tickets/{ref}/messages', { params: { path: { ref } }, body: reply }),
         )
       ).ticket,
     onSuccess: (ticket) => {

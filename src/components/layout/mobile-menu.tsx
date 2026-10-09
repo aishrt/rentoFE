@@ -4,6 +4,8 @@ import { staggerIndex } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Divider } from '@/components/ui/divider';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useUnreadMessages } from '@/features/messages/unread-count';
+import { UnreadBadge } from '@/features/messages/unread-badge';
 import { primaryNav, type NavLinkItem } from './site-nav';
 
 interface MobileMenuProps {
@@ -17,11 +19,12 @@ const linkClasses =
 
 /**
  * The ☰ menu on phones and tablets (plan §12.6). Loaded on first use to keep the homepage light. The links
- * fade up one after another as the sheet slides in. Signed in, it adds the Guest dashboard's places and, for
- * anyone who has applied to host, Hosting in place of Become a host.
+ * fade up one after another as the sheet slides in. Signed in, it adds the Guest dashboard's places, with the
+ * unread count beside Messages, and, for anyone who has applied to host, Hosting in place of Become a host.
  */
 export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const close = () => onOpenChange(false);
+  const unread = useUnreadMessages(Boolean(user)).data ?? 0;
   const hosting = Boolean(user?.hostStatus);
   const main = hosting ? primaryNav.filter((item) => item.to !== '/become-a-host') : primaryNav;
   const account: NavLinkItem[] = user
@@ -63,6 +66,7 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
                 <li key={item.to}>
                   <Link to={item.to} viewTransition onClick={close} className={linkClasses}>
                     {item.label}
+                    {item.to === '/messages' && <UnreadBadge count={unread} className="ml-auto" />}
                   </Link>
                 </li>
               ))}

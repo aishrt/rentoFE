@@ -42,6 +42,10 @@ export const addDays = (day: string, days: number) => {
   return dayString(date);
 };
 
+/** Whole days from one day to another: 1 from "2026-10-12" to "2026-10-13". */
+export const daysBetween = (from: string, to: string) =>
+  Math.round((utc(to).getTime() - utc(from).getTime()) / (MINUTES_PER_DAY * 60_000));
+
 /** 0 for Monday through 6 for Sunday: NZ calendars start on Monday. */
 export const mondayIndex = (day: string) => (utc(day).getUTCDay() + 6) % 7;
 

@@ -32,6 +32,9 @@ export const REPORT_STATUS: Record<AdminReport['status'], StatusLabel> = {
   DISMISSED: { label: 'Dismissed', tone: 'neutral' },
 };
 
+/** A reported message support took out of its conversation. */
+export const MESSAGE_REMOVED: StatusLabel = { label: 'Removed', tone: 'ended' };
+
 export const REVIEW_DIRECTION: Record<ModerationReview['direction'], string> = {
   GUEST_TO_HOST: 'Guest reviewing their Host',
   HOST_TO_GUEST: 'Host reviewing their Guest',

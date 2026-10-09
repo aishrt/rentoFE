@@ -175,11 +175,14 @@ export function PartyDetails({
               {party.tripCount} {party.tripCount === 1 ? 'trip' : 'trips'}
               {role === 'guest' ? ' completed' : ''}
             </span>
-            {party.verified && (
+            {party.verified ? (
               <span className="flex items-center gap-1 text-primary">
                 <BadgeCheck aria-hidden="true" className="size-4" />
                 Identity verified
               </span>
+            ) : (
+              // A Host sees whether the Guest is verified, either way (plan §6.2).
+              role === 'guest' && <span>Identity not verified yet</span>
             )}
           </p>
         </div>

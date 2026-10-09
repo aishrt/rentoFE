@@ -1,6 +1,6 @@
 import { EllipsisVertical, Flag, Lock, MessagesSquare, ShieldAlert, UserX } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Message, ThreadDetail } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
@@ -23,18 +23,14 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { IconButton } from '@/components/ui/icon-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
-import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { useSession } from '@/features/auth/use-session';
 import { formatTripSpan } from '@/features/booking/booking-format';
+import { HOST_INBOX } from '@/features/host/host-links';
+import { AreaShell } from '@/features/host/area-shell';
 import { Composer } from '@/features/messages/composer';
 import { MessageList } from '@/features/messages/message-list';
-import {
-  useBlock,
-  useLoadOlderMessages,
-  useMessages,
-  useReadThread,
-  useThread,
-} from '@/features/messages/messages-api';
+import { useBlock, useMessages, useReadThread, useThread } from '@/features/messages/messages-api';
 import { PersonAvatar } from '@/features/messages/person-avatar';
 import { ReportDialogContent } from '@/features/messages/report-dialog';
 
@@ -135,10 +131,9 @@ function useStickToBottom(count: number) {
   return end;
 }
 
-function Conversation({ bookingRef }: { bookingRef: string }) {
+function Conversation({ bookingRef, host }: { bookingRef: string; host: boolean }) {
   const thread = useThread(bookingRef);
   const messages = useMessages(bookingRef);
-  const older = useLoadOlderMessages(bookingRef);
   const read = useReadThread(bookingRef);
   const [reporting, setReporting] = useState<ReportTarget | null>(null);
   const list = messages.data?.messages ?? [];
@@ -159,7 +154,8 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [newest, markRead]);
 
-  const error = thread.error ?? messages.error;
+  // Earlier messages that fail to load leave the conversation on screen, and say so (showEarlier).
+  const error = thread.error ?? (messages.isFetchNextPageError ? null : messages.error);
   if (error) {
     const closed = error instanceof ApiError && (error.code === 'NO_THREAD' || error.status === 404);
     return (
@@ -177,7 +173,7 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
         actions={
           closed ? (
             <Button asChild>
-              <Link to="/messages">All messages</Link>
+              <Link to={host ? HOST_INBOX : '/messages'}>All messages</Link>
             </Button>
           ) : (
             <Button
@@ -195,12 +191,21 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
   }
   if (!thread.data || !messages.data) return <ConversationSkeleton />;
   const current = thread.data;
+  const showEarlier = () =>
+    void messages.fetchNextPage().then((result) => {
+      if (result.isFetchNextPageError) {
+        toast('We couldn’t load earlier messages', {
+          description: 'Check your connection, then try again.',
+          tone: 'danger',
+        });
+      }
+    });
 
   return (
     // One column that never grows past the page, so the header's name and trip are cut off on a phone.
     <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-4">
-        <BackLink to="/messages">All messages</BackLink>
+        <BackLink to={host ? HOST_INBOX : '/messages'}>{host ? 'Inbox' : 'All messages'}</BackLink>
         <ConversationHeader thread={current} onReport={setReporting} />
       </div>
 
@@ -217,8 +222,8 @@ function Conversation({ bookingRef }: { bookingRef: string }) {
             variant="ghost"
             size="sm"
             className="justify-self-center"
-            loading={older.isPending}
-            onClick={() => older.mutate(list[0]!.id)}
+            loading={messages.isFetchingNextPage}
+            onClick={showEarlier}
           >
             Show earlier messages
           </Button>
@@ -282,20 +287,40 @@ function ConversationSkeleton() {
   );
 }
 
+/**
+ * Whose dashboard frames the conversation: the one it was opened from (`?as=host` or `?as=guest`, from the
+ * inbox), or else, as from a booking or a notification, the side of the booking the reader is on. Undefined
+ * while that loads; someone who doesn't host is always a Guest here.
+ */
+function useOpenedAsHost(bookingRef: string): boolean | undefined {
+  const [params] = useSearchParams();
+  const session = useSession();
+  const as = params.get('as');
+  const hosting = Boolean(session.data?.hostStatus);
+  const thread = useThread(bookingRef, hosting && as !== 'host' && as !== 'guest');
+  if (as === 'host' || as === 'guest') return as === 'host';
+  if (session.isPending) return undefined;
+  if (!hosting) return false;
+  if (thread.data) return thread.data.role === 'HOST';
+  return thread.isError ? false : undefined;
+}
+
 /** One booking's conversation (spec §13): messages with photos, live, with report and block. */
 export function ConversationPage() {
   const { ref = '' } = useParams();
+  const bookingRef = ref.toUpperCase();
+  const host = useOpenedAsHost(bookingRef);
   return (
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
       <PageMeta title="Messages" noindex />
-      <AccountShell>
+      <AreaShell host={host}>
         <div className="max-w-3xl">
           <RequireSignedIn fallback={<ConversationSkeleton />}>
-            {() => <Conversation key={ref} bookingRef={ref.toUpperCase()} />}
+            {() => <Conversation key={ref} bookingRef={bookingRef} host={host ?? false} />}
           </RequireSignedIn>
         </div>
-      </AccountShell>
+      </AreaShell>
     </Container>
   );
 }

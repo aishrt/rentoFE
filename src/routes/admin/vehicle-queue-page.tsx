@@ -14,7 +14,7 @@ import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { AllCarsPanel } from '@/features/admin/listings/all-cars';
 import { useReviewQueue } from '@/features/admin/listings/listing-api';
 import { formatDateNz, waitingFor } from '@/features/admin/listings/listing-format';
-import { hostStatusLabel } from '@/features/admin/listings/listing-labels';
+import { hostStatusLabel, keyDetailsLine } from '@/features/admin/listings/listing-labels';
 import { ReviewBadge } from '@/features/admin/listings/review-badge';
 import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 import { formatNumber } from '@/lib/format';
@@ -22,18 +22,37 @@ import { formatNumber } from '@/lib/format';
 const plural = (count: number, one: string, many: string) =>
   `${formatNumber(count)} ${count === 1 ? one : many}`;
 
-/** "3 photos, 1 document", or "Nothing new" for a listing under review that only changed its details. */
-function pendingLine(item: ReviewQueueItem): string {
-  const parts = [
+/**
+ * What's waiting: the key details a live listing changed (plan §3), and "3 photos, 1 document"; or "Nothing
+ * new" for a listing under review that changed nothing staff need to compare.
+ */
+function PendingCell({ item }: { item: ReviewQueueItem }) {
+  const files = [
     item.pendingPhotos > 0 && plural(item.pendingPhotos, 'photo', 'photos'),
     item.pendingDocuments > 0 && plural(item.pendingDocuments, 'document', 'documents'),
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : 'Nothing new';
+  if (item.keyChanges.length === 0) return <>{files.length > 0 ? files.join(', ') : 'Nothing new'}</>;
+  return (
+    <>
+      <p className="font-medium text-ink">Key details changed</p>
+      <p className="mt-0.5 max-w-56 text-muted">{keyDetailsLine(item.keyChanges)}</p>
+      {files.length > 0 && <p className="mt-1">{files.join(', ')}</p>}
+    </>
+  );
 }
 
-/** New listings wait for a full review; live ones only for their new files (plan §3, changes to live listings). */
+/**
+ * New listings, and live ones whose key details changed, wait for a full review; other live ones only for
+ * their new files (plan §3, changes to live listings).
+ */
 function QueueStatus({ item }: { item: ReviewQueueItem }) {
-  if (item.status === 'UNDER_REVIEW') return <ReviewBadge tone="waiting">Under review</ReviewBadge>;
+  if (item.status === 'UNDER_REVIEW') {
+    return (
+      <ReviewBadge tone="waiting">
+        {item.keyChanges.length > 0 ? 'Back for review' : 'Under review'}
+      </ReviewBadge>
+    );
+  }
   const what = [item.pendingPhotos > 0 && 'photos', item.pendingDocuments > 0 && 'documents']
     .filter(Boolean)
     .join(' and ');
@@ -147,8 +166,8 @@ function ReviewQueuePanel() {
             Listings to review
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            New listings, and live ones with new photos or documents. Live listings stay bookable with what
-            you&rsquo;ve already approved. Oldest first.
+            New listings, live ones whose key details changed, and live ones with new photos or documents.
+            Live listings with new files stay bookable with what you&rsquo;ve already approved. Oldest first.
           </p>
         </div>
         {queue.data && (
@@ -245,7 +264,9 @@ function ReviewQueuePanel() {
                       <td className="px-5 py-4 text-ink">
                         {item.city ?? <span className="text-muted">—</span>}
                       </td>
-                      <td className="px-5 py-4 text-ink">{pendingLine(item)}</td>
+                      <td className="px-5 py-4 text-ink">
+                        <PendingCell item={item} />
+                      </td>
                       <td className="px-5 py-4">
                         {item.flags > 0 ? (
                           <span className="inline-flex items-center gap-1.5 text-ink">

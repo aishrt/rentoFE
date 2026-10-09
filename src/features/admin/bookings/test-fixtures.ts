@@ -91,6 +91,7 @@ export function bookingDetail(overrides: Partial<AdminBookingDetail> = {}): Admi
     incidents: [{ ref: 'IN-4F7K2P', type: 'DAMAGE', status: 'INVESTIGATING' }],
     tickets: [{ ref: 'ST-8H2K4M', subject: 'Where do I pick up the keys?', status: 'OPEN' }],
     refundableCents: 102_580,
+    refundableCharges: [],
     ...overrides,
   };
 }

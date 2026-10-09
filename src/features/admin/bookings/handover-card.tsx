@@ -21,6 +21,7 @@ import { DetailCard } from '@/features/booking/booking-parts';
 import { ANGLE_LABELS, takenLabel } from '@/features/handover/angles';
 import { areaName } from '@/features/handover/car-areas';
 import { CarDiagram } from '@/features/handover/car-diagram';
+import { PhotoDateNote } from '@/features/handover/photo-date-note';
 import { PHOTO_CONTENT_TYPES, uploadFile, uploadProblem } from '@/features/host/upload';
 import { FileButton } from '@/features/host/file-button';
 import { formatNumber } from '@/lib/format';
@@ -286,6 +287,7 @@ function Report({
                   <span className="font-medium text-ink">{ANGLE_LABELS[photo.angle]}</span>
                   <br />
                   {takenLabel(photo.takenAt)} by {WHO[photo.takenBy]}
+                  <PhotoDateNote photo={photo} className="mt-1" />
                 </figcaption>
               </figure>
             </li>

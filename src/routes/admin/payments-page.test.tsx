@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AdminPayment, AdminPayout } from '@/api/types';
+import type { AdminExtraChargeRow } from '@/features/admin/finance/finance-api';
 import { Toaster } from '@/components/ui/toast';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminPaymentsPage } from './payments-page';
@@ -354,6 +355,106 @@ describe('AdminPaymentsPage: payments', () => {
     // The Stripe test is the admin's.
     expect(screen.getByRole('tab', { name: 'Payouts' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Stripe test' })).not.toBeInTheDocument();
+  });
+});
+
+const fuel: AdminExtraChargeRow = {
+  id: 'c1',
+  bookingRef: 'RV-7K2Q9M',
+  guest: { id: 'u20', name: 'Kiri Tane' },
+  type: 'FUEL',
+  description: 'Returned with a quarter tank',
+  amountCents: 6550,
+  status: 'PENDING',
+  paymentStatus: 'FAILED',
+  failureReason: 'Your card was declined.',
+  attempts: 2,
+  // 9 am on Saturday 10 October in New Zealand.
+  nextTryAt: '2026-10-09T20:00:00.000Z',
+  incidentRef: 'IN-FUEL01',
+  createdAt: '2026-10-06T21:00:00.000Z',
+};
+
+const cleaning: AdminExtraChargeRow = {
+  id: 'c2',
+  bookingRef: 'RV-3H8D2L',
+  guest: { id: 'u21', name: 'Mere Paki' },
+  type: 'CLEANING',
+  description: 'Dog hair through the back seat',
+  amountCents: 8000,
+  status: 'FAILED',
+  createdAt: '2026-10-05T21:00:00.000Z',
+};
+
+describe('AdminPaymentsPage: unpaid extra charges', () => {
+  it('lists extra charges still to be paid, with the last try and the case, from their own view', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [], total: 0, page: 1 } },
+      'GET /admin/extra-charges': { status: 200, body: { charges: [fuel, cleaning], total: 2, page: 1 } },
+    });
+    const { router } = render('/admin/payments');
+
+    await screen.findByText('No payments');
+    await userEvent.click(screen.getByRole('tab', { name: 'Unpaid extra charges' }));
+    expect(router.state.location.search).toBe('?view=unpaid-charges');
+
+    const first = await row(/RV-7K2Q9M/);
+    expect(first.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2Q9M',
+    );
+    expect(first.getByRole('link', { name: 'Kiri Tane' })).toHaveAttribute('href', '/admin/users/u20');
+    expect(first.getByText('Fuel or charge')).toBeInTheDocument();
+    expect(first.getByText('Returned with a quarter tank')).toBeInTheDocument();
+    expect(first.getByText('$65.50')).toBeInTheDocument();
+    expect(first.getByText('Waiting for payment')).toBeInTheDocument();
+    expect(first.getByText('Your card was declined.')).toBeInTheDocument();
+    expect(first.getByText('Tried 2 times on the saved card')).toBeInTheDocument();
+    expect(first.getByText('Next try Sat, 10 Oct')).toBeInTheDocument();
+    expect(first.getByRole('link', { name: 'IN-FUEL01' })).toHaveAttribute(
+      'href',
+      '/admin/incidents/IN-FUEL01',
+    );
+
+    const second = await row(/RV-3H8D2L/);
+    expect(second.getByText('Failed')).toBeInTheDocument();
+    expect(second.getByText('Not tried yet')).toBeInTheDocument();
+    expect(screen.getByText('1–2 of 2 unpaid extra charges')).toBeInTheDocument();
+    // The payment filters don't apply to charges.
+    expect(screen.queryByRole('button', { name: /Type/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Status/ }));
+    await userEvent.click(screen.getByRole('option', { name: 'Failed' }));
+    await vi.waitFor(() =>
+      expect(queries(fetchMock, '/admin/extra-charges').at(-1)?.get('status')).toBe('FAILED'),
+    );
+    expect(router.state.location.search).toBe('?view=unpaid-charges&status=FAILED');
+    // Only the first view asked for payments.
+    expect(queries(fetchMock, '/admin/payments')).toHaveLength(1);
+  });
+
+  it('says when nothing is unpaid, and asks for the refunds permission like payments', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/extra-charges': { status: 200, body: { charges: [], total: 0, page: 1 } },
+    });
+    const first = render('/admin/payments?view=unpaid-charges');
+    expect(await screen.findByText('No unpaid extra charges')).toBeInTheDocument();
+    first.unmount();
+
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: supportUser } },
+      'GET /admin/extra-charges': {
+        status: 403,
+        body: { error: { code: 'FORBIDDEN', message: "Your account can't do this." } },
+      },
+    });
+    render('/admin/payments?view=unpaid-charges');
+    expect(
+      await screen.findByText('Ask the admin for the refunds permission to see payments.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

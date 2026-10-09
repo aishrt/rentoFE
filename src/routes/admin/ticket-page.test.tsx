@@ -1,14 +1,31 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StaffTicket } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
+import type * as UploadModule from '@/features/host/upload';
 import { mockApi, renderWithRouter } from '@/test/utils';
 import { AdminTicketPage } from './ticket-page';
+
+// Uploads go through XMLHttpRequest, which these tests don't run: each file gets a key straight away.
+vi.mock('@/features/host/upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof UploadModule>()),
+  uploadFile: vi.fn(async () => 'support/s1/5d1c2b7a.pdf'),
+}));
+
+beforeEach(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:preview');
+  URL.revokeObjectURL = vi.fn();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+/** A private file as the API gives it: a signed link that works for 10 minutes. */
+const signed = (key: string) => `http://localhost:4000/api/v1/files/private/${key}?e=1791543710&s=sig`;
+const chooseFile = (file: File) =>
+  userEvent.upload(document.querySelector<HTMLInputElement>('input[type="file"]')!, file);
 
 const render = (path = '/admin/support/ST-ABC123') =>
   renderWithRouter(
@@ -42,6 +59,7 @@ const ticket: StaffTicket = {
       from: 'USER',
       authorName: 'Kiri Ngata',
       body: 'Could I collect the car at 9 instead of 10?',
+      attachments: [],
       internal: false,
       createdAt: '2026-09-27T21:30:00.000Z',
     },
@@ -50,13 +68,19 @@ const ticket: StaffTicket = {
       from: 'STAFF',
       authorName: 'Aroha Admin',
       body: 'Checking with the Host first.',
+      attachments: [],
       internal: true,
       createdAt: '2026-09-27T22:00:00.000Z',
     },
   ],
 };
 
-const withMessage = (body: string, internal: boolean, status: StaffTicket['status']): StaffTicket => ({
+const withMessage = (
+  body: string,
+  internal: boolean,
+  status: StaffTicket['status'],
+  attachments: StaffTicket['thread'][number]['attachments'] = [],
+): StaffTicket => ({
   ...ticket,
   status,
   thread: [
@@ -66,6 +90,7 @@ const withMessage = (body: string, internal: boolean, status: StaffTicket['statu
       from: 'STAFF',
       authorName: 'Aroha Admin',
       body,
+      attachments,
       internal,
       createdAt: '2026-09-27T23:00:00.000Z',
     },
@@ -132,7 +157,7 @@ describe('AdminTicketPage', () => {
 
     // Toasts outlive a test, so each test looks for its own: the description names the new status.
     expect(await screen.findByText('We’ve emailed Kiri Ngata. Status: Waiting on them.')).toBeInTheDocument();
-    expect(sent).toEqual({ body: 'Yes, 9 is fine.', internal: false, status: 'PENDING' });
+    expect(sent).toEqual({ body: 'Yes, 9 is fine.', internal: false, attachments: [], status: 'PENDING' });
     expect(screen.getByRole('article', { name: 'Reply from Aroha Admin' })).toHaveTextContent(
       'Yes, 9 is fine.',
     );
@@ -158,7 +183,7 @@ describe('AdminTicketPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send reply' }));
 
     expect(await screen.findByText('We’ve emailed Kiri Ngata. Status: Resolved.')).toBeInTheDocument();
-    expect(sent).toEqual({ body: 'All sorted.', internal: false, status: 'RESOLVED' });
+    expect(sent).toEqual({ body: 'All sorted.', internal: false, attachments: [], status: 'RESOLVED' });
   });
 
   it('adds an internal note without changing the status', async () => {
@@ -183,8 +208,121 @@ describe('AdminTicketPage', () => {
 
     expect(await screen.findByText('Note added')).toBeInTheDocument();
     // Nothing is emailed, and without a status the ticket stays as it is.
-    expect(sent).toEqual({ body: 'The Host says 9 is fine.', internal: true });
+    expect(sent).toEqual({ body: 'The Host says 9 is fine.', internal: true, attachments: [] });
     expect(screen.getAllByText('Internal note — only staff see this')).toHaveLength(2);
+  });
+
+  it('shows the files on messages and notes', async () => {
+    const withFiles: StaffTicket = {
+      ...ticket,
+      thread: [
+        {
+          ...ticket.thread[0]!,
+          attachments: [
+            { url: signed('support/u2/car.jpg'), name: 'scratch.jpg', contentType: 'image/jpeg' },
+          ],
+        },
+        {
+          ...ticket.thread[1]!,
+          attachments: [
+            { url: signed('support/s1/host.pdf'), name: 'host-photos.pdf', contentType: 'application/pdf' },
+          ],
+        },
+      ],
+    };
+    mockApi({ 'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket: withFiles } } });
+    render();
+
+    const message = within(await screen.findByRole('article', { name: 'Message from Kiri Ngata' }));
+    expect(message.getByRole('img', { name: 'scratch.jpg' })).toHaveAttribute(
+      'src',
+      signed('support/u2/car.jpg'),
+    );
+    const note = within(screen.getByRole('article', { name: 'Internal note from Aroha Admin' }));
+    expect(note.getByRole('link', { name: 'host-photos.pdf' })).toHaveAttribute(
+      'href',
+      signed('support/s1/host.pdf'),
+    );
+  });
+
+  it('attaches a document to a note', async () => {
+    let sent: unknown;
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } },
+      'POST /admin/support/tickets/ST-ABC123/messages': (init) => {
+        sent = JSON.parse(String(init?.body));
+        const file = {
+          url: signed('support/s1/5d1c2b7a.pdf'),
+          name: 'booking.pdf',
+          contentType: 'application/pdf',
+        };
+        return { status: 200, body: { ticket: withMessage('The booking record.', true, 'OPEN', [file]) } };
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('switch', { name: 'Internal note' }));
+    await chooseFile(new File(['%PDF'], 'booking.pdf', { type: 'application/pdf' }));
+    expect(
+      await within(screen.getByRole('list', { name: 'Files to send' })).findByText('booking.pdf'),
+    ).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Note for the team' }), 'The booking record.');
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+
+    expect(await screen.findByText('Note added')).toBeInTheDocument();
+    expect(sent).toEqual({
+      body: 'The booking record.',
+      internal: true,
+      attachments: [{ key: 'support/s1/5d1c2b7a.pdf', name: 'booking.pdf', contentType: 'application/pdf' }],
+    });
+    expect(screen.queryByRole('list', { name: 'Files to send' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'booking.pdf' })).toHaveAttribute(
+      'href',
+      signed('support/s1/5d1c2b7a.pdf'),
+    );
+  });
+
+  it('keeps files to notes when the sender has no account', async () => {
+    const visitor: StaffTicket = { ...ticket, from: { name: 'Tama Visitor', email: 'tama@example.co.nz' } };
+    mockApi({ 'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket: visitor } } });
+    render();
+
+    expect(
+      await screen.findByText(
+        'Tama Visitor has no account to see files in. Add them to an internal note instead.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add photos or documents' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('switch', { name: 'Internal note' }));
+    expect(screen.getByRole('button', { name: 'Add photos or documents' })).toBeInTheDocument();
+  });
+
+  it('shows why the files couldn’t go with the reply', async () => {
+    const reason = 'They have no account to see files in. Describe them in the reply, or add them to a note.';
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } },
+      'POST /admin/support/tickets/ST-ABC123/messages': {
+        status: 400,
+        body: {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Some details need fixing.',
+            fields: { attachments: reason },
+          },
+        },
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    const text = await screen.findByRole('textbox', { name: 'Your reply' });
+    await chooseFile(new File(['%PDF'], 'map.pdf', { type: 'application/pdf' }));
+    await within(await screen.findByRole('list', { name: 'Files to send' })).findByText('map.pdf');
+    await user.type(text, 'The map.');
+    await user.click(screen.getByRole('button', { name: 'Send reply' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(reason);
   });
 
   it('needs something to send', async () => {

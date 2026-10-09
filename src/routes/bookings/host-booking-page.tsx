@@ -56,7 +56,7 @@ import { useTimeLeft } from '@/features/booking/use-time-left';
 import { ActiveTripPanel } from '@/features/handover/active-trip';
 import { ReportIncidentLink } from '@/features/incidents/report-incident-link';
 import { HandoverCard } from '@/features/handover/handover-card';
-import { HostSubNav } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 
 /** A request's answer: Accept captures the Guest's payment and confirms the trip; Decline releases it. */
 function RequestAnswer({ booking }: { booking: Booking }) {
@@ -290,7 +290,6 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
 
   return (
     <div className="grid gap-8">
-      <HostSubNav />
       <div>
         <BackLink to="/host/bookings">All bookings</BackLink>
         <p className="eyebrow mt-4 text-primary">Booking {booking.ref}</p>
@@ -308,7 +307,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
         <ActiveTripPanel booking={booking} base={`/host/bookings/${booking.ref}`} />
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="grid gap-6">
           <HandoverCard booking={booking} base={`/host/bookings/${booking.ref}`} />
           <DetailCard title="Your guest" icon={UserRound}>
@@ -341,7 +340,7 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
             </DetailCard>
           )}
         </div>
-        <div className="grid gap-6 lg:sticky lg:top-24">
+        <div className="grid gap-6 xl:sticky xl:top-24">
           {/* A booking that ended without a trip pays nothing; the banner above has any kept share or fee. */}
           {booking.payout && !ended && (
             <DetailCard
@@ -409,9 +408,11 @@ export function HostBookingPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title={ref ? `Booking ${ref}` : 'Booking'} noindex />
-      <RequireSignedIn fallback={<BookingPageSkeleton />}>
-        {() => <HostBooking key={ref} bookingRef={ref} />}
-      </RequireSignedIn>
+      <HostShell>
+        <RequireSignedIn fallback={<BookingPageSkeleton />}>
+          {() => <HostBooking key={ref} bookingRef={ref} />}
+        </RequireSignedIn>
+      </HostShell>
     </Container>
   );
 }

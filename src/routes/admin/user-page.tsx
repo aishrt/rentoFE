@@ -72,7 +72,7 @@ function RecordSkeleton() {
 
 /**
  * Someone's record (plan §12.6): their account, licence and hosting, risk flags and bookings, and what staff
- * can do about them: suspend, waive Host fees, and for the admin, close the account and manage support staff.
+ * can do about them: suspend, and for the admin, waive Host fees, close the account and manage support staff.
  */
 export function AdminUserPage() {
   const { id = '' } = useParams();
@@ -340,7 +340,8 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
             <HostSection
               userId={user.id}
               host={user.host}
-              onWaive={user.host.feesOwedCents > 0 ? () => setDialog('waive') : undefined}
+              // Waiving a Host's fees is the admin's (plan §8.1, item 10).
+              onWaive={isAdmin && user.host.feesOwedCents > 0 ? () => setDialog('waive') : undefined}
             />
           )}
 
@@ -350,7 +351,7 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
             <ReviewSection id="staff-access" title="Support team">
               <Switch
                 label="Can issue refunds"
-                description="Refund Guests, see payments and payouts, and waive Host fees."
+                description="Refund Guests, and see payments, refunds and payouts."
                 checked={user.permissions.includes('REFUNDS')}
                 disabled={refunds.isPending}
                 onCheckedChange={(checked) => refunds.mutate({ id: user.id, refunds: checked })}
@@ -413,7 +414,7 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
         onConfirm={unsuspend}
       />
 
-      {user.host && (
+      {isAdmin && user.host && (
         <WaiveFeeDialog
           {...dialogProps('waive')}
           name={user.firstName}

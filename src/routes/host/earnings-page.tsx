@@ -41,7 +41,8 @@ import {
   useStartPayoutSetup,
   useSyncPayoutAccount,
 } from '@/features/host/earnings-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 
 const HOLD_WORDS: Record<NonNullable<HostPayout['holdReason']>, string> = {
   PAYOUT_SETUP: 'Waiting for your payout setup',
@@ -148,7 +149,7 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
               ? HOLD_WORDS[payout.holdReason]
               : payout.status === 'FAILED'
                 ? 'Didn’t go through: our team is on it'
-                : `Due ${formatNzDate(payout.scheduledFor)}`}
+                : `Due ${formatNzDate(payout.scheduledFor)}${payout.expectedInBankBy ? `, usually in your bank by ${formatNzDate(payout.expectedInBankBy)}` : ''}`}
         </p>
         {commission && (
           <p className="text-xs text-muted">
@@ -564,18 +565,19 @@ export function EarningsPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Earnings" noindex />
-      <div className="grid gap-8">
-        <HostSubNav />
-        <HostPageHeader
-          eyebrow="Hosting"
-          title="Earnings"
-          description="What you’ve earned, and when it’s paid."
-        />
-        {/* The tabs and heading line up with the other Host pages; the figures keep a narrower width. */}
-        <div className="max-w-5xl">
-          <RequireSignedIn fallback={<EarningsSkeleton />}>{() => <Earnings />}</RequireSignedIn>
+      <HostShell>
+        <div className="grid gap-8">
+          <HostPageHeader
+            eyebrow="Hosting"
+            title="Earnings"
+            description="What you’ve earned, and when it’s paid."
+          />
+          {/* The heading lines up with the other Host pages; the figures keep a narrower width. */}
+          <div className="max-w-5xl">
+            <RequireSignedIn fallback={<EarningsSkeleton />}>{() => <Earnings />}</RequireSignedIn>
+          </div>
         </div>
-      </div>
+      </HostShell>
     </Container>
   );
 }

@@ -2,6 +2,7 @@ import { PenLine, Star } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { DotGrid } from '@/components/brand/patterns/dot-grid';
+import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
@@ -13,9 +14,12 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
-import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
+import { AccountPageHeader } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDate } from '@/features/booking/booking-format';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { openedAsHost } from '@/features/host/host-links';
+import { AreaShell } from '@/features/host/area-shell';
 import { PersonAvatar } from '@/features/messages/person-avatar';
 import { ReportReviewButton } from '@/features/reviews/report-review-button';
 import { ReviewCard } from '@/features/reviews/review-card';
@@ -95,7 +99,18 @@ function Reviews() {
         label="Reviews"
         options={TABS}
         value={tab}
-        onChange={(value) => setParams(value === 'received' ? {} : { tab: value }, { replace: true })}
+        // Only the tab changes: opened as a Host (`?as=host`), the page stays in the Host's dashboard.
+        onChange={(value) =>
+          setParams(
+            (current) => {
+              const next = new URLSearchParams(current);
+              if (value === 'received') next.delete('tab');
+              else next.set('tab', value);
+              return next;
+            },
+            { replace: true },
+          )
+        }
         className="max-w-sm"
       />
       <div role="tabpanel" id={tabPanelId('reviews', tab)} aria-labelledby={tabId('reviews', tab)}>
@@ -162,22 +177,28 @@ function ReviewsSkeleton() {
 
 /**
  * Reviews (spec §8, §9, §16): trips waiting for the user's review, then reviews about them, which they can
- * report, and by them.
+ * report, and by them. Hosts share the page with Guests: opened as a Host (`?as=host`, the Host area's
+ * Reviews) it sits in the Host's dashboard, otherwise in the Guest's.
  */
 export function ReviewsPage() {
+  const [params] = useSearchParams();
+  const asHost = openedAsHost(params);
+  const description =
+    'Reviews are published once both sides have written one, or when the time to review runs out.';
   return (
     <Container className="py-8 sm:py-12">
-      <PageBackdrop art={DotGrid} />
+      <PageBackdrop art={asHost ? ParkingBays : DotGrid} />
       <PageMeta title="Reviews" noindex />
-      <AccountShell>
+      <AreaShell host={asHost}>
         <div className="grid max-w-3xl gap-8">
-          <AccountPageHeader
-            title="Reviews"
-            description="Reviews are published once both sides have written one, or when the time to review runs out."
-          />
+          {asHost ? (
+            <HostPageHeader eyebrow="Hosting" title="Reviews" description={description} />
+          ) : (
+            <AccountPageHeader title="Reviews" description={description} />
+          )}
           <RequireSignedIn fallback={<ReviewsSkeleton />}>{() => <Reviews />}</RequireSignedIn>
         </div>
-      </AccountShell>
+      </AreaShell>
     </Container>
   );
 }

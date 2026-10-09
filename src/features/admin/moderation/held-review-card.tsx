@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
 import type { ModerationReview } from '@/api/types';
@@ -84,19 +84,29 @@ interface HeldReviewCardProps {
   review: ModerationReview;
   /** Held, published or hidden: which list it's in. */
   state: ReviewState;
-  /** Held reviews only: a hidden one stays hidden. */
+  /** Held reviews only. */
   onPublish?: () => void;
   /** Held and published reviews. */
   onHide?: () => void;
+  /** Hidden reviews: published again, as if never hidden. */
+  onRestore?: () => void;
   className?: string;
   style?: CSSProperties;
 }
 
 /**
  * A review held back before publishing, published, or hidden: the review, why it was held or hidden (or
- * the note when a held one was published), and Publish or Hide.
+ * the note when a held one was published), and Publish, Hide or Restore.
  */
-export function HeldReviewCard({ review, state, onPublish, onHide, className, style }: HeldReviewCardProps) {
+export function HeldReviewCard({
+  review,
+  state,
+  onPublish,
+  onHide,
+  onRestore,
+  className,
+  style,
+}: HeldReviewCardProps) {
   return (
     <li
       aria-label={`Review by ${review.author.firstName}`}
@@ -111,7 +121,7 @@ export function HeldReviewCard({ review, state, onPublish, onHide, className, st
         </Alert>
       )}
 
-      {(onPublish || onHide) && (
+      {(onPublish || onHide || onRestore) && (
         <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
           {onHide && (
             <Button variant="secondary" size="sm" onClick={onHide}>
@@ -123,6 +133,12 @@ export function HeldReviewCard({ review, state, onPublish, onHide, className, st
             <Button size="sm" onClick={onPublish}>
               <Eye aria-hidden="true" />
               Publish
+            </Button>
+          )}
+          {onRestore && (
+            <Button variant="secondary" size="sm" onClick={onRestore}>
+              <RotateCcw aria-hidden="true" />
+              Restore
             </Button>
           )}
         </div>

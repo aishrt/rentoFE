@@ -13,6 +13,7 @@ import {
   asNotesError,
   hideReportedReviewRequest,
   moderationQueryKey,
+  removeReportedMessageRequest,
   reportsQueryKey,
   resolveReportRequest,
   useReports,
@@ -49,7 +50,7 @@ interface ReportsPanelProps {
 
 /**
  * What members reported, by status. Open reports are resolved with a note of what was done; a reported
- * review can be hidden with a reason, which resolves the report too.
+ * review can be hidden, or a reported message removed, with a reason, which resolves the report too.
  */
 export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
   const queryClient = useQueryClient();
@@ -59,6 +60,8 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [hiding, setHiding] = useState<AdminReport | null>(null);
   const [hideOpen, setHideOpen] = useState(false);
+  const [removing, setRemoving] = useState<AdminReport | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
 
   const start = (report: AdminReport) => {
     setCurrent(report);
@@ -68,6 +71,11 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
   const startHide = (report: AdminReport) => {
     setHiding(report);
     setHideOpen(true);
+  };
+
+  const startRemove = (report: AdminReport) => {
+    setRemoving(report);
+    setRemoveOpen(true);
   };
 
   // The report leaves the open list straight away; every list then refreshes.
@@ -103,6 +111,26 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
     dropFromOpen(hiding.id);
     // Other reports about the review, and the review lists, show it hidden.
     void queryClient.invalidateQueries({ queryKey: moderationQueryKey });
+  };
+
+  const remove = async (notes: string | undefined) => {
+    if (!removing) return;
+    try {
+      await removeReportedMessageRequest({
+        reportId: removing.id,
+        messageId: removing.targetId,
+        reason: notes ?? '',
+      });
+    } catch (error) {
+      throw asNotesError(error, 'reason');
+    }
+    setRemoveOpen(false);
+    toast('Message removed and report resolved', {
+      description: 'Both sides now see that support removed it. The report is under Actioned now.',
+    });
+    dropFromOpen(removing.id);
+    // Other reports about the message show it removed.
+    void queryClient.invalidateQueries({ queryKey: reportsQueryKey() });
   };
 
   const count = reports.data?.length;
@@ -157,6 +185,15 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
                     ? () => startHide(report)
                     : undefined
                 }
+                // A message that's gone altogether (its conversation deleted) has no booking to remove it from.
+                onRemoveMessage={
+                  report.status === 'OPEN' &&
+                  report.targetType === 'MESSAGE' &&
+                  report.bookingRef &&
+                  !report.messageRemoved
+                    ? () => startRemove(report)
+                    : undefined
+                }
               />
             ))}
           </ul>
@@ -181,6 +218,19 @@ export function ReportsPanel({ status, onStatusChange }: ReportsPanelProps) {
         notesLabel="Why it’s hidden"
         notesDescription="Kept with the review and the report, and in the audit log."
         onConfirm={hide}
+      />
+
+      <DecisionDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        title="Remove this message?"
+        description="Both sides of the conversation see “This message was removed by Rento Vroom support” in its place, without its words or photos. You can still read it here and in the conversation. This report is resolved as actioned."
+        confirmLabel="Remove message"
+        tone="danger"
+        notes="required"
+        notesLabel="Why it’s removed"
+        notesDescription="For the team: kept with the message and the report, and in the audit log. The Guest and Host aren’t shown it."
+        onConfirm={remove}
       />
     </div>
   );

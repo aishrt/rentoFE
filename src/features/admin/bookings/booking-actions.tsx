@@ -125,7 +125,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
           {available.button}
         </Button>
       )}
-      {detail.refundableCents > 0 && (
+      {(detail.refundableCents > 0 || detail.refundableCharges.length > 0) && (
         <Button variant="secondary" onClick={() => setOpen('refund')}>
           <Undo2 aria-hidden="true" />
           Refund
@@ -153,6 +153,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
         onOpenChange={toggle('refund')}
         refundableCents={detail.refundableCents}
         tripPayoutSent={detail.tripPayoutSent}
+        charges={detail.refundableCharges}
         guestName={booking.guest.firstName}
         onConfirm={refund}
       />

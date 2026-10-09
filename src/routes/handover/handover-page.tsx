@@ -31,7 +31,8 @@ import {
   type HandoverState,
 } from '@/features/handover/handover-api';
 import { PhotoCapture } from '@/features/handover/photo-capture';
-import { useInspectionPhotos } from '@/features/handover/use-inspection-photos';
+import { PhotoDateNote } from '@/features/handover/photo-date-note';
+import { photoInput, useInspectionPhotos } from '@/features/handover/use-inspection-photos';
 import { useReportIncident } from '@/features/incidents/incidents-api';
 
 const WHO: Record<ConditionReport['submittedBy'], string> = {
@@ -190,7 +191,10 @@ function ReportSection({
                           className="aspect-4/3 w-full rounded-inner bg-canvas object-cover"
                         />
                       </a>
-                      <figcaption className="text-xs text-muted">Check-in</figcaption>
+                      <figcaption className="grid gap-1 text-xs text-muted">
+                        <span>Check-in</span>
+                        <PhotoDateNote photo={before} />
+                      </figcaption>
                     </figure>
                   )}
                   {photo ? (
@@ -202,7 +206,10 @@ function ReportSection({
                           className="aspect-4/3 w-full rounded-inner bg-canvas object-cover"
                         />
                       </a>
-                      <figcaption className="text-xs text-muted">{takenLabel(photo.takenAt)}</figcaption>
+                      <figcaption className="grid gap-1 text-xs text-muted">
+                        <span>{takenLabel(photo.takenAt)}</span>
+                        <PhotoDateNote photo={photo} />
+                      </figcaption>
                     </figure>
                   ) : (
                     <p className="text-xs text-muted">No photo</p>
@@ -226,6 +233,7 @@ function ReportSection({
                     />
                   </a>
                   <p className="mt-1 text-xs text-muted">{takenLabel(photo.takenAt)}</p>
+                  <PhotoDateNote photo={photo} className="mt-1" />
                 </li>
               ))}
             </ul>
@@ -302,8 +310,8 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
           ...(pinNote.trim() && { note: pinNote.trim() }),
         })),
         photos: damagePhotos
-          .filter((photo) => photo.key)
-          .map((photo) => ({ angle: 'DAMAGE' as const, key: photo.key!, takenAt: photo.takenAt })),
+          .filter((photo): photo is typeof photo & { key: string } => Boolean(photo.key))
+          .map(photoInput),
         ...(note.trim() && { note: note.trim() }),
       },
       {
@@ -469,9 +477,10 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
           {data.actions.flagDamage && (
             <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <p className="text-sm text-ink/85">
-                {data.role === 'HOST' && data.damageWindowEndsAt
-                  ? `Found new damage? Flag it by ${formatNzDateTime(data.damageWindowEndsAt)} (NZ time).`
-                  : 'Spotted new damage? Flag it before you confirm.'}
+                {/* Either party, until the damage-report window closes (plan §8.2). */}
+                {data.damageWindowEndsAt
+                  ? `Found new damage? You can flag it until ${formatNzDateTime(data.damageWindowEndsAt)} (NZ time).`
+                  : 'Found new damage? Flag it here.'}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="secondary" onClick={() => setFlagging(true)}>

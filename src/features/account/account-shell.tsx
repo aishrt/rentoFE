@@ -8,25 +8,16 @@ import {
   Settings,
   Star,
   UserRound,
-  type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
-import { useSession } from '@/features/auth/use-session';
-import { useUnreadMessages } from '@/features/messages/messages-api';
+import { useLocation } from 'react-router';
+import { useUnreadCount } from '@/features/messages/unread-count';
 import { cn } from '@/lib/cn';
+import { DashboardFrame, SidebarGroup, TabBar, type NavItem } from './dashboard-frame';
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  /** Whether a path belongs to this item; the item's own path by default. */
-  owns?: (path: string) => boolean;
-  /** Shows the unread messages count. */
-  unread?: boolean;
-}
-
-const owns = (item: NavItem, path: string) => (item.owns ? item.owns(path) : path === item.to);
+/*
+ * The Guest dashboard's navigation (plan §12.6), in the dashboards' frame (dashboard-frame.tsx).
+ */
 
 const MESSAGES: NavItem = {
   to: '/messages',
@@ -69,67 +60,6 @@ const TABS: NavItem[] = [
   },
 ];
 
-/** How many messages wait, once someone is signed in; nothing for visitors. */
-function useUnreadCount(): number {
-  const signedIn = Boolean(useSession().data);
-  return useUnreadMessages(signedIn).data ?? 0;
-}
-
-/** The unread count beside Messages, read out with the link's name. */
-function UnreadCount({ count, className }: { count: number; className?: string }) {
-  if (count === 0) return null;
-  return (
-    <span
-      className={cn(
-        'inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs leading-5 font-semibold text-white',
-        className,
-      )}
-    >
-      {count > 99 ? '99+' : count}
-      <span className="sr-only"> unread</span>
-    </span>
-  );
-}
-
-function SidebarGroup({
-  title,
-  items,
-  path,
-  unread = 0,
-}: {
-  title?: string;
-  items: NavItem[];
-  path: string;
-  unread?: number;
-}) {
-  return (
-    <div className="grid gap-1">
-      {title && <p className="eyebrow mb-1 px-3 text-muted">{title}</p>}
-      {items.map((item) => {
-        const active = owns(item, path);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            viewTransition
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex min-h-11 items-center gap-3 rounded-control px-3 text-ui font-medium transition-colors duration-120',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-              active ? 'bg-primary/8 text-primary' : 'text-ink/80 hover:bg-ink/5 hover:text-ink',
-            )}
-          >
-            <Icon aria-hidden="true" className="size-4.5 shrink-0" />
-            {item.label}
-            {item.unread && <UnreadCount count={unread} className="ml-auto" />}
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
 /** The account's sidebar on tablets and desktops. */
 export function AccountSidebar({ className }: { className?: string }) {
   const { pathname } = useLocation();
@@ -142,54 +72,9 @@ export function AccountSidebar({ className }: { className?: string }) {
   );
 }
 
-/**
- * The account's tab bar along the bottom of a phone (plan §12.6). It sticks to the bottom of the screen
- * while the page is in view, then scrolls away above the footer instead of covering it.
- */
+/** The account's tab bar along the bottom of a phone: Trips · Messages · Saved · Account (plan §12.6). */
 export function AccountTabBar({ className }: { className?: string }) {
-  const { pathname } = useLocation();
-  const unread = useUnreadCount();
-  return (
-    <nav
-      aria-label="Your dashboard, quick links"
-      className={cn(
-        'glass sticky bottom-0 z-30 -mx-4 border-t border-line/70 px-2 pb-[env(safe-area-inset-bottom)] sm:-mx-6',
-        className,
-      )}
-    >
-      <ul className="grid grid-cols-4">
-        {TABS.map((item) => {
-          const active = owns(item, pathname);
-          const Icon = item.icon;
-          return (
-            <li key={item.to}>
-              <Link
-                to={item.to}
-                viewTransition
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-control text-xs font-medium transition-colors duration-120',
-                  'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
-                  active ? 'text-primary' : 'text-muted hover:text-ink',
-                )}
-              >
-                <span className="relative">
-                  <Icon aria-hidden="true" className={cn('size-5', active && 'fill-primary/12')} />
-                  {item.unread && (
-                    <UnreadCount
-                      count={unread}
-                      className="absolute -top-2 left-3 min-w-4.5 px-1 text-xs leading-4.5"
-                    />
-                  )}
-                </span>
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
+  return <TabBar label="Your dashboard, quick links" items={TABS} className={cn('md:hidden', className)} />;
 }
 
 /**
@@ -198,11 +83,9 @@ export function AccountTabBar({ className }: { className?: string }) {
  */
 export function AccountShell({ children }: { children: ReactNode }) {
   return (
-    <div className="grid gap-8 md:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
-      <AccountSidebar className="max-md:hidden md:sticky md:top-24 md:self-start" />
-      <div className="min-w-0 max-md:pb-6">{children}</div>
-      <AccountTabBar className="md:hidden" />
-    </div>
+    <DashboardFrame sidebar={<AccountSidebar />} tabBar={<AccountTabBar />}>
+      {children}
+    </DashboardFrame>
   );
 }
 

@@ -24,11 +24,15 @@ import {
 import { AgreementsGate } from '@/features/auth/agreements-gate';
 import { initials, isStaff } from '@/features/auth/roles';
 import { useLogout } from '@/features/auth/use-session';
+import { useUnreadMessages } from '@/features/messages/unread-count';
+import { UnreadBadge } from '@/features/messages/unread-badge';
 import { NotificationBell } from '@/features/notifications/notification-bell';
 import { UserMenuLabel } from './user-menu-label';
 
 export function AccountMenu({ user }: { user: SessionUser }) {
   const logout = useLogout();
+  // Read here rather than in the menu, so the count is ready when it opens; live over Socket.IO.
+  const unread = useUnreadMessages().data ?? 0;
   // Hosting for anyone who has applied, and the way in for everyone else.
   const hosting = user.hostStatus
     ? { label: 'Hosting', to: '/host' }
@@ -75,6 +79,7 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <Link to="/messages" viewTransition>
               <MessagesSquare aria-hidden="true" />
               Messages
+              <UnreadBadge count={unread} className="ml-auto" />
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

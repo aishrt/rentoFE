@@ -46,7 +46,12 @@ const PLAN_BUDGET_KB = 170;
 // now edit the homepage's headline, footer links and destination tiles (plan §12.6), so the homepage reads them
 // from the API with the original copy as the fallback (0.42 KB, measured with and without those files); and the
 // Host calendar and member profile routes and the account menus' Reviews link add about 0.15 KB to the entry.
-const LIMIT_KB = 187.5;
+// Raised from 187.5 later on 9 October 2026 (187.3 → 187.6 KB locally, so about 187.75 KB in the pipeline) with
+// no new homepage code: the Host dashboard's own frame on about 14 Host, Inbox and Reviews routes, the new
+// /host/vehicles route, conversations kept page by page (the live connection's message handling lives in the
+// entry) and the support, refunds and help routes' preload lists. The Host frame is kept apart from the Guest
+// navigation and the unread-count hook out of messages-api, which took back about 0.1 KB.
+const LIMIT_KB = 187.8;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

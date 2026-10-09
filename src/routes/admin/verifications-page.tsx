@@ -39,6 +39,9 @@ function decidedToast({ item, decision }: Decision, outcome: VerificationOutcome
           // The other part of the check is still with the team.
           outcome.stillInReview.length > 0 &&
             `${joinRefs(outcome.stillInReview)} still waits for ${licence ? 'the identity check' : 'the licence check'}.`,
+          // A suspended car takes no new bookings: confirmed once the suspension is lifted.
+          outcome.carSuspended.length > 0 &&
+            `${joinRefs(outcome.carSuspended)} waits: its car is suspended, so it’s confirmed only if the suspension is lifted in time.`,
         ]
       : [
           outcome.released.length > 0 &&

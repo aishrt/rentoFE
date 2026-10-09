@@ -1,4 +1,4 @@
-import { ArrowUpRight, EyeOff, MessagesSquare } from 'lucide-react';
+import { ArrowUpRight, EyeOff, MessageSquareX, MessagesSquare } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AdminReport } from '@/api/types';
@@ -9,7 +9,13 @@ import { formatNzDateTime, formatRelativeTime } from '@/features/booking/booking
 import { StatusBadge } from '@/features/booking/booking-parts';
 import { cn } from '@/lib/cn';
 import { ModerationReviewContent } from './held-review-card';
-import { REPORT_STATUS, REPORT_TARGET, reportReasonLabel, reviewStateLabel } from './moderation-labels';
+import {
+  MESSAGE_REMOVED,
+  REPORT_STATUS,
+  REPORT_TARGET,
+  reportReasonLabel,
+  reviewStateLabel,
+} from './moderation-labels';
 
 const linkClasses = 'link-underline inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary';
 
@@ -76,18 +82,29 @@ interface ReportCardProps {
   onResolve?: () => void;
   /** Open reports about a review that's still shown. */
   onHideReview?: () => void;
+  /** Open reports about a message that's still shown. */
+  onRemoveMessage?: () => void;
   className?: string;
   style?: CSSProperties;
 }
 
 /**
  * A member's report: what they reported and why, who it's about, and a way to look at it in context. A
- * reported review is shown whole, with where it stands, so it can be hidden from here.
+ * reported review is shown whole, with where it stands, so it can be hidden from here, and a reported
+ * message can be removed from its conversation.
  */
-export function ReportCard({ report, onResolve, onHideReview, className, style }: ReportCardProps) {
+export function ReportCard({
+  report,
+  onResolve,
+  onHideReview,
+  onRemoveMessage,
+  className,
+  style,
+}: ReportCardProps) {
   const what = REPORT_TARGET[report.targetType];
   const context = contextLink(report);
-  const { review } = report;
+  const { review, messageRemoved } = report;
+  const actions = onResolve || onHideReview || onRemoveMessage;
   return (
     <li
       aria-label={`${what} reported by ${report.reporter.name}`}
@@ -120,7 +137,11 @@ export function ReportCard({ report, onResolve, onHideReview, className, style }
         </figure>
       ) : (
         <figure>
-          <figcaption className="text-xs font-semibold text-muted">What was reported</figcaption>
+          <figcaption className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
+            What was reported
+            {/* Staff still read a removed message; the Guest and Host see only a notice in its place. */}
+            {messageRemoved && <StatusBadge status={MESSAGE_REMOVED} />}
+          </figcaption>
           <blockquote className="mt-1.5 border-l-2 border-line pl-4 text-ink/90 break-words whitespace-pre-wrap">
             {report.preview}
           </blockquote>
@@ -148,6 +169,11 @@ export function ReportCard({ report, onResolve, onHideReview, className, style }
             {review.moderationReason}
           </Detail>
         )}
+        {messageRemoved && (
+          <Detail label="Why the message was removed" wide>
+            {messageRemoved.reason ?? 'No reason recorded.'}
+          </Detail>
+        )}
         {report.resolution && (
           <Detail label="What was done" wide>
             {report.resolution}
@@ -155,15 +181,21 @@ export function ReportCard({ report, onResolve, onHideReview, className, style }
         )}
       </dl>
 
-      {(context || onResolve || onHideReview) && (
+      {(context || actions) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
           {context}
-          {(onResolve || onHideReview) && (
+          {actions && (
             <div className="ml-auto flex flex-wrap justify-end gap-3">
               {onHideReview && (
                 <Button variant="secondary" onClick={onHideReview}>
                   <EyeOff aria-hidden="true" />
                   Hide review
+                </Button>
+              )}
+              {onRemoveMessage && (
+                <Button variant="secondary" onClick={onRemoveMessage}>
+                  <MessageSquareX aria-hidden="true" />
+                  Remove message
                 </Button>
               )}
               {onResolve && <Button onClick={onResolve}>Resolve</Button>}

@@ -327,7 +327,7 @@ describe('AdminBookingPage: actions', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Refund' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Refund the Guest' }));
-    expect(dialog.getByText(/Up to \$1,025.80 can still be refunded/)).toBeInTheDocument();
+    expect(dialog.getByText('Up to $1,025.80.')).toBeInTheDocument();
 
     // More than is left, and nobody chosen to pay for it.
     await userEvent.type(dialog.getByLabelText('Amount (NZD)'), '1100');

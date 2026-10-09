@@ -131,6 +131,11 @@ export const routes: RouteObject[] = [
                 path: 'host/apply',
                 lazy: page(() => import('@/routes/host/host-apply-page'), 'HostApplyPage'),
               },
+              // The Host's Vehicles tab: My Vehicles (plan §12.6).
+              {
+                path: 'host/vehicles',
+                lazy: page(() => import('@/routes/host/host-vehicles-page'), 'HostVehiclesPage'),
+              },
               {
                 path: 'host/vehicles/new',
                 lazy: page(() => import('@/routes/host/new-vehicle-page'), 'NewVehiclePage'),
@@ -139,7 +144,7 @@ export const routes: RouteObject[] = [
                 path: 'host/vehicles/:id/calendar',
                 lazy: page(() => import('@/routes/host/vehicle-calendar-page'), 'VehicleCalendarPage'),
               },
-              // The Host's Calendar tab: any of their cars' calendars (plan §12.6).
+              // The Host's Calendar tab: all their cars at once, or any one car's calendar (plan §12.6).
               {
                 path: 'host/calendar',
                 lazy: page(() => import('@/routes/host/host-calendar-page'), 'HostCalendarPage'),

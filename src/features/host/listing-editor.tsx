@@ -90,7 +90,7 @@ export function ListingEditor({
       <HostPageHeader
         back={
           <BackLink
-            to={draft ? '/host' : vehiclePath(vehicle.id)}
+            to={draft ? '/host/vehicles' : vehiclePath(vehicle.id)}
             onClick={(event) => {
               // Saves the step first, like every other way out of it.
               if (!saveRef.current) return;
@@ -98,7 +98,7 @@ export function ListingEditor({
               saveRef.current(draft ? 'exit' : 'overview');
             }}
           >
-            {draft ? 'Hosting' : 'Listing overview'}
+            {draft ? 'My vehicles' : 'Listing overview'}
           </BackLink>
         }
         title={draft ? 'List your car' : vehicleDisplayTitle(vehicle.title)}

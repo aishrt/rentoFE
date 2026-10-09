@@ -11,7 +11,7 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostVehicle, usePolicies } from '@/features/host/host-api';
-import { HostSubNav } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import { ListingEditor } from '@/features/host/listing-editor';
 import { stepPath, vehiclePath, type StepNavigationState } from '@/features/host/use-step-save';
 import { VehicleOverview } from '@/features/host/vehicle-overview';
@@ -105,22 +105,19 @@ function Editor({ id, step }: { id: string; step: string | undefined }) {
 /**
  * A car's listing (plan §9, Days 8–11): `/host/vehicles/:id/1` to `/6` are the onboarding steps and
  * `/review` submits. Without a step, a draft resumes where it was left, and anything submitted shows its
- * overview.
+ * overview, in the Host area's frame. The steps keep their focused layout, with their own bar of buttons at
+ * the bottom of a phone in place of the Host tabs.
  */
 export function VehicleEditorPage() {
   const { id = '', step } = useParams();
+  const editor = (
+    <RequireSignedIn fallback={<EditorSkeleton />}>{() => <Editor id={id} step={step} />}</RequireSignedIn>
+  );
   return (
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Your listing" noindex />
-      <RequireSignedIn fallback={<EditorSkeleton />}>
-        {() => (
-          <>
-            <HostSubNav className="mb-8" />
-            <Editor id={id} step={step} />
-          </>
-        )}
-      </RequireSignedIn>
+      {step === undefined ? <HostShell>{editor}</HostShell> : editor}
     </Container>
   );
 }

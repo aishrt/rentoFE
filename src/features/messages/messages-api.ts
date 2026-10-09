@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
 import type { Message, Messages, ReportRequest, SendMessageRequest } from '@/api/types';
 import {
@@ -8,12 +8,14 @@ import {
   threadQueryKey,
   threadsQueryKey,
   unreadMessagesQueryKey,
+  type MessagePages,
 } from './message-keys';
 
 /*
  * Messaging (spec §13): the inbox, a booking's conversation and its messages, sending with photos, and
  * report and block. New messages and read receipts arrive live over Socket.IO (message-keys.ts); a
- * minute's refresh catches anything missed while the connection was down.
+ * minute's refresh catches anything missed while the connection was down. The unread count beside the
+ * Messages links is in unread-count.ts.
  */
 
 const FALLBACK_REFRESH_MS = 60_000;
@@ -28,56 +30,45 @@ export function useThreads() {
   });
 }
 
-/** How many messages wait, for the Messages tab's badge. */
-export function useUnreadMessages(enabled = true) {
-  return useQuery({
-    queryKey: unreadMessagesQueryKey,
-    queryFn: async ({ signal }) => (await unwrap(client.GET('/threads/unread', { signal }))).count,
-    enabled,
-    refetchInterval: FALLBACK_REFRESH_MS,
-    staleTime: 15_000,
-  });
-}
-
 /** One booking's conversation: who it's with, and whether messages can be sent. */
-export function useThread(ref: string) {
+export function useThread(ref: string, enabled = true) {
   return useQuery({
     queryKey: threadQueryKey(ref),
     queryFn: async ({ signal }) =>
       (await unwrap(client.GET('/threads/{ref}', { params: { path: { ref } }, signal }))).thread,
-    enabled: ref !== '',
+    enabled: enabled && ref !== '',
   });
 }
 
-/** The newest messages of a conversation, oldest first; older pages load with `loadOlder`. */
+/** The pages loaded so far as one list, oldest first, and whether there are older ones. */
+function joinPages(data: MessagePages): Messages {
+  return {
+    messages: [...data.pages].reverse().flatMap((page) => page.messages),
+    hasMore: data.pages.at(-1)?.hasMore ?? false,
+  };
+}
+
+/**
+ * A conversation's messages, oldest first: the newest page, and older pages as `fetchNextPage` loads them.
+ * Each page is cached on its own, so the minute's refresh and a live booking update fetch every page loaded
+ * again, from the newest back, rather than replacing earlier messages with the newest page.
+ */
 export function useMessages(ref: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: messagesQueryKey(ref),
-    queryFn: ({ signal }) =>
-      unwrap(client.GET('/threads/{ref}/messages', { params: { path: { ref }, query: {} }, signal })),
+    queryFn: ({ pageParam, signal }) =>
+      unwrap(
+        client.GET('/threads/{ref}/messages', {
+          params: { path: { ref }, query: pageParam ? { before: pageParam } : {} },
+          signal,
+        }),
+      ),
+    initialPageParam: '',
+    // The page before the oldest message loaded.
+    getNextPageParam: (oldest: Messages) => (oldest.hasMore ? oldest.messages[0]?.id : undefined),
+    select: joinPages,
     enabled: ref !== '',
     refetchInterval: FALLBACK_REFRESH_MS,
-  });
-}
-
-/** Fetches the page before the first message on screen and puts it in front. */
-export function useLoadOlderMessages(ref: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (before: string) =>
-      unwrap(client.GET('/threads/{ref}/messages', { params: { path: { ref }, query: { before } } })),
-    onSuccess: (older) =>
-      queryClient.setQueryData<Messages>(messagesQueryKey(ref), (current) =>
-        current
-          ? {
-              messages: [
-                ...older.messages.filter((message) => !current.messages.some((m) => m.id === message.id)),
-                ...current.messages,
-              ],
-              hasMore: older.hasMore,
-            }
-          : current,
-      ),
   });
 }
 

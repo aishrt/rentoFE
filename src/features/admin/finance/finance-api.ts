@@ -1,17 +1,25 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ApiError, client, unwrap } from '@/api/client';
+import type { components } from '@/api/schema';
 import type { AdminPayment, AdminPayout, PlatformReport } from '@/api/types';
 import type { DateRange } from './date-range';
 
 /*
- * Payments, Host payouts and platform reports in the staff portal (spec §18; plan §12.6). Support staff
- * see payments and payouts with the refunds permission; holds, releases, retries and reports are the
- * admin's.
+ * Payments, refunds, unpaid extra charges, Host payouts and platform reports in the staff portal (spec §18;
+ * plan §12.6). Support staff see payments, refunds and payouts with the refunds permission; holds,
+ * releases, retries and reports are the admin's.
  */
+
+/** One refund to a Guest's card, from any payment, with who funds it (plan §8.1, item 15). */
+export type AdminRefundRow = components['schemas']['AdminRefundRow'];
+/** An extra charge on a booking that's still unpaid: being collected, or failed (plan §8.1, item 6). */
+export type AdminExtraChargeRow = components['schemas']['AdminExtraChargeRow'];
 
 /** The API's page sizes. */
 export const PAYMENTS_PAGE_SIZE = 25;
 export const PAYOUTS_PAGE_SIZE = 25;
+export const REFUNDS_PAGE_SIZE = 25;
+export const EXTRA_CHARGES_PAGE_SIZE = 25;
 
 /** The API refused: support staff without the permission, or an admin-only page. */
 export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;
@@ -25,6 +33,8 @@ export function pageFrom(value: string | null): number {
 // Payments --------------------------------------------------------------------------------------------------
 
 export type PaymentView = 'all' | 'failed' | 'disputed' | 'refunds-failed';
+/** The Payments tab's views: the payments API's, and the extra charges still to collect. */
+export type PaymentsTabView = PaymentView | 'unpaid-charges';
 
 export interface PaymentFilters {
   view: PaymentView;
@@ -48,6 +58,71 @@ export function useAdminPayments(filters: PaymentFilters) {
               view: filters.view,
               type: filters.type,
               status: filters.view === 'all' ? filters.status : undefined,
+              page: filters.page,
+            },
+          },
+          signal,
+        }),
+      ),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+// Unpaid extra charges --------------------------------------------------------------------------------------
+
+export interface ExtraChargeFilters {
+  /** Being collected, or failed; both when left out. */
+  status?: 'PENDING' | 'FAILED';
+  page: number;
+}
+
+export const extraChargesQueryKey = (filters?: ExtraChargeFilters) =>
+  filters
+    ? (['admin', 'payments', 'extra-charges', filters] as const)
+    : (['admin', 'payments', 'extra-charges'] as const);
+
+export function useUnpaidExtraCharges(filters: ExtraChargeFilters) {
+  return useQuery({
+    queryKey: extraChargesQueryKey(filters),
+    queryFn: ({ signal }) =>
+      unwrap(
+        client.GET('/admin/extra-charges', {
+          params: { query: { status: filters.status, page: filters.page } },
+          signal,
+        }),
+      ),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+// Refunds ---------------------------------------------------------------------------------------------------
+
+export interface RefundFilters {
+  /** A booking reference, or part of one. */
+  q: string;
+  status?: AdminRefundRow['status'];
+  fundedBy?: AdminRefundRow['fundedBy'];
+  kind?: NonNullable<AdminRefundRow['kind']>;
+  page: number;
+}
+
+export const refundsQueryKey = (filters?: RefundFilters) =>
+  filters ? (['admin', 'refunds', filters] as const) : (['admin', 'refunds'] as const);
+
+export function useAdminRefunds(filters: RefundFilters) {
+  return useQuery({
+    queryKey: refundsQueryKey(filters),
+    queryFn: ({ signal }) =>
+      unwrap(
+        client.GET('/admin/refunds', {
+          params: {
+            query: {
+              q: filters.q || undefined,
+              status: filters.status,
+              fundedBy: filters.fundedBy,
+              kind: filters.kind,
               page: filters.page,
             },
           },

@@ -2,6 +2,7 @@ import {
   CalendarRange,
   ChartColumn,
   Car,
+  CircleHelp,
   FileText,
   Flag,
   KeyRound,
@@ -13,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   TriangleAlert,
+  Undo2,
   UserCog,
   Users,
   Wallet,
@@ -54,6 +56,8 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
     title: 'Finance',
     items: [
       { label: 'Payments & payouts', icon: Wallet, to: '/admin/payments' },
+      // Shown to the whole team; support members without the refunds permission are told they need it.
+      { label: 'Refunds', icon: Undo2, to: '/admin/refunds' },
       { label: 'Reports', icon: ChartColumn, to: '/admin/reports', adminOnly: true },
     ],
   },
@@ -61,6 +65,7 @@ export const adminNav: { title?: string; items: AdminNavItem[] }[] = [
     title: 'Platform',
     items: [
       { label: 'Content', icon: FileText, to: '/admin/content', adminOnly: true },
+      { label: 'FAQs & help', icon: CircleHelp, to: '/admin/help', adminOnly: true },
       { label: 'Staff', icon: UserCog, to: '/admin/staff', adminOnly: true },
       { label: 'Settings', icon: Settings, to: '/admin/settings' },
       { label: 'Audit log', icon: ScrollText, to: '/admin/audit', adminOnly: true },

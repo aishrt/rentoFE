@@ -17,20 +17,31 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initials, staffRoleLabel } from '@/features/auth/roles';
 import { useLogout } from '@/features/auth/use-session';
+import { AdminOnlyNotice } from './admin-only-notice';
 import { AdminSidebar } from './admin-sidebar';
 
 /** Admin routes set `handle: { title }` so the header can show where the user is. */
 export interface AdminRouteHandle {
   title: string;
+  /**
+   * The administrator's page (plan §6.2), as the API's admin-only routes are: the support team sees why
+   * they can't use it instead of the page. The API is still what keeps them out.
+   */
+  adminOnly?: boolean;
 }
 
-function usePageTitle(): string {
-  const matches = useMatches();
-  for (let index = matches.length - 1; index >= 0; index--) {
-    const handle = matches[index]?.handle as Partial<AdminRouteHandle> | undefined;
-    if (handle?.title) return handle.title;
+/** The current page's title, and whether it's the administrator's. */
+function usePageHandle(): { title: string; adminOnly: boolean } {
+  const handles = useMatches().map((match) => match.handle as Partial<AdminRouteHandle> | undefined);
+  let title = 'Staff portal';
+  for (let index = handles.length - 1; index >= 0; index--) {
+    const found = handles[index]?.title;
+    if (found) {
+      title = found;
+      break;
+    }
   }
-  return 'Staff portal';
+  return { title, adminOnly: handles.some((handle) => handle?.adminOnly) };
 }
 
 function StaffMenu({ user }: { user: SessionUser }) {
@@ -81,7 +92,8 @@ function StaffMenu({ user }: { user: SessionUser }) {
  */
 export function AdminLayout({ user }: { user: SessionUser }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const title = usePageTitle();
+  const { title, adminOnly } = usePageHandle();
+  const refused = adminOnly && !user.roles.includes('ADMIN');
 
   return (
     <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -118,7 +130,7 @@ export function AdminLayout({ user }: { user: SessionUser }) {
         </header>
 
         <main id="main" className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-          <Outlet />
+          {refused ? <AdminOnlyNotice title={title} /> : <Outlet />}
         </main>
       </div>
     </div>

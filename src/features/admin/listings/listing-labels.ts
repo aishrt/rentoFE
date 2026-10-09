@@ -1,4 +1,4 @@
-import type { CalendarBlock, HostApplication, HostVehicle, ReviewQueueItem } from '@/api/types';
+import type { AdminVehicle, CalendarBlock, HostApplication, HostVehicle, ReviewQueueItem } from '@/api/types';
 
 /*
  * Words for the codes the staff approval queues show (plan §9, Days 8–11). NZ English throughout
@@ -164,3 +164,27 @@ export const REMOVABLE_BLOCKS: readonly BlockReason[] = ['ADMIN', 'HOST_BLOCK', 
 
 /** "FLEXIBLE" → "Flexible": the policy engine's tier codes read as words. */
 export const tierLabel = (code: string) => code.charAt(0) + code.slice(1).toLowerCase().replaceAll('_', ' ');
+
+/** A key detail a Host changed on a live listing, which sends it back for review (plan §3). */
+export type KeyDetail = AdminVehicle['keyChanges'][number]['field'];
+
+export const KEY_DETAIL_LABELS: Record<KeyDetail, string> = {
+  regoPlate: 'Number plate',
+  vin: 'VIN',
+  chassisNo: 'Chassis number',
+  make: 'Make',
+  model: 'Model',
+  year: 'Year',
+};
+
+/** "Number plate, make and year": the key details a listing in the queue changed. */
+export function keyDetailsLine(fields: readonly KeyDetail[]): string {
+  const names = fields.map((field, index) =>
+    index === 0
+      ? KEY_DETAIL_LABELS[field]
+      : KEY_DETAIL_LABELS[field].replace(/^[A-Z](?=[a-z])/, (letter) => letter.toLowerCase()),
+  );
+  return names.length > 1
+    ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+    : (names[0] ?? '');
+}

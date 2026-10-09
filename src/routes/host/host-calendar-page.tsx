@@ -13,8 +13,10 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { AllCarsCalendar } from '@/features/host/all-cars-calendar';
 import { useHostVehicle, useHostVehicles } from '@/features/host/host-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 import { vehiclePath } from '@/features/host/use-step-save';
 import { CalendarSkeleton, VehicleCalendar } from '@/features/host/vehicle-calendar';
 import { isLocked, vehicleDisplayTitle } from '@/features/host/vehicle-labels';
@@ -37,6 +39,9 @@ function ChosenCalendar({ id }: { id: string }) {
   }
   return <VehicleCalendar vehicle={vehicle.data} />;
 }
+
+/** The Select's choice for every car at once, the default for a Host with more than one. */
+const ALL_CARS = 'all';
 
 function HostCalendar({ user }: { user: SessionUser }) {
   const cars = useHostVehicles();
@@ -83,7 +88,7 @@ function HostCalendar({ user }: { user: SessionUser }) {
           description={
             none
               ? "Add your car, and its calendar shows here once you've submitted the listing."
-              : "A car's calendar opens once you've submitted its listing. Your drafts are on Overview."
+              : "A car's calendar opens once you've submitted its listing. Your drafts are on My vehicles."
           }
           actions={
             none && canAdd ? (
@@ -92,7 +97,7 @@ function HostCalendar({ user }: { user: SessionUser }) {
               </Button>
             ) : (
               <Button asChild variant="secondary">
-                <Link to="/host" viewTransition>
+                <Link to="/host/vehicles" viewTransition>
                   Your cars
                 </Link>
               </Button>
@@ -103,65 +108,84 @@ function HostCalendar({ user }: { user: SessionUser }) {
     );
   }
 
-  // The car in the link, or the first: the choice stays in the link, so a refresh or a shared link keeps it.
-  const chosen = choices.find((car) => car.id === params.get('car')) ?? choices[0]!;
-  const choose = (id: string) =>
+  // The car in the link; or else all of them, for a Host with more than one, or their only car. The choice
+  // stays in the link, so a refresh or a shared link keeps it.
+  const chosen = choices.find((car) => car.id === params.get('car'));
+  const allCars = !chosen && choices.length > 1;
+  const car = chosen ?? choices[0]!;
+  const choose = (value: string) =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
-        next.set('car', id);
+        if (value === ALL_CARS) next.delete('car');
+        else next.set('car', value);
         return next;
       },
       { replace: true },
     );
 
+  const picker = choices.length > 1 && (
+    <Field label="Car" className="w-full sm:w-72">
+      <Select
+        value={allCars ? ALL_CARS : car.id}
+        onChange={choose}
+        options={[
+          { value: ALL_CARS, label: 'All cars' },
+          ...choices.map((choice) => ({ value: choice.id, label: vehicleDisplayTitle(choice.title) })),
+        ]}
+        icon={<CarFront aria-hidden="true" />}
+        listLabel="Your cars"
+      />
+    </Field>
+  );
+
+  if (allCars) {
+    return (
+      <div className="grid gap-8">
+        <HostPageHeader
+          eyebrow="Hosting"
+          title="Calendar"
+          description="Every car’s trips, requests and blocks. Open a car to block dates. All times are NZ time."
+          actions={picker}
+        />
+        <AllCarsCalendar />
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-8">
       <HostPageHeader
         eyebrow={
-          <Link to={vehiclePath(chosen.id)} className="link-underline">
-            {vehicleDisplayTitle(chosen.title)}
+          <Link to={vehiclePath(car.id)} className="link-underline">
+            {vehicleDisplayTitle(car.title)}
           </Link>
         }
         title="Calendar"
         description="Trips appear here automatically. All times are NZ time."
-        actions={
-          choices.length > 1 && (
-            <Field label="Car" className="w-full sm:w-72">
-              <Select
-                value={chosen.id}
-                onChange={choose}
-                options={choices.map((car) => ({ value: car.id, label: vehicleDisplayTitle(car.title) }))}
-                icon={<CarFront aria-hidden="true" />}
-                listLabel="Your cars"
-              />
-            </Field>
-          )
-        }
+        actions={picker}
       />
       {/* A new car starts with nothing chosen on its calendar. */}
-      <ChosenCalendar key={chosen.id} id={chosen.id} />
+      <ChosenCalendar key={car.id} id={car.id} />
     </div>
   );
 }
 
 /**
- * The Host's Calendar tab (plan §12.6): one car's calendar at a time, chosen from their cars, with the same
- * month and week views, blocking and weekly availability as the car's own calendar page.
+ * The Host's Calendar tab (plan §12.6): all their cars at once on a timeline, for a Host with more than one,
+ * or one car's calendar chosen from them, with the same month and week views, blocking and weekly
+ * availability as the car's own calendar page.
  */
 export function HostCalendarPage() {
   return (
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Calendar" noindex />
-      <RequireSignedIn fallback={<CalendarSkeleton />}>
-        {(user) => (
-          <>
-            <HostSubNav className="mb-8" />
-            <HostCalendar user={user} />
-          </>
-        )}
-      </RequireSignedIn>
+      <HostShell>
+        <RequireSignedIn fallback={<CalendarSkeleton />}>
+          {(user) => <HostCalendar user={user} />}
+        </RequireSignedIn>
+      </HostShell>
     </Container>
   );
 }

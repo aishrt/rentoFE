@@ -18,7 +18,7 @@ import { userErrorMessage, waiveFeeErrorMessage } from './users-api';
 /*
  * The dialogs for actions on someone's account. Like the listing review's DecisionDialog and ConfirmDialog,
  * but they show the API's own words for the refusals these actions get: a staff account that only the admin
- * can change (403), a closure that's blocked (409), or a missing refunds permission.
+ * can change (403), a closure that's blocked (409), or a fee waiver, which is the admin's.
  */
 
 // The API's limits for a reason: a few words, at most 500 characters.
@@ -205,7 +205,7 @@ interface WaiveFeeDialogProps extends Omit<BaseProps, 'title' | 'description'> {
   onConfirm: (input: { amountCents?: number; reason: string }) => Promise<void>;
 }
 
-/** Waives some or all of the cancellation fees a Host owes. Needs the refunds permission. */
+/** Waives some or all of the cancellation fees a Host owes. The admin's (plan §8.1, item 10). */
 export function WaiveFeeDialog({ open, onOpenChange, name, owedCents, onConfirm }: WaiveFeeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -492,4 +492,161 @@ describe('AdminModerationPage', () => {
     expect(await screen.findByText('No published reviews')).toBeInTheDocument();
     expect(sent).toEqual({ action: 'HIDE', reason: 'Abuse aimed at the Host.' });
   });
+
+  it('removes a reported message with a reason, which resolves the report as actioned', async () => {
+    let removed: unknown;
+    let resolved: unknown;
+    mockApi({
+      'GET /admin/moderation/reports': () => ({
+        status: 200,
+        body: { reports: resolved ? [] : [messageReport] },
+      }),
+      'POST /admin/moderation/messages/m9/remove': (init) => {
+        removed = JSON.parse(String(init?.body));
+        return {
+          status: 200,
+          body: {
+            message: {
+              id: 'm9',
+              from: 'THEM',
+              sender: 'GUEST',
+              body: messageReport.preview,
+              attachments: [],
+              createdAt: '2026-09-27T21:00:00.000Z',
+              removed: { at: '2026-09-28T21:00:00.000Z', reason: 'Contact details to pay outside the app.' },
+            },
+          },
+        };
+      },
+      'POST /admin/moderation/reports/r1/resolve': (init) => {
+        resolved = JSON.parse(String(init?.body));
+        return { status: 200, body: { report: { ...messageReport, status: 'ACTIONED' } } };
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    const report = await card('Message reported by Kiri Ngata');
+    await user.click(report.getByRole('button', { name: 'Remove message' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Remove this message?' }));
+    expect(
+      dialog.getByText(/see “This message was removed by Rento Vroom support” in its place/),
+    ).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Remove message' }));
+    expect(await dialog.findByText('Add a short note saying why')).toBeInTheDocument();
+    expect(removed).toBeUndefined();
+
+    await user.type(dialog.getByLabelText('Why it’s removed'), 'Contact details to pay outside the app.');
+    await user.click(dialog.getByRole('button', { name: 'Remove message' }));
+
+    expect(await screen.findByText('Message removed and report resolved')).toBeInTheDocument();
+    expect(removed).toEqual({ reason: 'Contact details to pay outside the app.' });
+    expect(resolved).toEqual({
+      status: 'ACTIONED',
+      resolution: 'Removed the message. Contact details to pay outside the app.',
+    });
+    expect(await screen.findByText('No open reports')).toBeInTheDocument();
+  });
+
+  it('shows a reported message support removed, still readable, with nothing left to remove', async () => {
+    mockApi({
+      'GET /admin/moderation/reports': {
+        status: 200,
+        body: {
+          reports: [
+            {
+              ...messageReport,
+              messageRemoved: { at: '2026-09-28T21:00:00.000Z', reason: 'Contact details to pay outside.' },
+            },
+          ],
+        },
+      },
+    });
+    render();
+
+    const report = await card('Message reported by Kiri Ngata');
+    expect(report.getByText('Removed')).toBeInTheDocument();
+    expect(report.getByText('Text me on 021 555 0101 and we can sort it out')).toBeInTheDocument();
+    expect(report.getByText('Why the message was removed').nextElementSibling).toHaveTextContent(
+      'Contact details to pay outside.',
+    );
+    expect(report.queryByRole('button', { name: 'Remove message' })).not.toBeInTheDocument();
+    expect(report.getByRole('button', { name: 'Resolve' })).toBeInTheDocument();
+  });
+
+  it('closes the report when the message was removed meanwhile, from its conversation', async () => {
+    let resolved: unknown;
+    mockApi({
+      'GET /admin/moderation/reports': () => ({
+        status: 200,
+        body: { reports: resolved ? [] : [messageReport] },
+      }),
+      'POST /admin/moderation/messages/m9/remove': {
+        status: 409,
+        body: { error: { code: 'ALREADY_REMOVED', message: 'This message has already been removed.' } },
+      },
+      'POST /admin/moderation/reports/r1/resolve': (init) => {
+        resolved = JSON.parse(String(init?.body));
+        return { status: 200, body: { report: { ...messageReport, status: 'ACTIONED' } } };
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    await user.click(
+      (await card('Message reported by Kiri Ngata')).getByRole('button', { name: 'Remove message' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Remove this message?' }));
+    await user.type(dialog.getByLabelText('Why it’s removed'), 'Threats.');
+    await user.click(dialog.getByRole('button', { name: 'Remove message' }));
+
+    expect(await screen.findByText('Message removed and report resolved')).toBeInTheDocument();
+    expect(resolved).toEqual({ status: 'ACTIONED', resolution: 'Removed the message. Threats.' });
+  });
+
+  it('restores a hidden review with a reason, which publishes it again', async () => {
+    let sent: unknown;
+    const hidden: ModerationReview = {
+      ...publishedReview,
+      status: 'HIDDEN',
+      moderation: 'HIDDEN',
+      moderationReason: 'Reported as abusive.',
+    };
+    const fetchMock = mockApi({
+      'GET /admin/reviews': () => ({
+        status: 200,
+        body: { reviews: lastQuery(fetchMock).get('state') === 'HIDDEN' && !sent ? [hidden] : [] },
+      }),
+      'POST /admin/reviews/rev2/moderate': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return {
+          status: 200,
+          body: { review: { ...hidden, status: 'AWAITING_REVEAL', moderation: 'CLEAR' } },
+        };
+      },
+    });
+    render('/admin/moderation?tab=reviews&state=hidden');
+    const user = userEvent.setup();
+
+    const review = await card('Review by Kiri');
+    expect(review.getByText('Why it was hidden')).toBeInTheDocument();
+    expect(review.getByText('Reported as abusive.')).toBeInTheDocument();
+    expect(review.queryByRole('button', { name: 'Hide' })).not.toBeInTheDocument();
+    expect(review.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+
+    await user.click(review.getByRole('button', { name: 'Restore' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Restore Kiri’s review?' }));
+    expect(dialog.getByText(/published again like any other review/)).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Restore review' }));
+    expect(await dialog.findByText('Add a short note saying why')).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await user.type(dialog.getByLabelText('Why it’s restored'), 'The Host agreed it was fair.');
+    await user.click(dialog.getByRole('button', { name: 'Restore review' }));
+
+    expect(await screen.findByText('Review restored')).toBeInTheDocument();
+    expect(screen.getByText('Kiri’s review is published again, like any other.')).toBeInTheDocument();
+    expect(sent).toEqual({ action: 'CLEAR', reason: 'The Host agreed it was fair.' });
+    expect(await screen.findByText('No hidden reviews')).toBeInTheDocument();
+  });
 });

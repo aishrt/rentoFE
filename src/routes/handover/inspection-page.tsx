@@ -1,5 +1,6 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CircleCheck, CloudOff, Gauge, Hourglass, MailWarning } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Handover, InspectionAngle, InspectionStage } from '@/api/types';
@@ -21,13 +22,20 @@ import { Slider } from '@/components/ui/slider';
 import { Stepper, type StepState } from '@/components/ui/stepper';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
+import { resendVerificationRequest } from '@/features/auth/auth-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { sessionQueryKey, useSession } from '@/features/auth/use-session';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { ANGLE_LABELS } from '@/features/handover/angles';
 import { DamageEditor, type EditablePin } from '@/features/handover/damage-editor';
 import { useHandover, useSubmitInspection, type HandoverState } from '@/features/handover/handover-api';
 import { PhotoCapture, PhotoStatusBadge } from '@/features/handover/photo-capture';
-import { useInspectionPhotos, type InspectionPhoto } from '@/features/handover/use-inspection-photos';
+import { useDeviceLocation } from '@/features/handover/use-device-location';
+import {
+  photoInput,
+  useInspectionPhotos,
+  type InspectionPhoto,
+} from '@/features/handover/use-inspection-photos';
 
 type Phase =
   { kind: 'photo'; index: number } | { kind: 'readings' } | { kind: 'damage' } | { kind: 'review' };
@@ -75,7 +83,54 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
   );
 }
 
-function EmailFirst({ handover }: { handover: Handover }) {
+/**
+ * An unverified Guest confirms their email before the check-in photos (plan §6.1): one tap emails a new
+ * link, and the step checks again when they come back from opening it, or when they say they have.
+ */
+function EmailFirst({
+  handover,
+  onRecheck,
+  rechecking,
+}: {
+  handover: Handover;
+  onRecheck: () => Promise<unknown>;
+  rechecking: boolean;
+}) {
+  const guest = handover.role === 'GUEST';
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const [stillWaiting, setStillWaiting] = useState(false);
+  const latestRecheck = useRef(onRecheck);
+  useEffect(() => {
+    latestRecheck.current = onRecheck;
+  });
+
+  const recheck = async () => {
+    setStillWaiting(false);
+    // The link may have been opened in another tab: the account menu should say so too.
+    void queryClient.invalidateQueries({ queryKey: sessionQueryKey });
+    await onRecheck();
+    // Still here after the check, so it isn't confirmed yet: once it is, the photos replace this step.
+    setStillWaiting(true);
+  };
+
+  const resend = useMutation({
+    mutationFn: resendVerificationRequest,
+    // Nothing to send means it's confirmed already: check again, and the photos open.
+    onSuccess: (sent) => {
+      if (!sent) void latestRecheck.current();
+    },
+  });
+
+  // Back from the email app, or from the tab the link opened in: check again without being asked.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === 'visible') void latestRecheck.current();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    return () => document.removeEventListener('visibilitychange', onReturn);
+  }, []);
+
   return (
     <EmptyState
       titleAs="h2"
@@ -85,22 +140,60 @@ function EmailFirst({ handover }: { handover: Handover }) {
           <MailWarning />
         </IconBadge>
       }
-      title={
-        handover.role === 'GUEST' ? 'Confirm your email first' : 'Your guest needs to confirm their email'
-      }
+      title={guest ? 'Confirm your email first' : 'Your guest needs to confirm their email'}
       description={
-        handover.role === 'GUEST'
-          ? 'Before your first trip starts, please confirm your email address. Resend the link from your account, open it, then come back here.'
-          : 'They need to confirm their email address before the trip starts. They can resend the link from their account.'
+        guest
+          ? 'Before your first trip starts, please confirm your email address. We’ll email you a link: open it, then come back here.'
+          : 'They need to confirm their email address before the trip starts. They can get a new link from their check-in screen.'
       }
       actions={
-        handover.role === 'GUEST' && (
-          <Button asChild>
-            <Link to="/account/settings">Resend the link</Link>
+        guest ? (
+          <>
+            <Button
+              variant={resend.isSuccess ? 'secondary' : 'primary'}
+              loading={resend.isPending}
+              onClick={() => resend.mutate()}
+            >
+              {resend.isSuccess ? 'Send it again' : 'Email me the link'}
+            </Button>
+            <Button
+              variant={resend.isSuccess ? 'primary' : 'secondary'}
+              loading={rechecking}
+              onClick={() => void recheck()}
+            >
+              I’ve confirmed it
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" loading={rechecking} onClick={() => void recheck()}>
+            Check again
           </Button>
         )
       }
-    />
+    >
+      <div className="mt-5 grid w-full gap-3 text-left empty:hidden">
+        {resend.isSuccess && resend.data && (
+          <Alert variant="success" role="status">
+            We’ve sent a link to {session.data?.email ?? 'your email address'}. Open it, then come back here.
+            Links in earlier emails no longer work.
+          </Alert>
+        )}
+        {resend.isError && (
+          <Alert variant="danger" role="alert">
+            {resend.error instanceof ApiError && resend.error.code === 'RATE_LIMITED'
+              ? resend.error.message
+              : 'We couldn’t send the email. Please try again in a moment.'}
+          </Alert>
+        )}
+        {stillWaiting && !rechecking && (
+          <Alert variant="info" role="status">
+            {guest
+              ? 'Your email isn’t confirmed yet. Open the link in the email we sent, then try again. Can’t find it? Check your spam folder.'
+              : 'It isn’t confirmed yet.'}
+          </Alert>
+        )}
+      </div>
+    </EmptyState>
   );
 }
 
@@ -108,6 +201,8 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
   const navigate = useNavigate();
   const submit = useSubmitInspection(handover.ref);
   const store = useInspectionPhotos(handover.ref, stage);
+  // Asked once as the inspection starts; each photo carries it when the person allows it (plan §3).
+  const location = useDeviceLocation();
   const angles = handover.requiredAngles.filter((angle) => angle !== 'DAMAGE');
   const [phase, setPhase] = useState<Phase>({ kind: 'photo', index: 0 });
   const [odometer, setOdometer] = useState('');
@@ -167,7 +262,7 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
         ...(notes.trim() && { notes: notes.trim() }),
         photos: store.photos
           .filter((photo): photo is InspectionPhoto & { key: string } => Boolean(photo.key))
-          .map((photo) => ({ angle: photo.angle, key: photo.key, takenAt: photo.takenAt })),
+          .map(photoInput),
         damagePins: pins.map(({ x, y, note }) => ({ x, y, ...(note.trim() && { note: note.trim() }) })),
       },
       {
@@ -203,7 +298,7 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
             position={{ index: phase.index + 1, total: angles.length }}
             photo={photoFor(angles[phase.index]!)}
             earlier={earlierFor(angles[phase.index]!)}
-            onTake={(file) => store.add(angles[phase.index]!, file, { replace: true })}
+            onTake={(file) => store.add(angles[phase.index]!, file, { replace: true, location })}
           />
         )}
 
@@ -287,7 +382,7 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
                 <PhotoCapture
                   angle="DAMAGE"
                   position={{ index: damagePhotos.length + 1, total: damagePhotos.length + 1 }}
-                  onTake={(file) => store.add('DAMAGE', file)}
+                  onTake={(file) => store.add('DAMAGE', file, { location })}
                 />
               </div>
             )}
@@ -458,7 +553,7 @@ function Inspection({ bookingRef, stage }: { bookingRef: string; stage: Inspecti
         </p>
       </div>
       {stage === 'CHECK_IN' && open && data.emailVerificationNeeded ? (
-        <EmailFirst handover={data} />
+        <EmailFirst handover={data} onRecheck={() => handover.refetch()} rechecking={handover.isFetching} />
       ) : open ? (
         <Flow handover={data} stage={stage} />
       ) : (

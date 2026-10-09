@@ -2,7 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Message, ThreadDetail } from '@/api/types';
-import { applyMessagingEvent } from '@/features/messages/message-keys';
+import { applyMessagingEvent, messagesQueryKey } from '@/features/messages/message-keys';
 import { message, threadDetail, threadSummary } from '@/features/messages/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
@@ -19,6 +19,7 @@ function mockMessaging({
   user = guestUser,
   thread = threadDetail(),
   messages = [message()],
+  earlier,
   threadError,
   sendError,
 }: {
@@ -26,6 +27,8 @@ function mockMessaging({
   /** A function to change the conversation the API returns during a test. */
   thread?: ThreadDetail | (() => ThreadDetail);
   messages?: Message[];
+  /** An earlier page, before the first of `messages`. */
+  earlier?: Message[];
   threadError?: { status: number; code: string };
   sendError?: { status: number; code: string; message: string };
 } = {}) {
@@ -63,7 +66,9 @@ function mockMessaging({
           ? { status: threadError.status, body: { error: { code: threadError.code, message: 'Not here' } } }
           : { status: 200, body: { thread: typeof thread === 'function' ? thread() : thread } };
       case 'GET /threads/RV-7K2Q9M/messages':
-        return { status: 200, body: { messages: current, hasMore: false } };
+        return request.query.get('before')
+          ? { status: 200, body: { messages: earlier ?? [], hasMore: false } }
+          : { status: 200, body: { messages: current, hasMore: Boolean(earlier) } };
       case 'POST /threads/RV-7K2Q9M/read':
         return { status: 204 };
       case 'POST /threads/RV-7K2Q9M/messages': {
@@ -115,10 +120,61 @@ describe('MessagesPage', () => {
 
   it('lets a host see only their guests’ conversations', async () => {
     mockMessaging({ user: hostUser });
-    render('/messages');
+    const { router } = render('/messages');
     await userEvent.click(await screen.findByRole('tab', { name: 'Your guests' }));
     expect(await screen.findByRole('link', { name: /Mere/ })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Hana/ })).not.toBeInTheDocument();
+    // Still the Guest's dashboard: the filter doesn't change whose it is.
+    expect(router.state.location.search).toBe('?show=host');
+    expect(screen.getByRole('navigation', { name: 'Your dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hosting' })).not.toBeInTheDocument();
+  });
+
+  it('is the Guest’s Messages, with the unread count, when opened from their dashboard', async () => {
+    mockMessaging();
+    render('/messages');
+
+    const sidebar = within(await screen.findByRole('navigation', { name: 'Your dashboard' }));
+    expect(await sidebar.findByRole('link', { name: 'Messages, 1 unread' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const tabs = within(screen.getByRole('navigation', { name: 'Your dashboard, quick links' }));
+    expect(tabs.getByRole('link', { name: 'Messages, 1 unread' })).toHaveAttribute('href', '/messages');
+    expect(screen.queryByRole('navigation', { name: 'Hosting, quick links' })).not.toBeInTheDocument();
+  });
+
+  it('is the Host’s Inbox in the Host area when opened as a Host, starting on their guests', async () => {
+    mockMessaging({ user: hostUser });
+    const { router } = render('/messages?as=host');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
+    const hosting = within(screen.getByRole('navigation', { name: 'Hosting' }));
+    expect(await hosting.findByRole('link', { name: 'Inbox, 1 unread' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const tabs = within(screen.getByRole('navigation', { name: 'Hosting, quick links' }));
+    expect(tabs.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/host',
+      '/host/vehicles',
+      '/host/calendar',
+      '/host/earnings',
+      '/messages?as=host',
+    ]);
+    expect(screen.queryByRole('navigation', { name: 'Your dashboard, quick links' })).not.toBeInTheDocument();
+
+    const mere = await screen.findByRole('link', { name: /Mere/ });
+    // A conversation opens in the Host area too.
+    expect(mere).toHaveAttribute('href', '/messages/RV-HOST22?as=host');
+    expect(screen.queryByRole('link', { name: /Hana/ })).not.toBeInTheDocument();
+
+    // Every conversation, still in the Host area.
+    await userEvent.click(screen.getByRole('tab', { name: 'All' }));
+    expect(await screen.findByRole('link', { name: /Hana/ })).toBeInTheDocument();
+    expect(new URLSearchParams(router.state.location.search).get('as')).toBe('host');
+    expect(new URLSearchParams(router.state.location.search).get('show')).toBe('all');
+    expect(screen.getByRole('navigation', { name: 'Hosting' })).toBeInTheDocument();
   });
 });
 
@@ -249,6 +305,65 @@ describe('ConversationPage', () => {
     );
     // The messages load again too, so contact details typed before show unmasked.
     await vi.waitFor(() => expect(loads()).toBeGreaterThan(before));
+  });
+
+  it('keeps earlier messages on screen when the conversation is fetched again', async () => {
+    const sent = mockMessaging({
+      messages: [message({ id: 'm3', body: 'Newest' })],
+      earlier: [message({ id: 'm1', body: 'Oldest' }), message({ id: 'm2', body: 'Middle' })],
+    });
+    const { queryClient } = render('/messages/RV-7K2Q9M');
+    const log = await screen.findByRole('log', { name: 'Messages with Hana' });
+    expect(within(log).queryByText('Oldest')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show earlier messages' }));
+    expect(await within(log).findByText('Oldest')).toBeInTheDocument();
+    expect(sent.find((request) => request.query.get('before'))?.query.get('before')).toBe('m3');
+    expect(screen.queryByRole('button', { name: 'Show earlier messages' })).not.toBeInTheDocument();
+
+    // The minute's refresh: every page loaded comes again, from the newest back.
+    const loads = () => sent.filter((request) => request.path === '/threads/RV-7K2Q9M/messages').length;
+    const before = loads();
+    await act(() => queryClient.refetchQueries({ queryKey: messagesQueryKey('RV-7K2Q9M') }));
+    expect(loads()).toBe(before + 2);
+    expect(within(log).getByText('Oldest')).toBeInTheDocument();
+    expect(within(log).getByText('Middle')).toBeInTheDocument();
+    expect(within(log).getByText('Newest')).toBeInTheDocument();
+
+    // A booking update arriving live does the same.
+    act(() => {
+      applyMessagingEvent(queryClient, 'message', {
+        ref: 'RV-7K2Q9M',
+        message: message({ id: 's9', from: 'SYSTEM', sender: 'SYSTEM', body: 'Trip ended.' }),
+      });
+    });
+    await vi.waitFor(() => expect(loads()).toBe(before + 4));
+    expect(within(log).getByText('Oldest')).toBeInTheDocument();
+    expect(within(log).getByText('Newest')).toBeInTheDocument();
+  });
+
+  it('frames a Host’s conversation with a guest in the Host area, from wherever it was opened', async () => {
+    mockMessaging({ user: hostUser, thread: threadDetail({ role: 'HOST' }) });
+    render('/messages/RV-7K2Q9M');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hana' })).toBeInTheDocument();
+    const hosting = within(await screen.findByRole('navigation', { name: 'Hosting' }));
+    expect(await hosting.findByRole('link', { name: 'Inbox, 1 unread' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'Inbox' })).toHaveAttribute('href', '/messages?as=host');
+    expect(screen.queryByRole('navigation', { name: 'Your dashboard' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the dashboard the conversation was opened from', async () => {
+    mockMessaging({ user: hostUser, thread: threadDetail({ role: 'HOST' }) });
+    render('/messages/RV-7K2Q9M?as=guest');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hana' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Your dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hosting' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'All messages' })).toHaveAttribute('href', '/messages');
   });
 
   it('explains there’s no conversation for a booking that hasn’t reached the host', async () => {

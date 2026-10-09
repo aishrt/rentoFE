@@ -11,6 +11,11 @@ const prefsKey = ['me', 'notification-prefs'] as const;
 
 const CHOICES: { name: keyof NotificationPrefs; label: string; description: string }[] = [
   {
+    name: 'unreadMessageEmail',
+    label: 'Email me about unread messages',
+    description: 'When a host or guest’s message is still unread after 10 minutes. You’ll still see it here.',
+  },
+  {
     name: 'unreadMessageSms',
     label: 'Text me about unread messages',
     description: 'When a host or guest’s message is still unread after 10 minutes.',

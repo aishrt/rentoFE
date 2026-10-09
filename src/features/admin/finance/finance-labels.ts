@@ -1,17 +1,25 @@
 import type { AdminPayment } from '@/api/types';
 import type { StatusLabel } from '@/features/booking/booking-format';
-import type { PaymentView } from './finance-api';
+import type { AdminRefundRow, PaymentsTabView } from './finance-api';
 
 /* Plain-English labels for payments, refunds and payouts, beside those in ops/admin-labels. */
 
 type Refund = AdminPayment['refunds'][number];
 
-export const PAYMENT_VIEWS: readonly { value: PaymentView; label: string }[] = [
+export const PAYMENT_VIEWS: readonly { value: PaymentsTabView; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'failed', label: 'Failed' },
   { value: 'disputed', label: 'Disputed' },
   { value: 'refunds-failed', label: 'Failed refunds' },
+  { value: 'unpaid-charges', label: 'Unpaid extra charges' },
 ];
+
+/** Why a refund was made. Refunds recorded before this was kept have none. */
+export const REFUND_KIND: Record<NonNullable<AdminRefundRow['kind']>, string> = {
+  CANCELLATION: 'Cancellation',
+  LATE_PAYMENT: 'Paid after the booking ended',
+  STAFF: 'Issued by staff',
+};
 
 export const REFUND_STATUS: Record<Refund['status'], StatusLabel> = {
   PENDING: { label: 'Sending', tone: 'waiting' },

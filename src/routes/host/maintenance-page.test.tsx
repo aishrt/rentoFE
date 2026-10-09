@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MaintenanceReminders } from '@/api/types';
@@ -68,7 +68,10 @@ describe('MaintenancePage', () => {
       '/host/vehicles/v1',
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance reminders' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'My vehicles' })).toHaveAttribute('href', '/host');
+    expect(screen.getByRole('link', { name: 'My vehicles' })).toHaveAttribute('href', '/host/vehicles');
+    // In the Host area's frame, under Vehicles.
+    const hosting = within(screen.getByRole('navigation', { name: 'Hosting' }));
+    expect(hosting.getByRole('link', { name: 'Vehicles' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('starts with no reminders and nothing to save, then adds and saves one', async () => {

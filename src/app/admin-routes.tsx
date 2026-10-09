@@ -5,7 +5,10 @@ import { page } from './lazy-page';
 
 /**
  * The staff portal's pages (`/admin`). They join the router on the way into the portal (router.tsx), so the
- * homepage's first load doesn't carry their router entries and preload lists (plan §12.5).
+ * homepage's first load doesn't carry their router entries and preload lists (plan §12.5). The
+ * administrator's pages are marked `adminOnly`, matching the API's admin-only routes (plan §6.2): the
+ * support team sees why they can't use one instead of its errors. Settings isn't one, as everyone manages
+ * their own sign-in there.
  */
 export const adminRoutes: RouteObject[] = [
   {
@@ -84,22 +87,27 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'content',
-            handle: { title: 'Content' } satisfies AdminRouteHandle,
+            handle: { title: 'Content', adminOnly: true } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/content-page'), 'AdminContentPage'),
           },
           {
+            path: 'help',
+            handle: { title: 'FAQs & help', adminOnly: true } satisfies AdminRouteHandle,
+            lazy: page(() => import('@/routes/admin/help-page'), 'AdminHelpPage'),
+          },
+          {
             path: 'reports',
-            handle: { title: 'Reports' } satisfies AdminRouteHandle,
+            handle: { title: 'Reports', adminOnly: true } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/reports-page'), 'AdminReportsPage'),
           },
           {
             path: 'audit',
-            handle: { title: 'Audit log' } satisfies AdminRouteHandle,
+            handle: { title: 'Audit log', adminOnly: true } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/audit-page'), 'AdminAuditPage'),
           },
           {
             path: 'jobs',
-            handle: { title: 'Jobs' } satisfies AdminRouteHandle,
+            handle: { title: 'Jobs', adminOnly: true } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/jobs-page'), 'AdminJobsPage'),
           },
           {
@@ -108,12 +116,14 @@ export const adminRoutes: RouteObject[] = [
             lazy: page(() => import('@/routes/admin/payments-page'), 'AdminPaymentsPage'),
           },
           {
+            path: 'refunds',
+            handle: { title: 'Refunds' } satisfies AdminRouteHandle,
+            lazy: page(() => import('@/routes/admin/refunds-page'), 'AdminRefundsPage'),
+          },
+          {
             path: 'host-applications',
             handle: { title: 'Host applications' } satisfies AdminRouteHandle,
-            lazy: page(
-              () => import('@/routes/admin/host-applications-page'),
-              'AdminHostApplicationsPage',
-            ),
+            lazy: page(() => import('@/routes/admin/host-applications-page'), 'AdminHostApplicationsPage'),
           },
           {
             path: 'vehicles',
@@ -127,7 +137,7 @@ export const adminRoutes: RouteObject[] = [
           },
           {
             path: 'staff',
-            handle: { title: 'Staff' } satisfies AdminRouteHandle,
+            handle: { title: 'Staff', adminOnly: true } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/staff-page'), 'AdminStaffPage'),
           },
           {

@@ -46,6 +46,8 @@ export interface VerificationOutcome {
   released: string[];
   /** Bookings that still wait for the other part (the identity check or the licence) with support. */
   stillInReview: string[];
+  /** Bookings that wait for their car's suspension to be lifted before they're confirmed. */
+  carSuspended: string[];
 }
 
 // The API's limit for a review note, under the decision dialog's own.
@@ -77,11 +79,17 @@ export async function reviewVerificationRequest(input: {
   const params = { path: { id: input.userId } };
   const body = { decision: input.decision, ...(input.notes && { note: input.notes }) };
   try {
-    const { confirmed, waitingForHost, released, stillInReview } =
+    const { confirmed, waitingForHost, released, stillInReview, carSuspended } =
       input.kind === 'IDENTITY'
         ? await unwrap(client.POST('/admin/users/{id}/identity-review', { params, body }))
         : await unwrap(client.POST('/admin/users/{id}/licence-review', { params, body }));
-    return { confirmed, waitingForHost, released, stillInReview: stillInReview ?? [] };
+    return {
+      confirmed,
+      waitingForHost,
+      released,
+      stillInReview: stillInReview ?? [],
+      carSuspended: carSuspended ?? [],
+    };
   } catch (error) {
     throw asNotesError(error);
   }

@@ -84,6 +84,8 @@ export function useStaffTicket(ref: string) {
         .ticket,
     staleTime: 15_000,
     refetchOnWindowFocus: true,
+    // File links work for 10 minutes; a refresh brings fresh ones and anything the sender added.
+    refetchInterval: 5 * 60_000,
   });
 }
 
@@ -94,8 +96,9 @@ function storeTicket(queryClient: QueryClient, ref: string, ticket: StaffTicket)
 }
 
 /**
- * A reply, emailed to the sender, or an internal note, which only staff see. A reply without a status
- * leaves the ticket waiting on them; a note without one leaves it as it is.
+ * A reply, emailed to the sender, or an internal note, which only staff see, either with files the staff
+ * member uploaded. A reply without a status leaves the ticket waiting on them; a note without one leaves
+ * it as it is.
  */
 export function useReplyToTicket(ref: string) {
   const queryClient = useQueryClient();

@@ -65,8 +65,8 @@ export function useStepSave(vehicle: HostVehicle, step: number) {
   const go = (target: StepTarget) => {
     const saved = { saved: true } satisfies StepNavigationState;
     if (target === 'exit') {
-      toast('Saved', { description: 'Pick up where you left off from your Host home.' });
-      navigate('/host', { state: saved });
+      toast('Saved', { description: 'Pick up where you left off from My vehicles.' });
+      navigate('/host/vehicles', { state: saved });
     } else if (target === 'calendar') {
       navigate(`${vehiclePath(vehicle.id)}/calendar`, { state: saved });
     } else if (target === 'overview') {

@@ -221,7 +221,7 @@ function StaffSection() {
                   ) : (
                     <Switch
                       label="Can issue refunds"
-                      description="Refund Guests, see payments and payouts, and waive Host fees."
+                      description="Refund Guests, and see payments, refunds and payouts."
                       aria-label={`${staffName(member)} can issue refunds`}
                       checked={
                         refunds.isPending && refunds.variables.id === member.id

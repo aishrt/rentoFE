@@ -15,12 +15,13 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostProfile } from '@/features/host/host-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostMoreLinks, HostShell } from '@/features/host/host-shell';
 import { HostTodoList } from '@/features/host/todo-list';
 import { useCheckoutReadiness } from '@/features/booking/booking-api';
 import { IdentityCheck } from '@/features/booking/identity-check';
 import { CurrentTrips } from '@/features/handover/current-trips';
-import { MyVehicles } from '@/features/host/my-vehicles';
+import { VehiclesSummary } from '@/features/host/my-vehicles';
 
 type HostStatus = NonNullable<SessionUser['hostStatus']>;
 
@@ -209,39 +210,42 @@ function HostHome({ user }: { user: SessionUser }) {
   if (!status) return <Proposition />;
 
   return (
-    <div className="grid gap-8">
-      <HostSubNav />
-      <HostPageHeader
-        eyebrow="Hosting"
-        title={`Kia ora ${user.firstName}`}
-        description={
-          status === 'APPROVED' ? (
-            <span className="inline-flex flex-wrap items-center gap-2">
-              <Badge variant="primary">
-                <BadgeCheck aria-hidden="true" />
-                Approved Host
-              </Badge>
-              Your cars, their listings and calendars.
-            </span>
-          ) : (
-            'Your cars, their listings and calendars.'
-          )
-        }
-      />
-      <ApplicationStatus status={status} />
-      {/* Trips under way sit at the top, from check-in to check-out (plan §12.6), even while suspended. */}
-      {(status === 'APPROVED' || status === 'SUSPENDED') && <CurrentTrips role="host" />}
-      {(status === 'APPLIED' || status === 'APPROVED') && <HostIdentity />}
-      {status === 'APPROVED' && <HostTodoList />}
-      <MyVehicles canAdd={status === 'APPLIED' || status === 'APPROVED'} />
-    </div>
+    <HostShell>
+      <div className="grid gap-8">
+        <HostPageHeader
+          eyebrow="Today"
+          title={`Kia ora ${user.firstName}`}
+          description={
+            status === 'APPROVED' ? (
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <Badge variant="primary">
+                  <BadgeCheck aria-hidden="true" />
+                  Approved Host
+                </Badge>
+                Trips under way, what needs doing, and your cars.
+              </span>
+            ) : (
+              'Where your application stands, and your cars.'
+            )
+          }
+        />
+        {/* On a phone, the places the tab bar has no room for. */}
+        <HostMoreLinks />
+        <ApplicationStatus status={status} />
+        {/* Trips under way sit at the top, from check-in to check-out (plan §12.6), even while suspended. */}
+        {(status === 'APPROVED' || status === 'SUSPENDED') && <CurrentTrips role="host" />}
+        {(status === 'APPLIED' || status === 'APPROVED') && <HostIdentity />}
+        {status === 'APPROVED' && <HostTodoList />}
+        <VehiclesSummary canAdd={status === 'APPLIED' || status === 'APPROVED'} />
+      </div>
+    </HostShell>
   );
 }
 
 /**
- * The Host's home (spec §9), their Today: where their application stands, the trips under way, the to-do list,
- * and My Vehicles with each car's status and what's left. Someone who hasn't applied sees why to host and where
- * to start.
+ * The Host's home (spec §9), their Today (plan §12.6): where their application stands, the trips under way at
+ * the top, the to-do list, and their cars at a glance, with My Vehicles a tap away. Someone who hasn't applied
+ * sees why to host and where to start, without the Host area's navigation.
  */
 export function HostHomePage() {
   return (
