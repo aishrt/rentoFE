@@ -1,4 +1,4 @@
-import { CarFront, CircleCheck, Clock, Flag, Gauge, TriangleAlert } from 'lucide-react';
+import { CarFront, CircleCheck, Clock, Flag, Gauge, Trash2, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ConditionReport, Handover, InspectionStage } from '@/api/types';
@@ -30,9 +30,13 @@ import {
   useHandover,
   type HandoverState,
 } from '@/features/handover/handover-api';
-import { PhotoCapture } from '@/features/handover/photo-capture';
+import { PhotoCapture, PhotoStatusBadge } from '@/features/handover/photo-capture';
 import { PhotoDateNote } from '@/features/handover/photo-date-note';
-import { photoInput, useInspectionPhotos } from '@/features/handover/use-inspection-photos';
+import {
+  photoInput,
+  useForgetRecordedPhotos,
+  useInspectionPhotos,
+} from '@/features/handover/use-inspection-photos';
 import { useReportIncident } from '@/features/incidents/incidents-api';
 
 const WHO: Record<ConditionReport['submittedBy'], string> = {
@@ -294,7 +298,8 @@ function DamageFlaggedContent({
 
 function FlagDamageDialogContent({ handover }: { handover: Handover }) {
   const flag = useFlagDamage(handover.ref);
-  const store = useInspectionPhotos(handover.ref, 'CHECK_OUT');
+  // Kept apart from the check-out's own photos, so only what's shown here is sent.
+  const store = useInspectionPhotos(handover.ref, 'FLAGGED_DAMAGE');
   const [pins, setPins] = useState<EditablePin[]>([]);
   const [note, setNote] = useState('');
   const [flagged, setFlagged] = useState(false);
@@ -339,10 +344,41 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
             (pin) => ({ ...pin, isNew: pin.newDamage }),
           )}
         />
+        {damagePhotos.length > 0 && (
+          <div className="grid gap-2">
+            <p className="text-sm text-ink">
+              {damagePhotos.length === 1
+                ? 'This photo is sent with the damage.'
+                : `These ${damagePhotos.length} photos are sent with the damage.`}{' '}
+              Remove any you don’t want to send.
+            </p>
+            <ul aria-label="Photos to send" className="flex flex-wrap gap-3">
+              {damagePhotos.map((photo, index) => (
+                <li key={photo.id} className="grid w-32 gap-1.5">
+                  <img
+                    src={photo.previewUrl}
+                    alt={`Damage photo ${index + 1}`}
+                    className="aspect-4/3 rounded-inner object-cover"
+                  />
+                  <PhotoStatusBadge photo={photo} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-self-start text-danger"
+                    aria-label={`Remove damage photo ${index + 1}`}
+                    onClick={() => void store.remove(photo.id)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <PhotoCapture
           angle="DAMAGE"
           position={{ index: damagePhotos.length + 1, total: damagePhotos.length + 1 }}
-          photo={damagePhotos.at(-1)}
           onTake={(file) => store.add('DAMAGE', file)}
         />
         <Field label="What happened? (optional)">
@@ -373,6 +409,7 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
 
 function HandoverView({ bookingRef }: { bookingRef: string }) {
   const handover = useHandover(bookingRef);
+  useForgetRecordedPhotos(handover.data);
   const [flagging, setFlagging] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -425,6 +462,13 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
             {data.actions.checkIn
               ? 'Ready to go? Do the check-in together before driving away.'
               : 'Bringing the car back? Do the check-out together when you hand it over.'}
+            {data.actions.checkOut && !data.checkIn && (
+              // Support marked the trip as started without a check-in (plan §8.2).
+              <span className="mt-1 block text-sm text-muted">
+                There’s no check-in record to compare with, so the check-out photos and readings are the
+                record of how the car came back.
+              </span>
+            )}
           </p>
           <Button asChild>
             <Link to={`${base}/${data.actions.checkIn ? 'check-in' : 'check-out'}`}>
@@ -434,7 +478,7 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
         </Card>
       )}
 
-      {!data.checkIn && !data.checkOut && !data.actions.checkIn && (
+      {!data.checkIn && !data.checkOut && !data.actions.checkIn && !data.actions.checkOut && (
         <EmptyState
           className="mx-auto py-6"
           titleAs="h2"

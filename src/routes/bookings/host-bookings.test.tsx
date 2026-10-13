@@ -29,7 +29,8 @@ function hostRequest(overrides: Partial<Booking> = {}): Booking {
     requestExpiresAt: new Date(Date.now() + 23 * HOUR + 60_000).toISOString(),
     host: { ...base.host, phone: undefined },
     payment: { status: 'AUTHORISED' },
-    payout: { hostPayoutCents: 80_000, platformFeeCents: 12_000 },
+    // The fixture's $828 rental and $20 delivery at 20 % commission: $678.40 to the Host.
+    payout: { hostPayoutCents: 67_840, commissionCents: 16_960, commissionGstCents: 2_212 },
     actions: { ...NO_ACTIONS, accept: true, decline: true },
     ...overrides,
   });
@@ -65,7 +66,7 @@ describe('HostBookingsPage', () => {
     status: 'PENDING',
     instantBook: false,
     otherParty: { firstName: 'Kiri' },
-    amountCents: 80_000,
+    amountCents: 67_840,
     requestExpiresAt: new Date(Date.now() + 23 * HOUR + 60_000).toISOString(),
   });
 
@@ -81,7 +82,7 @@ describe('HostBookingsPage', () => {
     );
     expect(item.getByText('Request to answer')).toBeInTheDocument();
     expect(item.getByText('23 h left to answer')).toBeInTheDocument();
-    expect(item.getByText('You’d earn')).toHaveTextContent('You’d earn NZ$800');
+    expect(item.getByText('You’d earn')).toHaveTextContent('You’d earn NZ$678.40');
     expect(item.getByRole('link')).toHaveAttribute('href', `/host/bookings/${REF}`);
     const hosting = within(screen.getByRole('navigation', { name: 'Hosting' }));
     expect(hosting.getByRole('link', { name: 'Bookings' })).toHaveAttribute('aria-current', 'page');
@@ -211,8 +212,11 @@ describe('HostBookingPage', () => {
     ).toBeInTheDocument();
 
     const earnings = within(screen.getByRole('region', { name: 'What you’d earn' }));
-    expect(earnings.getByText('Your payout').nextElementSibling).toHaveTextContent('NZ$800');
-    expect(earnings.getByText('Platform commission').nextElementSibling).toHaveTextContent('$120');
+    expect(earnings.getByText('Your payout').nextElementSibling).toHaveTextContent('NZ$678.40');
+    // The commission on the rental and delivery only, not the Guest's service fee (plan §8.1, item 22).
+    expect(earnings.getByText('Platform commission').nextElementSibling).toHaveTextContent(
+      '$169.60incl. $22.12 GST',
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Accept request' }));
 
@@ -295,13 +299,14 @@ describe('HostBookingPage', () => {
       status: 'COMPLETED',
       actions: NO_ACTIONS,
       payout: {
-        hostPayoutCents: 80_000,
-        platformFeeCents: 12_000,
+        hostPayoutCents: 67_840,
+        commissionCents: 16_960,
+        commissionGstCents: 2_212,
         status: 'PAID',
         scheduledFor: '2026-10-09T01:00:00.000Z',
         paidAt: '2026-10-09T01:00:00.000Z',
         expectedInBankBy: '2026-10-13T01:00:00.000Z',
-        paidCents: 80_000,
+        paidCents: 67_840,
       },
       extraCharges: [
         {
@@ -347,15 +352,23 @@ describe('HostBookingPage', () => {
       status: 'COMPLETED',
       actions: NO_ACTIONS,
       payout: {
-        hostPayoutCents: 80_000,
-        platformFeeCents: 12_000,
+        hostPayoutCents: 67_840,
+        commissionCents: 16_960,
+        commissionGstCents: 2_212,
         status: 'PAID',
         scheduledFor: '2026-10-09T01:00:00.000Z',
         paidAt: '2026-10-09T01:00:00.000Z',
-        paidCents: 75_000,
+        paidCents: 67_840 - 4_000 - 400,
         refunds: [
-          { amountCents: 5_000, at: '2026-10-10T01:00:00.000Z', fundedBy: 'HOST' },
+          { amountCents: 5_000, at: '2026-10-10T01:00:00.000Z', fundedBy: 'HOST', hostCents: 4_000 },
           { amountCents: 2_000, at: '2026-10-11T01:00:00.000Z', fundedBy: 'PLATFORM' },
+          {
+            amountCents: 500,
+            at: '2026-10-12T01:00:00.000Z',
+            fundedBy: 'HOST',
+            hostCents: 400,
+            extraCharge: true,
+          },
         ],
       },
     });
@@ -367,11 +380,15 @@ describe('HostBookingPage', () => {
     renderWithRouter(routes, `/host/bookings/${REF}`);
 
     const earnings = within(await screen.findByRole('region', { name: 'What you earn' }));
-    const yours = earnings.getByText('Funded by you: it comes off your payout').closest('div')!;
+    // The Host pays their share of a refund they fund; Rento Vroom covers its commission (plan §8.1, item 15).
+    const yours = earnings.getByText('Funded by you: your share, $40, comes off your payout').closest('div')!;
     expect(yours).toHaveTextContent(/Refund to Kiri, .*10 Oct/);
     expect(yours).toHaveTextContent('$50');
     expect(earnings.getByText('Funded by Rento Vroom').closest('div')).toHaveTextContent('$20');
-    expect(earnings.getByText('Paid to you so far').nextElementSibling).toHaveTextContent('$750');
+    // An extra charge's refund shows too.
+    const charge = earnings.getByText('Funded by you: your share, $4, comes off your payout').closest('div')!;
+    expect(charge).toHaveTextContent(/Refund to Kiri of an extra charge, .*12 Oct/);
+    expect(earnings.getByText('Paid to you so far').nextElementSibling).toHaveTextContent('$634.40');
   });
 
   it('records an acceptance while the Guest’s identity check is still in review', async () => {

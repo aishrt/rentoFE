@@ -20,8 +20,10 @@ export const verificationsQueryKey = ['admin', 'verifications'] as const;
 export const adminIncidentsQueryKey = ['admin', 'incidents'] as const;
 const adminIncidentListsQueryKey = [...adminIncidentsQueryKey, 'list'] as const;
 /** No status: every case still open (Open, Investigating and Waiting on them), as the API does. */
-export const adminIncidentListQueryKey = (status?: IncidentStatus) =>
-  [...adminIncidentListsQueryKey, status ?? 'ALL_OPEN'] as const;
+export const adminIncidentListQueryKey = (status?: IncidentStatus, page = 1) =>
+  [...adminIncidentListsQueryKey, status ?? 'ALL_OPEN', page] as const;
+/** The API's page size for cases. */
+export const INCIDENTS_PAGE_SIZE = 50;
 export const adminIncidentQueryKey = (ref: string) => [...adminIncidentsQueryKey, 'case', ref] as const;
 export const incidentAssigneesQueryKey = [...adminIncidentsQueryKey, 'assignees'] as const;
 
@@ -104,13 +106,20 @@ export async function fetchLicenceNumber(userId: string): Promise<string> {
     .number;
 }
 
-/** Cases with one status, or every open one; the most recently updated first. */
-export function useAdminIncidents(status?: IncidentStatus) {
+/** Cases with one status, or every open one; the most recently updated first, a page at a time. */
+export function useAdminIncidents(status?: IncidentStatus, page = 1) {
   return useQuery({
-    queryKey: adminIncidentListQueryKey(status),
+    queryKey: adminIncidentListQueryKey(status, page),
     queryFn: ({ signal }) =>
-      unwrap(client.GET('/admin/incidents', { params: { query: status ? { status } : {} }, signal })),
-    select: (data) => data.incidents,
+      unwrap(
+        client.GET('/admin/incidents', {
+          params: { query: { ...(status && { status }), ...(page > 1 && { page }) } },
+          signal,
+        }),
+      ),
+    // Another page of the same tab shows the last one meanwhile; another tab shows it's loading.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[3] === (status ?? 'ALL_OPEN') ? previous : undefined,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

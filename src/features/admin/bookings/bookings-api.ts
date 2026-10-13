@@ -170,6 +170,30 @@ export function useAdminCancellationPreview(ref: string, reason: AdminCancelRequ
   });
 }
 
+/**
+ * Needs the refunds permission: an extra charge that hasn't been paid is taken off what the Guest owes, its
+ * pay link stops taking payments, and the Guest is told (plan §8.1, item 11). The reason goes to the audit log.
+ */
+export async function cancelChargeRequest(
+  ref: string,
+  chargeId: string,
+  reason: string,
+): Promise<AdminBookingDetail> {
+  try {
+    return await unwrap(
+      client.POST('/admin/bookings/{id}/extra-charges/{chargeId}/cancel', {
+        params: { path: { id: ref, chargeId } },
+        body: { reason },
+      }),
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403 && error.code !== 'OWN_RECORD') {
+      throw new ApiError(403, error.code, REFUNDS_PERMISSION_MESSAGE);
+    }
+    throw error;
+  }
+}
+
 // The handover -----------------------------------------------------------------------------------------------
 
 export const staffHandoverQueryKey = (ref: string) => ['admin', 'bookings', 'handover', ref] as const;
@@ -251,14 +275,16 @@ export const REFUNDS_PERMISSION_MESSAGE =
 /**
  * The message a staff action shows for an API error, or null when it belongs next to a form field. The API's
  * messages are written for people (e.g. "Only a confirmed booking can be cancelled here."), so they show as
- * they are; a 403 on a money action means the refunds permission is missing.
+ * they are; a plain 403 on a money action means the refunds permission is missing, while 403 OWN_RECORD says
+ * it's the staff member's own booking or car, for another team member (plan §6.2).
  */
 export function actionErrorMessage(
   error: unknown,
   options: { fields?: readonly string[]; needsRefunds?: boolean } = {},
 ): string | null {
   if (error instanceof ApiError) {
-    if (error.status === 403) return options.needsRefunds ? REFUNDS_PERMISSION_MESSAGE : error.message;
+    if (error.status === 403)
+      return options.needsRefunds && error.code === 'FORBIDDEN' ? REFUNDS_PERMISSION_MESSAGE : error.message;
     if (error.fields && Object.keys(error.fields).some((field) => options.fields?.includes(field)))
       return null;
     if (error.status > 0 && error.status < 500) return error.message;

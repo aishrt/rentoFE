@@ -19,6 +19,8 @@ export function PersonAvatar({
         alt=""
         width={40}
         height={40}
+        // Avatars are small and often far down a page or list (plan §12.5).
+        loading="lazy"
         className={cn('size-10 shrink-0 rounded-full bg-canvas object-cover', className)}
       />
     );

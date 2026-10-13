@@ -138,10 +138,13 @@ export async function setRefundsPermissionRequest(input: {
 }
 
 // These messages come from the API and are already written for people, e.g. support staff trying to
-// change a staff account (403), or a closure that's blocked by a trip under way (409 CLOSURE_BLOCKED).
+// change a staff account (403), or their own record (403 OWN_RECORD), or a closure that's blocked by a trip
+// under way (409 CLOSURE_BLOCKED).
 const USER_ERROR_CODES = [
   'FORBIDDEN',
+  'OWN_RECORD',
   'SELF',
+  'ACCOUNT_CLOSED',
   'CLOSURE_BLOCKED',
   'ALREADY_CLOSED',
   'ALREADY_SUSPENDED',

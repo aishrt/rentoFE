@@ -144,6 +144,22 @@ function ReceiptDocument({ receipt }: { receipt: Receipt }) {
                   Paid {formatNzNumericDate(charge.paidAt)} with {charge.paidWith}. GST included (
                   {receipt.gstRatePct}%) {formatNzdCents(charge.gstCents)}.
                 </dd>
+                {charge.refunds?.map((refund, refundIndex) => (
+                  <dd
+                    key={refundIndex}
+                    className="col-span-2 flex items-baseline justify-between gap-6 text-muted"
+                  >
+                    <span>
+                      Refund, {formatNzNumericDate(refund.at)}
+                      {refund.status === 'PENDING'
+                        ? ' (on its way)'
+                        : refund.status === 'FAILED'
+                          ? ' (failed)'
+                          : ''}
+                    </span>
+                    <span className="tabular-nums">{formatNzdCents(-refund.amountCents)}</span>
+                  </dd>
+                ))}
               </div>
             ))}
           </dl>

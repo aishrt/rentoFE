@@ -10,8 +10,10 @@ import type { HostStatus, VehicleStatus } from './listing-labels';
  */
 
 // Under ['admin'], so signing out drops them from memory with the rest of the staff data.
-export const hostApplicationsQueryKey = (status?: HostStatus) =>
-  status ? (['admin', 'host-applications', status] as const) : (['admin', 'host-applications'] as const);
+export const hostApplicationsQueryKey = (status?: HostStatus, page = 1) =>
+  status
+    ? (['admin', 'host-applications', status, page] as const)
+    : (['admin', 'host-applications'] as const);
 export const reviewQueueQueryKey = ['admin', 'review-queue'] as const;
 export const adminVehicleQueryKey = (id: string) => ['admin', 'vehicle', id] as const;
 export const adminCalendarQueryKey = (id: string, from?: string, to?: string) =>
@@ -19,13 +21,21 @@ export const adminCalendarQueryKey = (id: string, from?: string, to?: string) =>
     ? (['admin', 'vehicle-calendar', id, from, to] as const)
     : (['admin', 'vehicle-calendar', id] as const);
 
-/** Applications with one status, oldest first so nobody waits longest. */
-export function useHostApplications(status: HostStatus) {
+/** The API's page size for Host applications. */
+export const HOST_APPLICATIONS_PAGE_SIZE = 25;
+
+/**
+ * A page of applications with one status: those waiting oldest first, so nobody waits longest; those
+ * decided newest first.
+ */
+export function useHostApplications(status: HostStatus, page = 1) {
   return useQuery({
-    queryKey: hostApplicationsQueryKey(status),
+    queryKey: hostApplicationsQueryKey(status, page),
     queryFn: ({ signal }) =>
-      unwrap(client.GET('/admin/host-applications', { params: { query: { status } }, signal })),
-    select: (data) => data.applications,
+      unwrap(client.GET('/admin/host-applications', { params: { query: { status, page } }, signal })),
+    // Another page of the same tab shows the last one meanwhile; another tab shows it's loading.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[2] === status ? previous : undefined,
     staleTime: 30_000,
     // Staff move between the queue and email; show what changed meanwhile when they come back.
     refetchOnWindowFocus: true,

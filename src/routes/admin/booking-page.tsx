@@ -105,7 +105,7 @@ function AdminBooking({ bookingRef }: { bookingRef: string }) {
           <HandoverCard booking={booking} bookingRef={bookingRef} />
           <PaymentsCard payments={detail.data.payments} refundableCents={detail.data.refundableCents} />
           <PayoutsCard payouts={detail.data.payouts} />
-          <ExtraChargesCard charges={detail.data.extraCharges} />
+          <ExtraChargesCard charges={detail.data.extraCharges} queryRef={bookingRef} />
         </div>
         <div className="grid min-w-0 gap-6">
           <PartiesCard detail={detail.data} />

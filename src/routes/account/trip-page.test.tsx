@@ -202,6 +202,78 @@ describe('TripPage', () => {
     );
   });
 
+  it('says why an expired booking ended, not that the Host didn’t answer an Instant Book', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        instantBook: true,
+        holdExpiresAt: undefined,
+        payment: { status: 'CANCELLED' },
+        expiry: { reason: 'PAYMENT_TIMEOUT', paymentReturned: false },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(
+      await screen.findByText(
+        'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/didn’t answer/)).not.toBeInTheDocument();
+  });
+
+  it('says a payment that went through after the booking ended is refunded in full', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        holdExpiresAt: undefined,
+        payment: { status: 'SUCCEEDED' },
+        expiry: {
+          reason: 'DATES_TAKEN',
+          paymentReturned: true,
+          refundCents: 33_870,
+          refundStatus: 'PENDING',
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    const status = (await screen.findByText('This booking expired')).closest(
+      '[role="status"]',
+    ) as HTMLElement;
+    expect(status).toHaveTextContent(
+      'Your payment came through after the dates were booked by someone else, so the booking wasn’t made. Your payment of NZ$338.70 is being refunded in full. It usually reaches your account within 5–10 working days.',
+    );
+    expect(status).not.toHaveTextContent(/Nothing was charged/);
+  });
+
+  it('says a cancellation’s refund that didn’t go through is being sorted', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'CANCELLED',
+        payment: { status: 'SUCCEEDED' },
+        cancellation: {
+          at: new Date().toISOString(),
+          by: 'HOST',
+          reason: 'HOST_CANCELLED',
+          refundCents: 105_080,
+          refundStatus: 'FAILED',
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(
+      await screen.findByText(
+        /Your full refund of \$1,050\.80 didn’t go through to your card\. Our team is sorting it/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Refunded in full/)).not.toBeInTheDocument();
+  });
+
   it('shows the refund before cancelling, then cancels with the reason', async () => {
     const cancelled = confirmedBooking({
       status: 'CANCELLED',

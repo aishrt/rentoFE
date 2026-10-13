@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Inbox, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { HostApplication } from '@/api/types';
 import { PageMeta } from '@/components/layout/page-meta';
@@ -16,8 +16,10 @@ import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { toast } from '@/components/ui/toast';
 import { DecisionDialog } from '@/features/admin/listings/decision-dialog';
 import { HostApplicationCard } from '@/features/admin/listings/host-application-card';
+import { pageFrom } from '@/features/admin/finance/finance-api';
 import {
   decideHostApplicationRequest,
+  HOST_APPLICATIONS_PAGE_SIZE,
   hostApplicationsQueryKey,
   isApiError,
   reviewQueueQueryKey,
@@ -25,6 +27,7 @@ import {
 } from '@/features/admin/listings/listing-api';
 import { applicantName } from '@/features/admin/listings/listing-format';
 import type { HostStatus } from '@/features/admin/listings/listing-labels';
+import { Pagination } from '@/features/admin/ops/admin-table';
 import { formatNumber } from '@/lib/format';
 
 const TAB_PREFIX = 'host-applications';
@@ -46,8 +49,22 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
     title: 'No applications waiting',
     description: 'New applications to host appear here, oldest first.',
   },
-  APPROVED: { title: 'No approved Hosts yet', description: 'Hosts you approve are listed here.' },
-  REJECTED: { title: 'No rejected applications', description: 'Applications you reject are listed here.' },
+  APPROVED: {
+    title: 'No approved Hosts yet',
+    description: 'Hosts you approve are listed here, newest first.',
+  },
+  REJECTED: {
+    title: 'No rejected applications',
+    description: 'Applications you reject are listed here, newest first.',
+  },
+};
+
+/** The address with another page; page 1 isn't written. */
+const withPage = (current: URLSearchParams, page: number) => {
+  const params = new URLSearchParams(current);
+  if (page > 1) params.set('page', String(page));
+  else params.delete('page');
+  return params;
 };
 
 type Decision = { application: HostApplication; kind: 'approve' | 'reject' };
@@ -104,13 +121,27 @@ export function AdminHostApplicationsPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = tabFrom(searchParams.get('status'));
-  const applications = useHostApplications(tab);
+  const page = pageFrom(searchParams.get('page'));
+  const applications = useHostApplications(tab, page);
+  const list = applications.data?.applications;
   // The decision is kept while its dialog closes, so the dialog's text doesn't change as it animates out.
   const [decision, setDecision] = useState<Decision | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const changeTab = (next: Tab) =>
     setSearchParams(next === 'APPLIED' ? {} : { status: next.toLowerCase() }, { replace: true });
+  const changePage = (next: number) =>
+    setSearchParams((current) => withPage(current, next), { replace: true });
+
+  // Deciding the last applications on a later page empties it: go back to the last page there is.
+  const lastPage = Math.max(1, Math.ceil((applications.data?.total ?? 0) / HOST_APPLICATIONS_PAGE_SIZE));
+  const pastTheEnd = list?.length === 0 && !applications.isPlaceholderData && page > lastPage;
+  useEffect(() => {
+    if (pastTheEnd) setSearchParams((current) => withPage(current, lastPage), { replace: true });
+  }, [pastTheEnd, lastPage, setSearchParams]);
+  // While another page loads, an empty one shows grey cards rather than "No applications".
+  const loading =
+    applications.isPending || pastTheEnd || (applications.isPlaceholderData && list?.length === 0);
 
   const start = (application: HostApplication, kind: Decision['kind']) => {
     setDecision({ application, kind });
@@ -137,11 +168,13 @@ export function AdminHostApplicationsPage() {
           : "We've emailed them your note.",
     });
     // It leaves this tab straight away; every tab and the listing queue's Host statuses then refresh.
-    queryClient.setQueryData<{ applications: HostApplication[] }>(
-      hostApplicationsQueryKey(tab),
+    queryClient.setQueryData<{ applications: HostApplication[]; total: number; page: number }>(
+      hostApplicationsQueryKey(tab, page),
       (previous) =>
         previous && {
+          ...previous,
           applications: previous.applications.filter((item) => item.userId !== application.userId),
+          total: Math.max(0, previous.total - 1),
         },
     );
     void queryClient.invalidateQueries({ queryKey: hostApplicationsQueryKey() });
@@ -182,8 +215,8 @@ export function AdminHostApplicationsPage() {
         {applications.data && (
           <div className="flex items-center gap-2 text-sm text-muted">
             <span aria-live="polite">
-              {formatNumber(applications.data.length)}{' '}
-              {applications.data.length === 1 ? 'application' : 'applications'}
+              {formatNumber(applications.data.total)}{' '}
+              {applications.data.total === 1 ? 'application' : 'applications'}
             </span>
             <IconButton
               label="Refresh the list"
@@ -205,7 +238,7 @@ export function AdminHostApplicationsPage() {
         aria-labelledby={tabId(TAB_PREFIX, tab)}
         className="mt-6"
       >
-        {applications.isPending && (
+        {loading && (
           <div aria-busy="true" className="grid gap-4">
             <span className="sr-only">Loading applications</span>
             {Array.from({ length: 3 }, (_, index) => (
@@ -234,7 +267,7 @@ export function AdminHostApplicationsPage() {
           </Alert>
         )}
 
-        {applications.data?.length === 0 && (
+        {list?.length === 0 && !loading && (
           <EmptyState
             titleAs="h2"
             className="mx-auto py-12"
@@ -248,23 +281,34 @@ export function AdminHostApplicationsPage() {
           />
         )}
 
-        {applications.data && applications.data.length > 0 && (
-          <ul
-            aria-label={`${TABS.find((item) => item.value === tab)?.label} applications`}
-            className="grid gap-4"
-          >
-            {applications.data.map((application, index) => (
-              <HostApplicationCard
-                key={application.userId}
-                application={application}
-                className="stagger-in"
-                style={staggerIndex(index)}
-                // Approved Hosts are managed from Users (plan §12.6); a rejected applicant can be reconsidered.
-                onApprove={tab === 'APPROVED' ? undefined : () => start(application, 'approve')}
-                onReject={tab === 'APPLIED' ? () => start(application, 'reject') : undefined}
+        {list && list.length > 0 && (
+          <div aria-busy={applications.isPlaceholderData}>
+            <ul
+              aria-label={`${TABS.find((item) => item.value === tab)?.label} applications`}
+              className="grid gap-4"
+            >
+              {list.map((application, index) => (
+                <HostApplicationCard
+                  key={application.userId}
+                  application={application}
+                  className="stagger-in"
+                  style={staggerIndex(index)}
+                  // Approved Hosts are managed from Users (plan §12.6); a rejected applicant can be reconsidered.
+                  onApprove={tab === 'APPROVED' ? undefined : () => start(application, 'approve')}
+                  onReject={tab === 'APPLIED' ? () => start(application, 'reject') : undefined}
+                />
+              ))}
+            </ul>
+            {applications.data && applications.data.total > HOST_APPLICATIONS_PAGE_SIZE && (
+              <Pagination
+                page={applications.data.page}
+                total={applications.data.total}
+                pageSize={HOST_APPLICATIONS_PAGE_SIZE}
+                onChange={changePage}
+                noun="applications"
               />
-            ))}
-          </ul>
+            )}
+          </div>
         )}
       </div>
 

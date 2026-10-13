@@ -6,6 +6,7 @@ import {
   CalendarX,
   CircleCheck,
   CirclePlus,
+  Coins,
   HandCoins,
   Landmark,
   Percent,
@@ -83,6 +84,13 @@ export const REPORT_GROUPS: ReportGroup[] = [
         value: (report) => report.money.grossBookingsCents,
         format: formatNzd,
         hint: 'Paid for trips starting on these days, GST included',
+      },
+      {
+        label: 'Booking revenue',
+        icon: Coins,
+        value: (report) => report.money.bookingRevenueCents,
+        format: formatNzd,
+        hint: 'Trips, extra charges and cancellation fees kept, less refunds of them: as on the overview',
       },
       {
         label: 'Refunds',

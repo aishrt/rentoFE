@@ -70,6 +70,11 @@ describe('HostProfilePage', () => {
       '/account/settings',
     );
     expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
+    // The Host's reviews keep the Host dashboard's frame.
+    expect(screen.getByRole('link', { name: 'Your reviews' })).toHaveAttribute(
+      'href',
+      '/account/reviews?as=host',
+    );
   });
 
   it('saves the bio and GST number', async () => {

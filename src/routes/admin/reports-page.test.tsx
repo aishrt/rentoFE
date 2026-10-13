@@ -40,6 +40,7 @@ const report = (overrides: Partial<PlatformReport['bookings']> = {}): PlatformRe
   },
   money: {
     grossBookingsCents: 1234550,
+    bookingRevenueCents: 1251950,
     refundsCents: 45000,
     platformFeesCents: 185000,
     hostPayoutsPaidCents: 902500,
@@ -96,6 +97,8 @@ describe('AdminReportsPage', () => {
     const gross = await figure('Gross bookings');
     expect(gross.getByText('$12,345.50')).toBeInTheDocument();
     expect(gross.getByText('Paid for trips starting on these days, GST included')).toBeInTheDocument();
+    // The overview's booking revenue, to compare with it.
+    expect((await figure('Booking revenue')).getByText('$12,519.50')).toBeInTheDocument();
     expect((await figure('Paid to Hosts')).getByText('$9,025')).toBeInTheDocument();
     expect((await figure('GST collected')).getByText('$1,610.28')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'GST' })).toBeInTheDocument();

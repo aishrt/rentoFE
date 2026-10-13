@@ -12,7 +12,6 @@ export type Role = SessionUser['roles'][number];
 export type AgreementType = SessionUser['pendingAgreements'][number];
 export type LoginRequest = paths['/auth/login']['post']['requestBody']['content']['application/json'];
 export type SignupRequest = paths['/auth/signup']['post']['requestBody']['content']['application/json'];
-export type AdminOverview = Schemas['AdminOverview'];
 /** A staff member's authenticator app setup: a QR code and the key to type by hand. */
 export type MfaSetup = Schemas['MfaSetupResponse'];
 /** A staff member's two-factor sign-in: whether it's on, and their authenticator apps (up to two). */

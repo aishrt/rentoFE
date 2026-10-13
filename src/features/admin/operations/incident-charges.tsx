@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DollarSign, Receipt, Tag } from 'lucide-react';
+import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '@/api/client';
@@ -62,15 +63,25 @@ type ChargeValues = z.infer<typeof chargeSchema>;
 /** The message above the form for an API error; field errors show under their field. */
 function chargeErrorMessage(error: Error): string | null {
   if (!(error instanceof ApiError)) return error.message;
-  if (error.status === 403)
+  // A case about their own booking says so; any other refusal is the missing permission.
+  if (error.status === 403 && error.code !== 'OWN_RECORD')
     return 'You need the refunds permission to charge a Guest. An admin can give it to you.';
   if (error.fields) return null;
   return error.message;
 }
 
+/** A key for one charge: sent again with a repeated submit, so the API adds the charge once. */
+const newChargeKey = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 function ChargeForm({ incident }: { incident: Incident }) {
   const charge = useIncidentCharge(incident.caseRef);
   const defaults: ChargeValues = { type: defaultChargeType(incident.type), description: '', amount: '' };
+  // The same key until a charge goes through: a double click or a retry after a lost answer adds one charge.
+  const [chargeKey, setChargeKey] = useState(newChargeKey);
+  const limit = incident.chargeLimitCents;
   const {
     register,
     control,
@@ -84,14 +95,29 @@ function ChargeForm({ incident }: { incident: Incident }) {
   const onSubmit = handleSubmit(async ({ type, description, amount }) => {
     const amountCents = dollarsToCents(amount);
     if (amountCents === null || !isChargeType(type)) return;
+    // Within the protection plan's excess, on a damage, accident or theft case (plan §3).
+    if (limit !== undefined && amountCents > limit) {
+      setError(
+        'amount',
+        {
+          message:
+            limit > 0
+              ? `Up to ${formatNzd(limit)}, within the protection plan’s excess`
+              : 'Nothing more: the protection plan’s excess is charged already',
+        },
+        { shouldFocus: true },
+      );
+      return;
+    }
     try {
-      await charge.mutateAsync({ type, description, amountCents });
+      await charge.mutateAsync({ type, description, amountCents, idempotencyKey: chargeKey });
     } catch (error) {
       if (!(error instanceof ApiError) || !error.fields) return;
       if (error.fields.description) setError('description', { message: error.fields.description });
       if (error.fields.amountCents) setError('amount', { message: error.fields.amountCents });
       return;
     }
+    setChargeKey(newChargeKey());
     reset(defaults);
     toast(`${formatNzd(amountCents)} charge added`, {
       description: 'We’re charging the Guest’s saved card; the Host’s share is paid out to them.',
@@ -99,7 +125,7 @@ function ChargeForm({ incident }: { incident: Incident }) {
   });
 
   const serverError = charge.error ? chargeErrorMessage(charge.error) : null;
-  const valid = cents !== null && cents > 0 && cents <= CHARGE_MAX_CENTS;
+  const valid = cents !== null && cents > 0 && cents <= Math.min(CHARGE_MAX_CENTS, limit ?? CHARGE_MAX_CENTS);
 
   return (
     <form noValidate onSubmit={onSubmit} aria-label="Charge the Guest" className="grid gap-4">
@@ -135,7 +161,17 @@ function ChargeForm({ incident }: { incident: Incident }) {
         >
           <Input autoComplete="off" maxLength={DESCRIPTION_MAX} {...register('description')} />
         </Field>
-        <Field label="Amount (NZD)" error={errors.amount?.message}>
+        <Field
+          label="Amount (NZD)"
+          description={
+            limit !== undefined
+              ? limit > 0
+                ? `Up to ${formatNzd(limit)} more on this case, within the protection plan’s excess.`
+                : 'The protection plan’s excess is charged already: nothing more on this case.'
+              : undefined
+          }
+          error={errors.amount?.message}
+        >
           <Input
             inputMode="decimal"
             autoComplete="off"
@@ -186,6 +222,15 @@ export function IncidentCharges({ incident }: { incident: Incident }) {
         )}
 
         <div className="mt-5 border-t border-line pt-5">
+          {incident.protectionPlan && (
+            <p className="mb-4 text-sm text-ink/85">
+              The Guest booked {incident.protectionPlan.name}, with a{' '}
+              <span className="font-medium text-ink">{formatNzd(incident.protectionPlan.excessCents)}</span>{' '}
+              excess.
+              {incident.chargeLimitCents !== undefined &&
+                ' For damage, an accident or theft, the case’s charges stay within it.'}
+            </p>
+          )}
           {resolved ? (
             <>
               <p className="mb-4 text-sm text-muted">

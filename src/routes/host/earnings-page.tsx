@@ -127,9 +127,6 @@ function deductionLabel(deduction: HostPayout['deductions'][number]): string {
   return 'Other deduction';
 }
 
-/** Paid payouts shown before "Show all". */
-const PAID_SHOWN = 12;
-
 function PayoutRow({ payout }: { payout: HostPayout }) {
   // As on the payout email: the commission with the GST in it, for GST-registered Hosts' records.
   const commission =
@@ -357,7 +354,6 @@ function Earnings() {
   const sync = useSyncPayoutAccount();
   const [params, setParams] = useSearchParams();
   const synced = useRef(false);
-  const [allPaid, setAllPaid] = useState(false);
 
   // Back from Stripe's setup pages: read the account now rather than wait for Stripe's message.
   const returned = params.get('payouts');
@@ -397,16 +393,18 @@ function Earnings() {
       </Alert>
     );
   }
-  if (!earnings.data || !payouts.data) return <EarningsSkeleton />;
+  const first = payouts.data?.pages[0];
+  if (!earnings.data || !first) return <EarningsSkeleton />;
   const { summary } = earnings.data;
   const change =
     summary.previousMonthCents > 0
       ? Math.round(((summary.monthCents - summary.previousMonthCents) / summary.previousMonthCents) * 100)
       : null;
-  const upcoming = payouts.data.payouts.filter((payout) => payout.status !== 'PAID');
-  const paid = payouts.data.payouts.filter((payout) => payout.status === 'PAID');
-  const paidShown = allPaid ? paid : paid.slice(0, PAID_SHOWN);
-  const { feesOwedCents, refundsOwedCents } = payouts.data.account;
+  // Soonest first, as the API sends them; the paid ones a page at a time, newest first.
+  const all = payouts.data?.pages.flatMap((page) => page.payouts) ?? [];
+  const upcoming = all.filter((payout) => payout.status !== 'PAID');
+  const paid = all.filter((payout) => payout.status === 'PAID');
+  const { feesOwedCents, refundsOwedCents } = first.account;
   // What the Host owes, each kind on its own line, taken off their next payout (plan §8.1, items 10 and 15).
   const owed = [
     {
@@ -424,7 +422,7 @@ function Earnings() {
 
   return (
     <div className="grid gap-8">
-      <PayoutSetup account={payouts.data.account} />
+      <PayoutSetup account={first.account} />
 
       <section aria-label="Your earnings" className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Today" icon={CalendarDays} value={summary.todayCents} format={formatNzd} />
@@ -514,21 +512,21 @@ function Earnings() {
             <p className="mt-4 text-sm text-muted">Your paid payouts will show here.</p>
           ) : (
             <ul id="paid-payouts" className="divide-y divide-line/70">
-              {paidShown.map((payout) => (
+              {paid.map((payout) => (
                 <PayoutRow key={payout.id} payout={payout} />
               ))}
             </ul>
           )}
-          {paid.length > PAID_SHOWN && (
+          {payouts.hasNextPage && (
             <Button
               variant="ghost"
               size="sm"
               className="mt-2"
-              aria-expanded={allPaid}
               aria-controls="paid-payouts"
-              onClick={() => setAllPaid((shown) => !shown)}
+              loading={payouts.isFetchingNextPage}
+              onClick={() => void payouts.fetchNextPage()}
             >
-              {allPaid ? 'Show fewer' : `Show all ${paid.length}`}
+              Show more ({first.paidCount - paid.length} left)
             </Button>
           )}
         </Card>

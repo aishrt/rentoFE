@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ApiError, client, unwrap } from '@/api/client';
 import type { components } from '@/api/schema';
 import type { AdminPayment, AdminPayout, PlatformReport } from '@/api/types';
+import { MAX_PAGE } from '@/features/admin/ops/admin-table';
 import type { DateRange } from './date-range';
 
 /*
@@ -24,10 +25,10 @@ export const EXTRA_CHARGES_PAGE_SIZE = 25;
 /** The API refused: support staff without the permission, or an admin-only page. */
 export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;
 
-/** A page number from the address, 1 when missing or wrong. */
+/** A page number from the address, 1 when missing or wrong, and no further than the API lists. */
 export function pageFrom(value: string | null): number {
   const page = Number(value);
-  return Number.isInteger(page) && page > 1 ? page : 1;
+  return Number.isInteger(page) && page > 1 ? Math.min(page, MAX_PAGE) : 1;
 }
 
 // Payments --------------------------------------------------------------------------------------------------
@@ -41,6 +42,8 @@ export interface PaymentFilters {
   type?: AdminPayment['type'];
   /** Only with the "all" view: the others choose the payments themselves. */
   status?: AdminPayment['status'];
+  /** Only payments made on or after this NZ day, as 2026-10-07: the overview links to the last 30 days' failures. */
+  from?: string;
   page: number;
 }
 
@@ -58,6 +61,7 @@ export function useAdminPayments(filters: PaymentFilters) {
               view: filters.view,
               type: filters.type,
               status: filters.view === 'all' ? filters.status : undefined,
+              from: filters.from,
               page: filters.page,
             },
           },

@@ -63,7 +63,10 @@ function payouts(
   account: Partial<HostPayouts['account']> = {},
   extra: HostPayouts['payouts'] = [],
 ): HostPayouts {
+  const list = payoutList(extra);
   return {
+    paidCount: list.filter((payout) => payout.status === 'PAID').length,
+    payouts: list,
     account: {
       connected: false,
       payoutsEnabled: false,
@@ -72,47 +75,50 @@ function payouts(
       refundsOwedCents: 0,
       ...account,
     },
-    payouts: [
-      {
-        id: 'p1',
-        type: 'TRIP',
-        status: 'HELD',
-        holdReason: 'PAYOUT_SETUP',
-        amountCents: 21360,
-        grossCents: 26700,
-        commissionCents: 5340,
-        commissionGstCents: 697,
-        deductions: [],
-        scheduledFor: '2026-10-13T21:00:00.000Z',
-        booking: { ref: 'RV-7K2Q9M', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-12T21:00:00.000Z' },
-      },
-      {
-        id: 'p2',
-        type: 'TRIP',
-        status: 'PAID',
-        amountCents: 10000,
-        deductions: [
-          { type: 'HOST_CANCELLATION_FEE', amountCents: 2500 },
-          { type: 'HOST_FUNDED_REFUND', amountCents: 5000, bookingRef: 'RV-REF234' },
-        ],
-        reversedCents: 1500,
-        scheduledFor: '2026-09-13T21:00:00.000Z',
-        paidAt: '2026-09-13T21:05:00.000Z',
-        expectedInBankBy: '2026-09-17T21:05:00.000Z',
-        booking: { ref: 'RV-OLD234', vehicleTitle: '2021 Toyota Corolla', start: '2026-09-12T21:00:00.000Z' },
-      },
-      {
-        id: 'p3',
-        type: 'EXTRA_CHARGE',
-        status: 'FAILED',
-        amountCents: 2800,
-        deductions: [],
-        scheduledFor: '2026-10-14T21:00:00.000Z',
-        booking: { ref: 'RV-FAIL22', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-12T21:00:00.000Z' },
-      },
-      ...extra,
-    ],
   };
+}
+
+function payoutList(extra: HostPayouts['payouts']): HostPayouts['payouts'] {
+  return [
+    {
+      id: 'p1',
+      type: 'TRIP',
+      status: 'HELD',
+      holdReason: 'PAYOUT_SETUP',
+      amountCents: 21360,
+      grossCents: 26700,
+      commissionCents: 5340,
+      commissionGstCents: 697,
+      deductions: [],
+      scheduledFor: '2026-10-13T21:00:00.000Z',
+      booking: { ref: 'RV-7K2Q9M', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-12T21:00:00.000Z' },
+    },
+    {
+      id: 'p2',
+      type: 'TRIP',
+      status: 'PAID',
+      amountCents: 10000,
+      deductions: [
+        { type: 'HOST_CANCELLATION_FEE', amountCents: 2500 },
+        { type: 'HOST_FUNDED_REFUND', amountCents: 5000, bookingRef: 'RV-REF234' },
+      ],
+      reversedCents: 1500,
+      scheduledFor: '2026-09-13T21:00:00.000Z',
+      paidAt: '2026-09-13T21:05:00.000Z',
+      expectedInBankBy: '2026-09-17T21:05:00.000Z',
+      booking: { ref: 'RV-OLD234', vehicleTitle: '2021 Toyota Corolla', start: '2026-09-12T21:00:00.000Z' },
+    },
+    {
+      id: 'p3',
+      type: 'EXTRA_CHARGE',
+      status: 'FAILED',
+      amountCents: 2800,
+      deductions: [],
+      scheduledFor: '2026-10-14T21:00:00.000Z',
+      booking: { ref: 'RV-FAIL22', vehicleTitle: '2021 Toyota Corolla', start: '2026-10-12T21:00:00.000Z' },
+    },
+    ...extra,
+  ];
 }
 
 function mockEarnings(
@@ -252,7 +258,7 @@ describe('EarningsPage', () => {
     expect(screen.getByText('Fees owed').parentElement?.nextElementSibling).toHaveTextContent('−$25');
   });
 
-  it('shows the latest 12 paid payouts, and all of them on request', async () => {
+  it('shows the latest paid payouts, and more a page at a time on request', async () => {
     const older = Array.from({ length: 13 }, (_, index) => ({
       id: `old${index}`,
       type: 'TRIP' as const,
@@ -267,15 +273,32 @@ describe('EarningsPage', () => {
         start: '2026-07-31T21:00:00.000Z',
       },
     }));
-    mockEarnings({}, {}, older);
+    // The first page: those still to be sent, and 12 paid (the fixtures' one, then 11 of these).
+    const sent = mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: hostUser } };
+        case 'GET /host/earnings':
+          return { status: 200, body: earnings() };
+        case 'GET /host/payouts':
+          return request.query.get('cursor') === 'old10'
+            ? { status: 200, body: { ...payouts(), payouts: older.slice(11), paidCount: 14 } }
+            : {
+                status: 200,
+                body: { ...payouts({}, older.slice(0, 11)), paidCount: 14, nextCursor: 'old10' },
+              };
+        default:
+          return undefined;
+      }
+    });
     renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
 
-    // 14 paid in all: the one from the fixtures first, then 11 of these.
-    const more = await screen.findByRole('button', { name: 'Show all 14' });
+    const more = await screen.findByRole('button', { name: 'Show more (2 left)' });
     expect(screen.getAllByText('2019 Mazda 3')).toHaveLength(11);
     await userEvent.click(more);
-    expect(screen.getAllByText('2019 Mazda 3')).toHaveLength(13);
-    expect(screen.getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
+    await vi.waitFor(() => expect(screen.getAllByText('2019 Mazda 3')).toHaveLength(13));
+    expect(sent.some((request) => request.query.get('cursor') === 'old10')).toBe(true);
+    expect(screen.queryByRole('button', { name: /Show more/ })).not.toBeInTheDocument();
   });
 
   it('sends a Host without payout setup to Stripe', async () => {

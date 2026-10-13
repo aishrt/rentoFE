@@ -292,6 +292,79 @@ describe('AdminIncidentPage', () => {
     expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
   });
 
+  // A case support opened with the Host only: the Guest can't see it.
+  const hostOnly = (overrides: Partial<Incident> = {}) =>
+    incident({
+      reportedBy: 'SUPPORT',
+      audience: 'HOST',
+      events: [
+        {
+          id: '0',
+          action: 'OPENED',
+          by: 'SUPPORT',
+          byName: 'Mere',
+          note: 'The next guest found a scratch on the bumper.',
+          attachments: [],
+          visibility: 'HOST',
+          status: 'OPEN',
+          createdAt: '2026-10-05T20:00:00.000Z',
+        },
+      ],
+      ...overrides,
+    });
+
+  it('sends an update to whoever already sees the case, and asks before showing it to anyone else', async () => {
+    const sent: unknown[] = [];
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: hostOnly() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent.push(JSON.parse(String(init?.body)));
+        return { status: 200, body: { incident: hostOnly({ audience: 'BOTH' }) } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByText('Now only the Host sees this case.')).toBeInTheDocument();
+    expect(form.getByRole('radio', { name: /Host only/ })).toBeChecked();
+
+    await userEvent.type(form.getByLabelText('Update'), 'We’ve asked the guest about the bumper.');
+    await userEvent.click(form.getByRole('radio', { name: /Both parties/ }));
+    expect(form.getByText('This shows the case to the Guest')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+    expect(await form.findByText('Tick to confirm you’re showing the case to the Guest')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+
+    await userEvent.click(form.getByRole('checkbox', { name: 'Show the case to the Guest' }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toEqual([
+      { note: 'We’ve asked the guest about the bumper.', attachments: [], visibility: 'BOTH' },
+    ]);
+  });
+
+  it('keeps taking the case to staff, whoever the form says sees it', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: hostOnly() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { incident: hostOnly({ assignedTo: 'Aroha' }) } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    await userEvent.click(form.getByRole('radio', { name: /Both parties/ }));
+    await userEvent.click(form.getByRole('checkbox', { name: /Assign to me/ }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toEqual({ note: '', attachments: [], visibility: 'INTERNAL', assignToMe: true });
+  });
+
   it('offers only the statuses the case can move to: reopening a resolved one, never back to Open', async () => {
     let sent: unknown;
     mockApi({
@@ -374,7 +447,13 @@ describe('AdminIncidentPage', () => {
     await userEvent.click(form.getByRole('button', { name: 'Charge $45.50' }));
 
     expect(await screen.findByText('$45.50 charge added')).toBeInTheDocument();
-    expect(sent).toEqual({ type: 'DAMAGE', description: 'Repair the passenger door', amountCents: 4550 });
+    expect(sent).toEqual({
+      type: 'DAMAGE',
+      description: 'Repair the passenger door',
+      amountCents: 4550,
+      // Sent again with a repeated submit, so the API adds the charge once.
+      idempotencyKey: expect.any(String),
+    });
     const charges = within(screen.getByRole('list', { name: 'Charges from this case' }));
     expect(charges.getByText('Repair the passenger door')).toBeInTheDocument();
     expect(charges.getByText('Charging')).toBeInTheDocument();
@@ -393,6 +472,34 @@ describe('AdminIncidentPage', () => {
     await userEvent.click(form.getByRole('button', { name: 'Charge the Guest' }));
 
     expect(await form.findByText('Enter an amount in dollars, such as 45 or 45.50')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it('shows the protection plan’s excess, and keeps a damage case’s charges within it', async () => {
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': {
+        status: 200,
+        body: {
+          incident: resolved({
+            protectionPlan: { name: 'Basic protection', excessCents: 200_000 },
+            chargeLimitCents: 50_000,
+          }),
+        },
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Charge the Guest' }));
+    expect(screen.getByText(/The Guest booked Basic protection, with a/)).toHaveTextContent('$2,000 excess');
+    expect(
+      form.getByText('Up to $500 more on this case, within the protection plan’s excess.'),
+    ).toBeInTheDocument();
+    await userEvent.type(form.getByLabelText('Description'), 'Repair the passenger door');
+    await userEvent.type(form.getByLabelText('Amount (NZD)'), '600');
+    await userEvent.click(form.getByRole('button', { name: 'Charge the Guest' }));
+
+    expect(await form.findByText('Up to $500, within the protection plan’s excess')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
   });
 

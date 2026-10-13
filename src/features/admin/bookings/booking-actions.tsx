@@ -60,6 +60,9 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
   // A request, or a booking waiting for the Guest's verification: only authorised, so it can be cancelled
   // with the hold on the card released (plan §8.2).
   const pending = booking.status === 'PENDING';
+  // A trip under way, started by the Host's check-in alone: a Guest who never turned up can still be a no-show
+  // (plan §8.2). The preview says so when the Guest confirmed the check-in.
+  const underWay = booking.status === 'ACTIVE';
 
   const toggle = (action: Action) => (next: boolean) => setOpen(next ? action : null);
   const show = (next: AdminBookingDetail) => {
@@ -131,10 +134,10 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
           Refund
         </Button>
       )}
-      {(booking.status === 'CONFIRMED' || pending) && (
+      {(booking.status === 'CONFIRMED' || pending || underWay) && (
         <Button variant="secondary" onClick={() => setOpen('cancel')}>
           <CircleX aria-hidden="true" />
-          {pending ? 'Cancel request' : 'Cancel booking'}
+          {pending ? 'Cancel request' : underWay ? 'Cancel as a no-show' : 'Cancel booking'}
         </Button>
       )}
 
@@ -153,6 +156,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
         onOpenChange={toggle('refund')}
         refundableCents={detail.refundableCents}
         tripPayoutSent={detail.tripPayoutSent}
+        hostFunding={detail.hostFunding}
         charges={detail.refundableCharges}
         guestName={booking.guest.firstName}
         onConfirm={refund}
@@ -162,6 +166,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
         onOpenChange={toggle('cancel')}
         bookingRef={queryRef}
         pending={pending}
+        noShowOnly={underWay}
         onConfirm={cancel}
       />
     </>

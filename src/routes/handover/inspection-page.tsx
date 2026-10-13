@@ -33,6 +33,7 @@ import { PhotoCapture, PhotoStatusBadge } from '@/features/handover/photo-captur
 import { useDeviceLocation } from '@/features/handover/use-device-location';
 import {
   photoInput,
+  useForgetRecordedPhotos,
   useInspectionPhotos,
   type InspectionPhoto,
 } from '@/features/handover/use-inspection-photos';
@@ -62,8 +63,8 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
   } else if (stage === 'CHECK_IN' && handover.bookingStatus === 'CONFIRMED') {
     title = 'Check-in opens 2 hours before the trip';
     description = `Come back from ${formatNzDateTime(handover.checkInOpensAt)} (NZ time).`;
-  } else if (stage === 'CHECK_OUT' && !handover.checkIn) {
-    description = 'Check-out comes after check-in.';
+  } else if (stage === 'CHECK_OUT' && handover.bookingStatus === 'CONFIRMED') {
+    description = 'Check-out comes after check-in, once the trip is under way.';
   }
   return (
     <EmptyState
@@ -342,7 +343,9 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
                 {stage === 'CHECK_OUT'
                   ? handover.fuelPolicy === 'FULL'
                     ? 'This trip’s fuel policy: return it full.'
-                    : `This trip’s fuel policy: return it at the same level as check-in (${handover.checkIn?.fuelOrBatteryPct ?? 0}%).`
+                    : handover.checkIn
+                      ? `This trip’s fuel policy: return it at the same level as check-in (${handover.checkIn.fuelOrBatteryPct}%).`
+                      : 'This trip’s fuel policy: return it at the same level as at pick-up.'
                   : 'Read it from the gauge on the dashboard.'}
               </p>
             </div>
@@ -524,6 +527,7 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
 
 function Inspection({ bookingRef, stage }: { bookingRef: string; stage: InspectionStage }) {
   const handover = useHandover(bookingRef);
+  useForgetRecordedPhotos(handover.data);
   if (handover.isError) {
     return (
       <Alert
@@ -549,7 +553,9 @@ function Inspection({ bookingRef, stage }: { bookingRef: string; stage: Inspecti
         <p className="mt-2 max-w-2xl text-muted">
           {stage === 'CHECK_IN'
             ? 'Walk around the car together and photograph each angle. The photos are timestamped and protect you both.'
-            : 'Photograph each angle again as you hand the car back. Each photo sits next to the same shot from check-in.'}
+            : data.checkIn
+              ? 'Photograph each angle again as you hand the car back. Each photo sits next to the same shot from check-in.'
+              : 'Photograph each angle as you hand the car back. There’s no check-in record to compare with, as the trip was started without one, so these photos and readings record how the car came back.'}
         </p>
       </div>
       {stage === 'CHECK_IN' && open && data.emailVerificationNeeded ? (

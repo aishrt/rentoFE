@@ -1,4 +1,4 @@
-import { CalendarOff, Heart, Search } from 'lucide-react';
+import { CalendarOff, CarFront, Heart, Search } from 'lucide-react';
 import { Link } from 'react-router';
 import type { SavedCars } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
@@ -15,7 +15,10 @@ import { AccountPageHeader, AccountShell } from '@/features/account/account-shel
 import { useSavedCars } from '@/features/account/dashboard-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatDays, formatTripSpan, nzWallClockParts } from '@/features/booking/booking-format';
+import { SaveButton } from '@/features/vehicles/save-button';
 import { VehicleCard } from '@/features/vehicles/vehicle-card';
+import { vehicleName } from '@/features/vehicles/vehicle-format';
+import { smallPhoto } from '@/lib/photos';
 
 type Search = NonNullable<SavedCars['search']>;
 
@@ -43,6 +46,41 @@ function SearchNote({ search }: { search: Search | null }) {
       Priced for{search.place ? ` ${search.place},` : ''} {formatTripSpan(search.start, search.end)} (
       {formatDays(search.days)}), from your last search. Totals include every mandatory charge and GST.
     </>
+  );
+}
+
+/**
+ * A saved car its Host has taken off the site: its listing is gone, so there's no link and no price, only the
+ * heart to take it off the list.
+ */
+function UnlistedCar({ car }: { car: SavedCars['cars'][number] }) {
+  const name = vehicleName(car);
+  return (
+    <article className="relative flex flex-col rounded-card border border-line/80 bg-surface shadow-card">
+      <div className="aspect-4/3 overflow-hidden rounded-t-card bg-ink/6 opacity-60 grayscale">
+        {car.photo ? (
+          <img
+            src={smallPhoto(car.photo.url)}
+            alt={car.photo.alt}
+            loading="lazy"
+            decoding="async"
+            width={800}
+            height={600}
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-muted">
+            <CarFront aria-hidden="true" className="size-10" />
+          </div>
+        )}
+      </div>
+      <SaveButton vehicleId={car.id} name={name} className="absolute top-2.5 right-2.5" />
+      <div className="p-4">
+        <h2 className="text-base font-semibold text-muted">
+          {name} <span className="font-normal">{car.year}</span>
+        </h2>
+      </div>
+    </article>
   );
 }
 
@@ -110,13 +148,11 @@ function SavedList() {
     <ul className="grid gap-x-6 gap-y-8 sm:grid-cols-2 xl:grid-cols-3">
       {cars.map((car, index) => (
         <li key={car.id} className="stagger-in grid content-start gap-3" style={staggerIndex(index)}>
-          <VehicleCard
-            vehicle={car}
-            listingSearch={car.listed ? query : ''}
-            priority={index < 3}
-            headingLevel="h2"
-            className={car.listed ? undefined : 'opacity-70'}
-          />
+          {car.listed ? (
+            <VehicleCard vehicle={car} listingSearch={query} priority={index < 3} headingLevel="h2" />
+          ) : (
+            <UnlistedCar car={car} />
+          )}
           {!car.listed ? (
             <p className="flex items-center gap-2 text-sm text-muted">
               <CalendarOff aria-hidden="true" className="size-4 shrink-0" />

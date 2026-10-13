@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
 
 /*
@@ -17,11 +17,22 @@ export function useEarnings() {
   });
 }
 
-/** The payout setup and every payout, upcoming first. */
+/**
+ * The payout setup and the Host's payouts: those still to be sent, soonest first, then the paid ones, newest
+ * first, a page at a time (fetchNextPage) so every one can be shown.
+ */
 export function useHostPayouts() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: payoutsQueryKey,
-    queryFn: ({ signal }) => unwrap(client.GET('/host/payouts', { signal })),
+    queryFn: ({ pageParam, signal }) =>
+      unwrap(
+        client.GET('/host/payouts', {
+          params: { query: pageParam ? { cursor: pageParam } : {} },
+          signal,
+        }),
+      ),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor,
     staleTime: 60_000,
   });
 }

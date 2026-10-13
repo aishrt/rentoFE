@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { applyFieldErrors, formErrorMessage } from '@/features/account/form-errors';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { HOST_REVIEWS } from '@/features/host/host-links';
 import { HostPageHeader } from '@/features/host/host-nav';
 import { HostShell } from '@/features/host/host-shell';
 import {
@@ -216,7 +217,8 @@ function HostProfileView() {
               </div>
             )}
           </dl>
-          <Link to="/account/reviews" className="link-underline text-sm font-medium text-primary">
+          {/* Opened as a Host, it keeps the Host dashboard's frame. */}
+          <Link to={HOST_REVIEWS} className="link-underline text-sm font-medium text-primary">
             Your reviews
           </Link>
         </InfoCard>

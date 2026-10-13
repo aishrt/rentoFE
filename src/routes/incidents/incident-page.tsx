@@ -53,7 +53,9 @@ function EventItem({ event }: { event: IncidentEvent }) {
           </>
         )}{' '}
         · <time dateTime={event.createdAt}>{formatNzDateTime(event.createdAt)}</time>
-        {event.visibility !== 'BOTH' && <span className="ml-1 text-xs">(only you can see this)</span>}
+        {event.visibility !== 'BOTH' && (
+          <span className="ml-1 text-xs">(only you and our support team see this)</span>
+        )}
       </p>
       {event.note && <p className="whitespace-pre-wrap text-ink/90">{event.note}</p>}
       {event.attachments.length > 0 && (
@@ -103,7 +105,14 @@ function Reply({ incident }: { incident: Incident }) {
     );
   return (
     <Card className="grid gap-4 p-5 sm:p-6">
-      <Field label="Add an update" description="The other side and our support team see it.">
+      <Field
+        label="Add an update"
+        description={
+          incident.sharedWithOtherParty === false
+            ? 'Only our support team sees it.'
+            : 'The other side and our support team see it.'
+        }
+      >
         <Textarea rows={3} maxLength={5000} value={note} onChange={(event) => setNote(event.target.value)} />
       </Field>
       <EvidencePicker evidence={evidence} />

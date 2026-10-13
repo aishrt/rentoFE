@@ -15,11 +15,14 @@ export interface AuditFilters {
   entityId?: string;
   /** A staff member's or member's user id. */
   actor?: string;
+  /** First and last NZ day, as 2026-10-07: the log is kept for years (plan §14), longer than its pages reach. */
+  from?: string;
+  to?: string;
   page: number;
 }
 
 /** The filters the address can hold, as the API takes them. */
-export const AUDIT_FILTER_KEYS = ['action', 'entity', 'entityId', 'actor'] as const;
+export const AUDIT_FILTER_KEYS = ['action', 'entity', 'entityId', 'actor', 'from', 'to'] as const;
 
 /** Kinds of record the API writes to the log, for the filter. */
 export const AUDIT_ENTITIES: readonly { value: string; label: string }[] = [

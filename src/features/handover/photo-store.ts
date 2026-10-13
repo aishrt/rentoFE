@@ -4,12 +4,17 @@ import type { InspectionAngle, InspectionStage } from '@/api/types';
  * Inspection photos wait in the browser until they've uploaded (plan §12.6, Inspection): they're kept in
  * IndexedDB, so a weak signal, a closed tab or a reload loses nothing, and they upload when the connection
  * returns. Where IndexedDB isn't available (some private windows, tests) they're kept in memory instead.
+ * They can say where the device was, so they don't stay longer than needed (plan §14): a stage's photos go
+ * once its report is recorded, and all of them when someone signs out of the device.
  */
+
+/** A check-in, a check-out, or new damage flagged after the check-out. */
+export type PhotoStage = InspectionStage | 'FLAGGED_DAMAGE';
 
 export interface StoredPhoto {
   id: string;
   bookingRef: string;
-  stage: InspectionStage;
+  stage: PhotoStage;
   angle: InspectionAngle;
   blob: Blob;
   name: string;
@@ -61,8 +66,8 @@ function run<T>(db: IDBDatabase, mode: IDBTransactionMode, act: (store: IDBObjec
   });
 }
 
-/** Every photo taken for one booking's check-in or check-out, oldest first. */
-export async function listPhotos(bookingRef: string, stage: InspectionStage): Promise<StoredPhoto[]> {
+/** Every photo taken for one booking's check-in, check-out or flagged damage, oldest first. */
+export async function listPhotos(bookingRef: string, stage: PhotoStage): Promise<StoredPhoto[]> {
   const db = await openDb();
   const photos = db
     ? await run<StoredPhoto[]>(db, 'readonly', (store) =>
@@ -87,6 +92,13 @@ export async function removePhoto(id: string): Promise<void> {
 }
 
 /** Forgets an inspection's photos once it's recorded. */
-export async function clearPhotos(bookingRef: string, stage: InspectionStage): Promise<void> {
+export async function clearPhotos(bookingRef: string, stage: PhotoStage): Promise<void> {
   for (const photo of await listPhotos(bookingRef, stage)) await removePhoto(photo.id);
+}
+
+/** Forgets every photo on this device, for anyone: on sign-out, so the next person can't see them. */
+export async function clearPhotoStore(): Promise<void> {
+  memory.clear();
+  const db = await openDb();
+  if (db) await run(db, 'readwrite', (store) => store.clear()).catch(() => undefined);
 }

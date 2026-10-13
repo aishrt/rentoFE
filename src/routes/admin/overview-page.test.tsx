@@ -81,7 +81,11 @@ describe('AdminOverviewPage', () => {
     expect(await screen.findByRole('heading', { name: 'Good afternoon, Aroha' })).toBeInTheDocument();
     const revenue = await figure('Booking revenue');
     expect(revenue.getByText('$12,346')).toBeInTheDocument();
-    expect(revenue.getByText('Paid for bookings made on these dates, less refunds')).toBeInTheDocument();
+    expect(
+      revenue.getByText(
+        'Trips starting on these dates, extra charges and cancellation fees kept, less their refunds',
+      ),
+    ).toBeInTheDocument();
     expect((await figure('Registered users')).getByText('Guests and Hosts, right now')).toBeInTheDocument();
     expect((await figure('Registered users')).getByText('1,520')).toBeInTheDocument();
     expect(
@@ -99,9 +103,10 @@ describe('AdminOverviewPage', () => {
       'href',
       '/admin/vehicles',
     );
+    // The failures of the last 30 NZ days, as the API counts them.
     expect(queues.getByRole('link', { name: 'Failed payments 2 waiting' })).toHaveAttribute(
       'href',
-      '/admin/payments?view=failed',
+      '/admin/payments?view=failed&from=2026-09-08',
     );
     expect(queues.getByRole('link', { name: 'Held payouts 1 waiting' })).toHaveAttribute(
       'href',

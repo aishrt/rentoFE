@@ -150,7 +150,7 @@ function Filters({
               value={text}
               maxLength={100}
               onChange={(event) => setText(event.target.value)}
-              placeholder="RV-7K2Q9M, a name, an email or a car"
+              placeholder="RV-7K2Q9M, a name, email, mobile or car"
               leadingIcon={<Search />}
               enterKeyHint="search"
             />

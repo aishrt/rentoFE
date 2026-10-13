@@ -38,7 +38,16 @@ function Reviews() {
 
   if (reviews.isError) {
     return (
-      <Alert variant="danger" role="alert" title="We couldn’t load your reviews">
+      <Alert
+        variant="danger"
+        role="alert"
+        title="We couldn’t load your reviews"
+        action={
+          <Button variant="secondary" size="sm" onClick={() => void reviews.refetch()}>
+            Try again
+          </Button>
+        }
+      >
         {reviews.error.message}
       </Alert>
     );

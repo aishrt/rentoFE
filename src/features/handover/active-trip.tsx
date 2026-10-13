@@ -97,7 +97,8 @@ export function ActiveTripPanel({ booking, base, standalone = false }: ActiveTri
           <div>
             <p className="eyebrow text-primary">On the road</p>
             <h2 className="mt-1 text-lg font-semibold text-ink">
-              {guest ? 'Return' : `${other.firstName} returns it`} by {formatNzDateTime(booking.end)}
+              {guest ? 'Return' : `${other.firstName} returns it`} by {formatNzDateTime(booking.end)} (NZ
+              time)
             </h2>
             {standalone && (
               <p className="mt-1 text-sm font-medium text-ink">

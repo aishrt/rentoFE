@@ -1,8 +1,8 @@
 import { BadgeCheck, Star, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import type { PublicHost } from '@/api/types';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { PersonAvatar } from '@/features/messages/person-avatar';
 import { formatNumber } from '@/lib/format';
 import { ListingSection } from './listing-section';
 import { formatRating } from './vehicle-format';
@@ -35,18 +35,7 @@ export function HostCard({ host }: { host: PublicHost }) {
     <ListingSection id="host" title={`Hosted by ${host.firstName}`}>
       <div className="rounded-card border border-line/80 bg-surface p-5 shadow-card sm:p-6">
         <div className="flex items-center gap-4">
-          {host.avatarUrl ? (
-            <img
-              src={host.avatarUrl}
-              alt=""
-              width={56}
-              height={56}
-              loading="lazy"
-              className="size-14 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <Avatar initials={host.firstName.slice(0, 1).toUpperCase()} className="size-14 text-lg" />
-          )}
+          <PersonAvatar name={host.firstName} photoUrl={host.avatarUrl} className="size-14 text-lg" />
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 text-lg font-semibold text-ink">
               {host.firstName}

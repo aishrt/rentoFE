@@ -38,4 +38,35 @@ describe('NotificationsSection', () => {
     );
     expect(screen.getByRole('switch', { name: /Email me about unread messages/ })).not.toBeChecked();
   });
+
+  it('asks for a verified mobile before texts about unread messages can be turned on', async () => {
+    mockRoutes(({ method, path }) => {
+      if (path === '/auth/session') return { status: 200, body: { user: guestUser } };
+      if (method === 'GET' && path === '/me/notification-prefs') return { status: 200, body: { prefs } };
+      return undefined;
+    });
+    renderWithProviders(<NotificationsSection />);
+
+    const text = await screen.findByRole('switch', { name: /Text me about unread messages/ });
+    await vi.waitFor(() => expect(text).toBeDisabled());
+    expect(text).toHaveAccessibleDescription(/Add and verify your mobile first/);
+    expect(screen.getByRole('link', { name: 'Mobile number' })).toHaveAttribute(
+      'href',
+      '#section-mobile-number',
+    );
+  });
+
+  it('lets texts about unread messages be turned on once the mobile is verified', async () => {
+    mockRoutes(({ method, path }) => {
+      if (path === '/auth/session')
+        return { status: 200, body: { user: { ...guestUser, phone: '+64211112222', phoneVerified: true } } };
+      if (method === 'GET' && path === '/me/notification-prefs') return { status: 200, body: { prefs } };
+      return undefined;
+    });
+    renderWithProviders(<NotificationsSection />);
+
+    const text = await screen.findByRole('switch', { name: /Text me about unread messages/ });
+    await vi.waitFor(() => expect(text).toHaveAccessibleDescription(/still unread after 10 minutes/));
+    expect(text).toBeEnabled();
+  });
 });

@@ -44,7 +44,7 @@ describe('AdminIncidentsPage: opening a case', () => {
   it('opens a case on a booking by its reference, saying when there’s no such booking', async () => {
     const sent: unknown[] = [];
     mockApi({
-      'GET /admin/incidents': { status: 200, body: { incidents: [] } },
+      'GET /admin/incidents': { status: 200, body: { incidents: [], total: 0, page: 1 } },
       'POST /admin/incidents': (init) => {
         const body = JSON.parse(String(init?.body)) as { bookingRef: string };
         sent.push(body);
@@ -96,7 +96,7 @@ describe('AdminIncidentsPage: opening a case', () => {
 describe('AdminIncidentsPage', () => {
   it('lists every open case by default, each linking to it', async () => {
     const fetchMock = mockApi({
-      'GET /admin/incidents': { status: 200, body: { incidents: [damage, lateReturn] } },
+      'GET /admin/incidents': { status: 200, body: { incidents: [damage, lateReturn], total: 2, page: 1 } },
     });
     render();
 
@@ -128,12 +128,10 @@ describe('AdminIncidentsPage', () => {
     const fetchMock = mockApi({
       'GET /admin/incidents': () => ({
         status: 200,
-        body: {
-          incidents:
-            lastUrl(fetchMock).searchParams.get('status') === 'RESOLVED'
-              ? [{ ...damage, status: 'RESOLVED' }]
-              : [],
-        },
+        body:
+          lastUrl(fetchMock).searchParams.get('status') === 'RESOLVED'
+            ? { incidents: [{ ...damage, status: 'RESOLVED' }], total: 1, page: 1 }
+            : { incidents: [], total: 0, page: 1 },
       }),
     });
     const { router } = render();
@@ -146,8 +144,76 @@ describe('AdminIncidentsPage', () => {
     expect(lastUrl(fetchMock).searchParams.get('status')).toBe('RESOLVED');
   });
 
+  it('goes through the cases a page at a time, keeping the page in the address', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/incidents': () => {
+        const page = Number(lastUrl(fetchMock).searchParams.get('page') ?? 1);
+        return {
+          status: 200,
+          body: { incidents: [page === 2 ? lateReturn : damage], total: 51, page },
+        };
+      },
+    });
+    const { router } = render();
+
+    expect(await screen.findByRole('link', { name: 'IN-ABC123' })).toBeInTheDocument();
+    expect(screen.getByText('51 cases')).toBeInTheDocument();
+    expect(screen.getByText('1–50 of 51 cases')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByText('Late return')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2');
+    expect(lastUrl(fetchMock).searchParams.get('page')).toBe('2');
+  });
+
+  it('goes back to the last page when the one in the address is past the end', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/incidents': () => {
+        const page = Number(lastUrl(fetchMock).searchParams.get('page') ?? 1);
+        const resolved = { ...lateReturn, status: 'RESOLVED' as const };
+        return { status: 200, body: { incidents: page === 2 ? [resolved] : [], total: 51, page } };
+      },
+    });
+    const { router } = render('/admin/incidents?status=resolved&page=4');
+
+    expect(await screen.findByRole('link', { name: 'IN-DEF456' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?status=resolved&page=2');
+    expect(screen.getByText('51–51 of 51 cases')).toBeInTheDocument();
+    expect(screen.queryByText('No resolved cases')).not.toBeInTheDocument();
+  });
+
+  it('shows another tab loading rather than the last tab’s cases', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/incidents': () => ({
+        status: 200,
+        body:
+          lastUrl(fetchMock).searchParams.get('status') === 'RESOLVED'
+            ? { incidents: [{ ...lateReturn, status: 'RESOLVED' }], total: 1, page: 1 }
+            : { incidents: [damage], total: 1, page: 1 },
+      }),
+    });
+    // The resolved cases arrive only when the test says so.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    vi.stubGlobal('fetch', async (input: Request) => {
+      if (new URL(input.url).searchParams.get('status') === 'RESOLVED') await held;
+      return fetchMock(input);
+    });
+    render();
+
+    expect(await screen.findByRole('link', { name: 'IN-ABC123' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Resolved' }));
+
+    expect(await screen.findByText('Loading cases')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'IN-ABC123' })).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('link', { name: 'IN-DEF456' })).toBeInTheDocument();
+  });
+
   it('opens the tab named in the address', async () => {
-    const fetchMock = mockApi({ 'GET /admin/incidents': { status: 200, body: { incidents: [] } } });
+    const fetchMock = mockApi({
+      'GET /admin/incidents': { status: 200, body: { incidents: [], total: 0, page: 1 } },
+    });
     render('/admin/incidents?status=awaiting_response');
 
     expect(await screen.findByText('Nobody to wait on')).toBeInTheDocument();

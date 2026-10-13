@@ -129,7 +129,8 @@ describe('TripsPage', () => {
     render();
 
     const now = within(await screen.findByRole('region', { name: 'Trips under way' }));
-    expect(await now.findByRole('heading', { name: /^Return by/ })).toBeInTheDocument();
+    // In NZ time, like every other trip time.
+    expect(await now.findByRole('heading', { name: /^Return by .* \(NZ time\)$/ })).toBeInTheDocument();
     expect(now.getByText('2022 Toyota RAV4')).toBeInTheDocument();
     expect(now.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trips/RV-ONROAD');
     // Two hours from the return time: check-out is a tap away.
@@ -144,6 +145,29 @@ describe('TripsPage', () => {
     );
     // The tabs still open on Upcoming, under it.
     expect(screen.getByRole('tab', { name: 'Upcoming' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('lists a trip under way once on the Current tab', async () => {
+    const end = new Date(Date.now() + 2 * HOUR).toISOString();
+    mockTrips(
+      {
+        current: [
+          summary({
+            ref: 'RV-ONROAD',
+            status: 'ACTIVE',
+            start: new Date(Date.now() - 48 * HOUR).toISOString(),
+            end,
+          }),
+        ],
+      },
+      guestUser,
+      [confirmedBooking({ ref: 'RV-ONROAD', status: 'ACTIVE', end })],
+    );
+    render('/trips?tab=current');
+
+    const list = within(await screen.findByRole('tabpanel'));
+    expect(await list.findAllByRole('listitem')).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: 'Trips under way' })).not.toBeInTheDocument();
   });
 
   it('asks to check in once a booked trip has started', async () => {

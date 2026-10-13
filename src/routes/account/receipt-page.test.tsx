@@ -109,6 +109,29 @@ describe('ReceiptPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('lists the refunds made on a charge after the trip under it', async () => {
+    mockReceipt(
+      paid({
+        extraCharges: [
+          {
+            description: 'Sand through the back seats',
+            amountCents: 6_000,
+            gstCents: 783,
+            paidAt: '2026-10-09T01:00:00.000Z',
+            paidWith: 'Visa ending 4242',
+            refunds: [{ amountCents: 6_000, status: 'SUCCEEDED', at: '2026-10-11T01:00:00.000Z' }],
+            refundedCents: 6_000,
+          },
+        ],
+      }),
+    );
+    render();
+
+    const charges = within(await screen.findByRole('region', { name: 'Charges after the trip' }));
+    expect(charges.getByText(/Refund, 11\/10\/2026/)).toBeInTheDocument();
+    expect(charges.getByText('−$60.00')).toBeInTheDocument();
+  });
+
   it('downloads the PDF through the API', async () => {
     const sent = mockReceipt(paid());
     render();

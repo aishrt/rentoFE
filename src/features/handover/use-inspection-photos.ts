@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/api/client';
-import type { InspectionAngle, InspectionRequest, InspectionStage } from '@/api/types';
+import type { Handover, InspectionAngle, InspectionRequest } from '@/api/types';
 import { contentTypeOf, uploadFile, uploadProblem } from '@/features/host/upload';
 import { readExifTakenAt } from './exif';
-import { clearPhotos, listPhotos, removePhoto, savePhoto, type StoredPhoto } from './photo-store';
+import {
+  clearPhotos,
+  listPhotos,
+  removePhoto,
+  savePhoto,
+  type PhotoStage,
+  type StoredPhoto,
+} from './photo-store';
 import type { DeviceLocation } from './use-device-location';
 
 /** Where a photo is: on the server, on its way, waiting for a connection, or refused. */
@@ -38,11 +45,11 @@ const isNetworkProblem = (error: unknown) =>
   error.code === 'UPLOAD_EXPIRED';
 
 /**
- * The photos of one check-in or check-out (plan §12.6, Inspection): kept in the browser as they're taken
- * and uploaded straight away, or as soon as the connection returns, so an inspection on a weak signal is
- * never lost.
+ * The photos of one check-in, check-out or flagged damage (plan §12.6, Inspection): kept in the browser as
+ * they're taken and uploaded straight away, or as soon as the connection returns, so an inspection on a weak
+ * signal is never lost.
  */
-export function useInspectionPhotos(bookingRef: string, stage: InspectionStage) {
+export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
   const [photos, setPhotos] = useState<InspectionPhoto[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -184,6 +191,24 @@ export function useInspectionPhotos(bookingRef: string, stage: InspectionStage) 
   const clear = useCallback(() => clearPhotos(bookingRef, stage), [bookingRef, stage]);
 
   return { photos, loaded, online, add, remove, clear, retry: upload };
+}
+
+/**
+ * Forgets the photos this browser still keeps for a stage whose report is recorded, whoever recorded it
+ * (an abandoned check-out's, say), and those for flagging damage once the damage-report window has closed.
+ * They can say where the device was, so they don't linger on a shared device (plan §14).
+ */
+export function useForgetRecordedPhotos(handover: Handover | undefined) {
+  const ref = handover?.ref;
+  const checkInDone = Boolean(handover?.checkIn);
+  const checkOutDone = Boolean(handover?.checkOut);
+  const flaggingOver = checkOutDone && handover?.actions.flagDamage === false;
+  useEffect(() => {
+    if (!ref) return;
+    if (checkInDone) void clearPhotos(ref, 'CHECK_IN');
+    if (checkOutDone) void clearPhotos(ref, 'CHECK_OUT');
+    if (flaggingOver) void clearPhotos(ref, 'FLAGGED_DAMAGE');
+  }, [ref, checkInDone, checkOutDone, flaggingOver]);
 }
 
 /** What's kept in the browser for a photo: everything but its on-screen state. */

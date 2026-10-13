@@ -327,7 +327,12 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
                     key={flag.id}
                     flag={flag}
                     clearing={clearFlag.isPending && clearFlag.variables.flagId === flag.id}
-                    onClear={() => clearFlag.mutate({ id: user.id, flagId: flag.id })}
+                    // Support staff leave their own flags to another team member (plan §6.2).
+                    onClear={
+                      isSelf && !isAdmin
+                        ? undefined
+                        : () => clearFlag.mutate({ id: user.id, flagId: flag.id })
+                    }
                   />
                 ))}
               </ul>

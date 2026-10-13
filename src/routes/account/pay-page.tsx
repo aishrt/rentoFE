@@ -1,8 +1,8 @@
 import { Elements } from '@stripe/react-stripe-js';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, LockKeyhole, ReceiptText } from 'lucide-react';
+import { CircleCheck, CircleSlash, LockKeyhole, ReceiptText, Undo2 } from 'lucide-react';
 import { Link, useParams } from 'react-router';
-import { client, unwrap } from '@/api/client';
+import { ApiError, client, unwrap } from '@/api/client';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { CalmWaves } from '@/components/brand/patterns/calm-waves';
 import { Container } from '@/components/layout/container';
@@ -29,6 +29,12 @@ function Pay({ paymentId }: { paymentId: string }) {
   });
   const start = useMutation({
     mutationFn: () => unwrap(client.POST('/payments/{id}/pay', { params: { path: { id: paymentId } } })),
+    // Paid or cancelled meanwhile: the page catches up and says so.
+    onError: (error) => {
+      if (error instanceof ApiError && ['ALREADY_PAID', 'CHARGE_CANCELLED'].includes(error.code)) {
+        void queryClient.invalidateQueries({ queryKey: payLinkKey(paymentId) });
+      }
+    },
   });
   const sync = async () => {
     const paid = (await unwrap(client.POST('/payments/{id}/sync', { params: { path: { id: paymentId } } })))
@@ -58,17 +64,34 @@ function Pay({ paymentId }: { paymentId: string }) {
   if (!charge.data) return <PaySkeleton />;
   const data = charge.data;
 
-  if (data.status === 'PAID') {
+  // Nothing to pay: paid (perhaps refunded since, in part or in full), or cancelled by our team.
+  if (data.status !== 'DUE') {
+    const what = `${formatNzdCharge(data.amountCents)} for ${data.description.toLowerCase()} on booking ${data.bookingRef}`;
+    const settled = {
+      PAID: {
+        icon: <CircleCheck />,
+        title: 'Paid, thank you',
+        description: data.refundedCents
+          ? `${what}. ${formatNzdCharge(data.refundedCents)} of it was refunded to your card.`
+          : `${what}. A receipt is on its way by email.`,
+      },
+      REFUNDED: {
+        icon: <Undo2 />,
+        title: 'Refunded',
+        description: `${what} was paid, then refunded to your card in full. There’s nothing to pay.`,
+      },
+      CANCELLED: {
+        icon: <CircleSlash />,
+        title: 'This charge was cancelled',
+        description: `${what} was cancelled by our team, so there’s nothing to pay.`,
+      },
+    }[data.status];
     return (
       <EmptyState
         className="mx-auto py-10"
-        visual={
-          <IconBadge size="xl">
-            <CircleCheck />
-          </IconBadge>
-        }
-        title="Paid, thank you"
-        description={`${formatNzdCharge(data.amountCents)} for ${data.description.toLowerCase()} on booking ${data.bookingRef}. A receipt is on its way by email.`}
+        visual={<IconBadge size="xl">{settled.icon}</IconBadge>}
+        title={settled.title}
+        description={settled.description}
         actions={
           <Button asChild>
             <Link to={`/trips/${data.bookingRef}`}>Back to your trip</Link>

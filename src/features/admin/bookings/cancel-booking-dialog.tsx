@@ -35,6 +35,11 @@ interface CancelBookingDialogProps {
   bookingRef: string;
   /** A request, or a booking waiting for the Guest's verification: nothing was charged yet. */
   pending: boolean;
+  /**
+   * A trip under way after the Host's check-in alone: it can be cancelled only as a Guest no-show (plan §8.2).
+   * The preview says when it can't (the Guest confirmed the check-in).
+   */
+  noShowOnly?: boolean;
   /** Cancels the booking. An API error it throws shows in the dialog. */
   onConfirm: (request: AdminCancelRequest) => Promise<void>;
 }
@@ -64,10 +69,15 @@ export function CancelBookingDialog({ open, onOpenChange, ...form }: CancelBooki
 function CancelForm({
   bookingRef,
   pending,
+  noShowOnly = false,
   onConfirm,
 }: Omit<CancelBookingDialogProps, 'open' | 'onOpenChange'>) {
   const confirm = useMutation({ mutationFn: onConfirm });
-  const reasons = pending ? PENDING_CANCEL_REASONS : CANCEL_REASONS;
+  const reasons = pending
+    ? PENDING_CANCEL_REASONS
+    : noShowOnly
+      ? CANCEL_REASONS.filter((option) => option.value === 'GUEST_NO_SHOW')
+      : CANCEL_REASONS;
   const {
     register,
     control,
@@ -76,8 +86,8 @@ function CancelForm({
     formState: { errors },
   } = useForm<z.input<CancelSchema>, unknown, z.output<CancelSchema>>({
     resolver: zodResolver(cancelSchema),
-    // A pending booking has one way to cancel it.
-    defaultValues: { reason: pending ? 'PLATFORM' : '', note: '' },
+    // A pending booking, and a trip under way, each have one way to cancel it.
+    defaultValues: { reason: pending ? 'PLATFORM' : noShowOnly ? 'GUEST_NO_SHOW' : '', note: '' },
   });
   const reason = useWatch({ control, name: 'reason' });
   const preview = useAdminCancellationPreview(bookingRef, isReason(reason) ? reason : null);

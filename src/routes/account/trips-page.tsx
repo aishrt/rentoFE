@@ -39,7 +39,7 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
   },
   cancelled: {
     title: 'Nothing cancelled',
-    description: 'Cancelled, declined and expired bookings would show here, with any refund.',
+    description: 'Cancelled, declined and expired bookings would show here. Open one to see any refund.',
   },
 };
 
@@ -111,8 +111,8 @@ function Trips() {
         <h1 className="headline mt-2 text-title-3 font-medium">Trips</h1>
         <p className="mt-2 text-muted">Your bookings and requests, with receipts, times and where to meet.</p>
       </div>
-      {/* From check-in to check-out, the trip sits at the top (plan §12.6). */}
-      <CurrentTrips role="guest" />
+      {/* From check-in to check-out, the trip sits at the top (plan §12.6); the Current tab lists it already. */}
+      {tab !== 'current' && <CurrentTrips role="guest" />}
       <SegmentedTabs
         idPrefix="trips"
         label="Trips"

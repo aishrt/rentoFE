@@ -521,3 +521,24 @@ describe('AdminUserPage', () => {
     expect(screen.getByRole('link', { name: 'Open Users' })).toHaveAttribute('href', '/admin/users');
   });
 });
+
+describe('AdminUserPage: a support member’s own record', () => {
+  it('leaves their own risk flags to another team member (plan §6.2)', async () => {
+    mockApi({
+      'POST /auth/session': session(supportUser),
+      'GET /admin/users/u3': {
+        status: 200,
+        body: { user: { ...aroha, id: 'u3', firstName: 'Sam', roles: ['GUEST', 'HOST', 'SUPPORT'] } },
+      },
+    });
+    const { queryClient } = render('u3');
+
+    const flags = await region('Risk flags');
+    expect(flags.getByText('Repeated Host cancellations')).toBeInTheDocument();
+    // Once the page knows who's looking.
+    await vi.waitFor(() => expect(queryClient.getQueryData(sessionQueryKey)).toBeTruthy());
+    await vi.waitFor(() =>
+      expect(flags.queryByRole('button', { name: /Clear flag/ })).not.toBeInTheDocument(),
+    );
+  });
+});

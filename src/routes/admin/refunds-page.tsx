@@ -312,6 +312,9 @@ function RefundsTable({ refunds, className }: { refunds: AdminRefundRow[]; class
             </Td>
             <Td className="max-w-64 whitespace-normal">
               <p>{FUNDED_BY[refund.fundedBy]}</p>
+              {refund.hostCents !== undefined && refund.hostCents < refund.amountCents && (
+                <p className="text-muted">Host pays {formatNzd(refund.hostCents)}, Rento Vroom the rest</p>
+              )}
               {refund.hostRecovery && <HostRecovery recovery={refund.hostRecovery} />}
             </Td>
             <Td className="max-w-56 whitespace-normal">

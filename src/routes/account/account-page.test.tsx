@@ -64,9 +64,46 @@ describe('AccountPage', () => {
     expect(details.getByText(/is confirmed\./)).toBeInTheDocument();
     expect(await details.findByText(/\+64211234567/)).toBeInTheDocument();
     expect(details.getByText(/ending 456/)).toBeInTheDocument();
+    // Not asked for before booking here, but the Guest can verify whenever they like (spec §8).
+    expect(details.getByText(/Not checked yet, and optional for now/)).toBeInTheDocument();
+    expect(details.getByRole('button', { name: 'Verify your identity' })).toBeInTheDocument();
+  });
+
+  it('says when the identity check is needed before the first booking, once', async () => {
+    mockAccount(
+      readiness({
+        identityStatus: 'NONE',
+        problems: [{ code: 'IDENTITY_REQUIRED', message: 'Verify your identity with a photo of your ID.' }],
+      }),
+    );
+    render();
+
+    const details = within(await screen.findByRole('region', { name: 'Your details for booking' }));
     expect(
-      details.getByText(/We’ll ask for a photo of your ID and a selfie before your first trip/),
+      await details.findByText('Not checked yet. You’ll need it before your first booking.'),
     ).toBeInTheDocument();
+    expect(details.getAllByRole('heading', { name: 'Your identity' })).toHaveLength(1);
+    expect(details.getAllByRole('button', { name: 'Verify your identity' })).toHaveLength(1);
+  });
+
+  it('says once that the identity check was turned down', async () => {
+    mockAccount(
+      readiness({
+        identityStatus: 'REJECTED',
+        problems: [
+          { code: 'IDENTITY_REJECTED', message: 'We couldn’t verify your identity. Please contact support.' },
+        ],
+      }),
+    );
+    render();
+
+    const details = within(await screen.findByRole('region', { name: 'Your details for booking' }));
+    expect(await details.findAllByText(/We couldn’t verify your identity/)).toHaveLength(1);
+    expect(details.getByRole('link', { name: 'Contact support' })).toHaveAttribute(
+      'href',
+      '/contact?category=ACCOUNT',
+    );
+    expect(details.queryByRole('button', { name: 'Verify your identity' })).not.toBeInTheDocument();
   });
 
   it('says when support is checking the licence, and that booking still works meanwhile', async () => {

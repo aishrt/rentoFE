@@ -73,12 +73,19 @@ interface PaginationProps {
   nounOne?: string;
 }
 
-/** "41–60 of 112 users" with previous and next. */
+/** The furthest page the staff portal's lists go to (the API refuses a later one). */
+export const MAX_PAGE = 500;
+
+/**
+ * "41–60 of 112 users" with previous and next. Next stops at the last page the API lists; past that, a
+ * narrower search or dates reach the rest.
+ */
 export function Pagination({ page, total, pageSize, onChange, noun, nounOne }: PaginationProps) {
   const counted = total === 1 ? (nounOne ?? noun.replace(/s$/, '')) : noun;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const pages = Math.min(MAX_PAGE, Math.max(1, Math.ceil(total / pageSize)));
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(total, page * pageSize);
+  const more = page >= pages && total > pages * pageSize;
   return (
     <nav
       aria-label="Pages"
@@ -90,6 +97,7 @@ export function Pagination({ page, total, pageSize, onChange, noun, nounOne }: P
           : total === 1
             ? `1 ${counted}`
             : `${formatNumber(first)}–${formatNumber(last)} of ${formatNumber(total)} ${counted}`}
+        {more && '. Narrow the search to see the rest.'}
       </p>
       {pages > 1 && (
         <div className="flex gap-2">

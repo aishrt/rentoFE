@@ -3,6 +3,7 @@ import {
   Check,
   CircleCheck,
   Coins,
+  Fuel,
   Hourglass,
   ShieldCheck,
   Undo2,
@@ -39,6 +40,7 @@ import {
   statusLabel,
 } from '@/features/booking/booking-format';
 import {
+  BookedTermsDetails,
   BookingPageSkeleton,
   DetailCard,
   PartyDetails,
@@ -140,9 +142,19 @@ function payoutStatusLine(payout: NonNullable<Booking['payout']>): string | null
   return null;
 }
 
+type PayoutRefund = NonNullable<NonNullable<Booking['payout']>['refunds']>[number];
+
+/** Who funds a refund: one the Host funds costs them their share of it, not Rento Vroom's commission. */
+function fundedWords(refund: PayoutRefund): string {
+  if (refund.fundedBy !== 'HOST') return 'Funded by Rento Vroom';
+  if (refund.hostCents !== undefined && refund.hostCents < refund.amountCents)
+    return `Funded by you: your share, ${formatNzd(refund.hostCents)}, comes off your payout`;
+  return 'Funded by you: it comes off your payout';
+}
+
 /**
- * Refunds made to the Guest on the booking with who funds each, and what the Host was actually paid for it
- * (plan §8.1, items 15 and 19).
+ * Refunds made to the Guest on the booking and its extra charges with who funds each, and what the Host was
+ * actually paid for it (plan §8.1, items 15 and 19).
  */
 function PaidAndRefunded({ payout, guest }: { payout: NonNullable<Booking['payout']>; guest: string }) {
   const refunds = payout.refunds ?? [];
@@ -152,12 +164,9 @@ function PaidAndRefunded({ payout, guest }: { payout: NonNullable<Booking['payou
       {refunds.map((refund, index) => (
         <div key={`${refund.at}-${index}`} className="flex items-baseline justify-between gap-4 text-muted">
           <dt>
-            Refund to {guest}, {formatNzDate(refund.at)}
-            <span className="block text-xs">
-              {refund.fundedBy === 'HOST'
-                ? 'Funded by you: it comes off your payout'
-                : 'Funded by Rento Vroom'}
-            </span>
+            Refund to {guest}
+            {refund.extraCharge ? ' of an extra charge' : ''}, {formatNzDate(refund.at)}
+            <span className="block text-xs">{fundedWords(refund)}</span>
           </dt>
           <dd className="tabular-nums">{formatNzd(refund.amountCents)}</dd>
         </div>
@@ -170,6 +179,43 @@ function PaidAndRefunded({ payout, guest }: { payout: NonNullable<Booking['payou
       )}
     </dl>
   );
+}
+
+/** Why a booking expired, for its Host (plan §8.2: each labelled). */
+function expiredWords(booking: Booking, guest: string): { title: string; text: string } {
+  // Before the API said why: ended by the Guest's identity check (always for an Instant Book, otherwise
+  // unless it was approved), or the request wasn't answered.
+  const reason =
+    booking.expiry?.reason ??
+    (booking.verificationReview && (booking.instantBook || booking.verificationReview !== 'APPROVED')
+      ? 'VERIFICATION_EXPIRED'
+      : 'HOST_NO_ANSWER');
+  const notAhead = 'This booking didn’t go ahead';
+  switch (reason) {
+    case 'HOST_NO_ANSWER':
+      return {
+        title: 'This request expired',
+        text: `It wasn’t answered within 24 hours, so ${guest}’s card authorisation was released.`,
+      };
+    case 'VERIFICATION_EXPIRED':
+    case 'VERIFICATION_REJECTED':
+      return {
+        title: notAhead,
+        text: `We couldn’t verify ${guest}${reason === 'VERIFICATION_EXPIRED' ? ' in time' : ''}, so their card authorisation was released and the dates are free again. It doesn’t count against your response rate.`,
+      };
+    case 'DATES_TAKEN':
+      return {
+        title: notAhead,
+        text: `${guest}’s payment came through after the dates were booked by someone else, so it was given back. Nothing changes for you.`,
+      };
+    case 'CAR_UNAVAILABLE':
+      return {
+        title: notAhead,
+        text: `${guest}’s payment came through after the car was taken off Rento Vroom, so it was given back.`,
+      };
+    default:
+      return { title: notAhead, text: `${guest} didn’t finish paying, so the dates are free again.` };
+  }
 }
 
 function HostStatus({ booking }: { booking: Booking }) {
@@ -220,19 +266,10 @@ function HostStatus({ booking }: { booking: Booking }) {
       return banner('Trip completed', 'Your payout follows the schedule below.');
     case 'DECLINED':
       return banner('You declined this request', `${guest}’s card authorisation was released.`, Undo2);
-    case 'EXPIRED':
-      // Ended by the Guest's identity check: always for an Instant Book, otherwise unless it was approved.
-      return booking.verificationReview && (booking.instantBook || booking.verificationReview !== 'APPROVED')
-        ? banner(
-            'This booking didn’t go ahead',
-            `We couldn’t verify ${guest} in time, so their card authorisation was released and the dates are free again. It doesn’t count against your response rate.`,
-            Hourglass,
-          )
-        : banner(
-            'This request expired',
-            `It wasn’t answered within 24 hours, so ${guest}’s card authorisation was released.`,
-            Hourglass,
-          );
+    case 'EXPIRED': {
+      const { title, text } = expiredWords(booking, guest);
+      return banner(title, text, Hourglass);
+    }
     case 'CANCELLED': {
       const cancellation = booking.cancellation;
       const byGuest = cancellation?.by === 'GUEST';
@@ -334,6 +371,9 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
               }
             />
           </DetailCard>
+          <DetailCard title="Fuel and kilometres" icon={Fuel}>
+            <BookedTermsDetails terms={booking.terms} />
+          </DetailCard>
           {booking.protectionPlan && (
             <DetailCard title="Protection" icon={ShieldCheck}>
               <ProtectionDetails plan={booking.protectionPlan} />
@@ -354,9 +394,15 @@ function HostBooking({ bookingRef }: { bookingRef: string }) {
                     NZ{formatNzd(booking.payout.hostPayoutCents)}
                   </dd>
                 </div>
+                {/* As on the payout and its email (plan §8.1, item 22): the commission with the GST in it. */}
                 <div className="flex items-baseline justify-between gap-4 text-muted">
                   <dt>Platform commission</dt>
-                  <dd className="tabular-nums">{formatNzd(booking.payout.platformFeeCents)}</dd>
+                  <dd className="text-right tabular-nums">
+                    {formatNzd(booking.payout.commissionCents)}
+                    <span className="block text-xs">
+                      incl. {formatNzd(booking.payout.commissionGstCents)} GST
+                    </span>
+                  </dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-4 text-muted">
                   <dt>The guest pays</dt>

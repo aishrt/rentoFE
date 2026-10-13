@@ -28,6 +28,7 @@ const STATUS_LABELS: Record<BookingExtraCharge['status'], StatusLabel> = {
   UNPAID: { label: 'Not paid yet', tone: 'ended' },
   FAILED: { label: 'Didn’t go through', tone: 'ended' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },
+  REFUNDED: { label: 'Refunded', tone: 'neutral' },
 };
 
 function ChargeNote({
@@ -60,6 +61,15 @@ function ChargeNote({
   }
   if (charge.status === 'FAILED')
     return <p className="text-muted">We couldn’t collect this charge. Our team is looking into it.</p>;
+  if (charge.status === 'REFUNDED')
+    return <p className="text-muted">It was refunded in full to the card it was paid with.</p>;
+  if (charge.status === 'PAID' && charge.refundedCents)
+    return (
+      <p className="text-muted">
+        <span className="tabular-nums">{formatNzd(charge.refundedCents)}</span> of it was refunded to the card
+        it was paid with.
+      </p>
+    );
   return null;
 }
 

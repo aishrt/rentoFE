@@ -77,7 +77,12 @@ export function PayBooking({
       onError: (error) => {
         setAgreed(false);
         if (error instanceof ApiError && error.code === 'HOLD_EXPIRED') onHoldExpired();
-        if (error instanceof ApiError && error.code === 'ALREADY_PAID') onPaid(booking);
+        // The payment went through already (its webhook or sync hadn't arrived): on to the trip as it is now.
+        if (error instanceof ApiError && error.code === 'ALREADY_PAID') {
+          void syncPayment(booking.ref)
+            .catch(() => booking)
+            .then((updated) => onPaid(updated));
+        }
       },
     });
   };
@@ -96,6 +101,11 @@ export function PayBooking({
   const prepareError =
     prepare.error instanceof ApiError && prepare.error.status === 503 ? (
       <PaymentsNotSetUp />
+    ) : prepare.error instanceof ApiError && prepare.error.code === 'ALREADY_PAID' ? (
+      <p className="flex items-center gap-2.5 text-sm text-muted" role="status">
+        <Spinner />
+        Your payment has gone through. Opening your trip…
+      </p>
     ) : prepare.error && !(prepare.error instanceof ApiError && prepare.error.code === 'HOLD_EXPIRED') ? (
       <Alert variant="danger" role="alert" title="We couldn’t start the payment">
         {prepare.error.message}

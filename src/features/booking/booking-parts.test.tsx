@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders } from '@/test/utils';
-import { PartyDetails } from './booking-parts';
+import { BookedTermsDetails, PartyDetails } from './booking-parts';
 import { booking } from './test-fixtures';
 
 describe('PartyDetails', () => {
@@ -28,5 +28,41 @@ describe('PartyDetails', () => {
       <PartyDetails party={{ ...host, firstName: 'Former member' }} role="host" phoneNote="—" />,
     );
     expect(screen.queryByRole('link', { name: /profile and reviews/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('BookedTermsDetails', () => {
+  it('shows daily allowance, total allowance and extra kilometre price for limited km', () => {
+    renderWithProviders(
+      <BookedTermsDetails
+        terms={{
+          fuelPolicy: 'SAME_LEVEL',
+          unlimitedKm: false,
+          kmAllowancePerDay: 200,
+          allowanceKm: 600,
+          extraKmCents: 35,
+          electric: false,
+        }}
+      />,
+    );
+    expect(screen.getByText('200 km/day (600 km total)')).toBeInTheDocument();
+    expect(screen.getByText('$0.35/km')).toBeInTheDocument();
+    expect(screen.getByText('Return at same fuel level')).toBeInTheDocument();
+  });
+
+  it('shows unlimited kilometres and electric battery policy', () => {
+    renderWithProviders(
+      <BookedTermsDetails
+        terms={{
+          fuelPolicy: 'FULL',
+          unlimitedKm: true,
+          extraKmCents: 0,
+          electric: true,
+        }}
+      />,
+    );
+    expect(screen.getByText('Unlimited kilometres')).toBeInTheDocument();
+    expect(screen.queryByText(/Extra kilometre charge/)).not.toBeInTheDocument();
+    expect(screen.getByText('Return fully charged')).toBeInTheDocument();
   });
 });

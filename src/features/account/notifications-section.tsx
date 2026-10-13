@@ -5,6 +5,7 @@ import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
+import { useSession } from '@/features/auth/use-session';
 import { SettingsSection } from './settings-section';
 
 const prefsKey = ['me', 'notification-prefs'] as const;
@@ -38,6 +39,9 @@ const CHOICES: { name: keyof NotificationPrefs; label: string; description: stri
  */
 export function NotificationsSection() {
   const queryClient = useQueryClient();
+  const user = useSession().data;
+  // Texts go only to a verified mobile (plan §7): without one, this switch would do nothing.
+  const canText = Boolean(user?.phone && user.phoneVerified);
   const prefs = useQuery({
     queryKey: prefsKey,
     queryFn: async ({ signal }) => (await unwrap(client.GET('/me/notification-prefs', { signal }))).prefs,
@@ -74,15 +78,33 @@ export function NotificationsSection() {
         </div>
       ) : (
         <div className="grid gap-5">
-          {CHOICES.map((choice) => (
-            <Switch
-              key={choice.name}
-              label={choice.label}
-              description={choice.description}
-              checked={prefs.data[choice.name]}
-              onCheckedChange={(checked) => save.mutate({ [choice.name]: checked })}
-            />
-          ))}
+          {CHOICES.map((choice) => {
+            const checked = prefs.data[choice.name];
+            const needsMobile = choice.name === 'unreadMessageSms' && !canText;
+            return (
+              <Switch
+                key={choice.name}
+                label={choice.label}
+                description={
+                  needsMobile ? (
+                    <>
+                      Add and verify your mobile first, under{' '}
+                      <a href="#section-mobile-number" className="link-underline font-medium text-primary">
+                        Mobile number
+                      </a>
+                      .
+                    </>
+                  ) : (
+                    choice.description
+                  )
+                }
+                checked={checked}
+                // One already on can still be turned off.
+                disabled={needsMobile && !checked}
+                onCheckedChange={(next) => save.mutate({ [choice.name]: next })}
+              />
+            );
+          })}
         </div>
       )}
     </SettingsSection>

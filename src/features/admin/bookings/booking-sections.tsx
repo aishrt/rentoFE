@@ -32,6 +32,7 @@ import { DetailCard, ProtectionDetails, StatusBadge, TripStops } from '@/feature
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { incidentTypeLabel } from '@/features/incidents/incident-labels';
 import { threadPath } from './bookings-api';
+import { CancelChargeButton } from './cancel-charge';
 import {
   CANCELLED_BY,
   CASE_STATUS,
@@ -176,6 +177,11 @@ function Refunds({ refunds }: { refunds: AdminPayment['refunds'] }) {
             <p className="text-muted">
               {REFUND_FUNDER[refund.fundedBy]} · {formatNzDateTime(refund.at)}
             </p>
+            {refund.hostCents !== undefined && refund.hostCents < refund.amountCents && (
+              <p className="text-muted">
+                Host pays {formatNzd(refund.hostCents)}, Rento Vroom the rest (its commission)
+              </p>
+            )}
             <p className="break-words">{refund.reason}</p>
             {refund.failureReason && <p className="text-danger">{refund.failureReason}</p>}
           </li>
@@ -277,8 +283,17 @@ export function PayoutsCard({ payouts }: { payouts: AdminPayout[] }) {
   );
 }
 
-/** Charges after the trip: extra kilometres, fuel, cleaning, tolls and the like. */
-export function ExtraChargesCard({ charges }: { charges: AdminBookingDetail['extraCharges'] }) {
+/**
+ * Charges after the trip: extra kilometres, fuel, cleaning, tolls and the like. With the booking's reference,
+ * one that hasn't been paid can be cancelled (plan §8.1, item 11).
+ */
+export function ExtraChargesCard({
+  charges,
+  queryRef,
+}: {
+  charges: AdminBookingDetail['extraCharges'];
+  queryRef?: string;
+}) {
   return (
     <DetailCard title="Extra charges" icon={ReceiptText}>
       {charges.length === 0 ? (
@@ -295,6 +310,9 @@ export function ExtraChargesCard({ charges }: { charges: AdminBookingDetail['ext
                 <StatusBadge status={EXTRA_CHARGE_STATUS[charge.status]} />
               </div>
               <p className="break-words">{charge.description}</p>
+              {queryRef && (charge.status === 'PENDING' || charge.status === 'FAILED') && (
+                <CancelChargeButton charge={charge} queryRef={queryRef} />
+              )}
             </li>
           ))}
         </ul>

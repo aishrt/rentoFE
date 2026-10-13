@@ -4,6 +4,7 @@ import {
   CarFront,
   CircleCheck,
   FileText,
+  Fuel,
   Hourglass,
   ReceiptText,
   ShieldCheck,
@@ -44,6 +45,7 @@ import {
   statusLabel,
 } from '@/features/booking/booking-format';
 import {
+  BookedTermsDetails,
   BookingPageSkeleton,
   DetailCard,
   MessageLink,
@@ -112,6 +114,56 @@ const CANCELLED_BY: Record<NonNullable<Booking['cancellation']>['by'], (host: st
   HOST: (host) => `${host} cancelled this trip`,
   SUPPORT: () => 'Rento Vroom support cancelled this trip',
 };
+
+type ExpiryReason = NonNullable<Booking['expiry']>['reason'];
+
+/** Why a booking expired, in the Guest's words (plan §8.2: each labelled). */
+const EXPIRED_WHY: Record<ExpiryReason, (host: string) => string> = {
+  PAYMENT_TIMEOUT: () => 'The payment wasn’t finished within 30 minutes, so the dates were released.',
+  CHECKOUT_ABANDONED: () => 'You left the checkout before paying, so the dates were released.',
+  HOST_NO_ANSWER: (host) => `${host} didn’t answer within 24 hours, so your card authorisation was released.`,
+  VERIFICATION_EXPIRED: () =>
+    'We couldn’t finish checking your ID and licence within 24 hours, so your card authorisation was released.',
+  VERIFICATION_REJECTED: () =>
+    'We weren’t able to verify your identity or driver licence, so your card authorisation was released.',
+  DATES_TAKEN: () =>
+    'Your payment came through after the dates were booked by someone else, so the booking wasn’t made.',
+  CAR_UNAVAILABLE: () =>
+    'Your payment came through after the car was taken off Rento Vroom, so the booking wasn’t made.',
+};
+
+/**
+ * Why an expired booking ended, and what happened to the money (plan §8.2: the Guest is told what is happening
+ * at every step). A payment taken after the booking ended is refunded in full; anything else was only an
+ * authorisation, released. A booking from before the API said why is read from what it shows.
+ */
+function expiredWords(booking: Booking): { reason: ExpiryReason; money: string } {
+  const expiry = booking.expiry;
+  const reason: ExpiryReason =
+    expiry?.reason ??
+    (booking.verificationReview === 'REJECTED'
+      ? 'VERIFICATION_REJECTED'
+      : booking.verificationReview === 'PENDING'
+        ? 'VERIFICATION_EXPIRED'
+        : booking.payment?.status === 'CANCELLED'
+          ? 'HOST_NO_ANSWER'
+          : 'PAYMENT_TIMEOUT');
+  if (!expiry?.paymentReturned) {
+    const held = reason === 'DATES_TAKEN' || reason === 'CAR_UNAVAILABLE';
+    return {
+      reason,
+      money: held ? 'The hold on your card is released, so nothing was charged.' : 'Nothing was charged.',
+    };
+  }
+  const amount = `NZ${formatNzd(expiry.refundCents ?? booking.price.totalCents)}`;
+  const money =
+    expiry.refundStatus === 'FAILED'
+      ? `We refunded your payment of ${amount} in full, but the refund didn’t go through to your card. Our team is sorting it and will be in touch.`
+      : expiry.refundStatus === 'SUCCEEDED'
+        ? `We’ve refunded your payment of ${amount} in full. It usually reaches your account within 5–10 working days.`
+        : `Your payment of ${amount} is being refunded in full. It usually reaches your account within 5–10 working days.`;
+  return { reason, money };
+}
 
 /** Where the trip stands, in the Guest's words (plan §8.2), with what to do next. */
 function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: PaidBooking) => void }) {
@@ -218,21 +270,16 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
           </div>
         </Banner>
       );
-    case 'EXPIRED':
+    case 'EXPIRED': {
+      const { reason, money } = expiredWords(booking);
       return (
         <Banner tone="danger" icon={Hourglass} title="This booking expired">
           <p>
-            {booking.verificationReview === 'REJECTED'
-              ? 'We weren’t able to verify your identity or driver licence, so your card authorisation was released. Nothing was charged.'
-              : booking.verificationReview === 'PENDING'
-                ? 'We couldn’t finish checking your ID and licence within 24 hours, so your card authorisation was released. Nothing was charged.'
-                : booking.payment?.status === 'CANCELLED'
-                  ? `${host} didn’t answer within 24 hours, so your card authorisation was released. Nothing was charged.`
-                  : 'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.'}
+            {EXPIRED_WHY[reason](host)} {money}
           </p>
           <div>
             <Button asChild variant="secondary" size="sm">
-              {booking.verificationReview === 'REJECTED' ? (
+              {reason === 'VERIFICATION_REJECTED' ? (
                 <Link to={`/contact?category=ACCOUNT&booking=${booking.ref}`}>Contact support</Link>
               ) : (
                 <Link to="/cars">Find another car</Link>
@@ -241,6 +288,7 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
           </div>
         </Banner>
       );
+    }
     case 'CANCELLED': {
       const cancellation = booking.cancellation;
       const withdrawn = cancellation?.reason === 'REQUEST_WITHDRAWN';
@@ -391,6 +439,9 @@ function Trip({ tripRef }: { tripRef: string }) {
                 <span className="font-semibold tracking-wide text-ink">{booking.vehicle.regoPlate}</span>
               </p>
             )}
+          </DetailCard>
+          <DetailCard title="Fuel and kilometres" icon={Fuel}>
+            <BookedTermsDetails terms={booking.terms} />
           </DetailCard>
           <DetailCard title="Your host" icon={UserRound}>
             <PartyDetails

@@ -16,6 +16,7 @@ import { sessionQueryKey } from '@/features/auth/use-session';
 import { updateNameRequest } from './account-api';
 import { applyFieldErrors, formErrorMessage } from './form-errors';
 import { PrivacyRequestDialog } from './privacy-section';
+import { ProfilePhotoPicker } from './profile-photo-picker';
 import { SettingsSection } from './settings-section';
 
 /** The same name rules as sign-up. */
@@ -41,7 +42,8 @@ function Detail({ term, children }: { term: string; children: ReactNode }) {
 }
 
 /**
- * Personal details (spec §8; plan §11, PATCH /me): the name and the date of birth. The name can be corrected
+ * Personal details (spec §8; plan §11, PATCH /me): the profile photo (PUT /me/photo), the name and the date
+ * of birth. The name can be corrected
  * here until the identity check has passed or is being checked; after that it must match the ID, so a
  * correction goes to our team as a privacy request. The date of birth comes from the driver licence details.
  */
@@ -94,8 +96,11 @@ export function PersonalDetailsSection({ user }: { user: SessionUser }) {
   return (
     <SettingsSection
       title="Personal details"
-      description="Your name as it appears on your driver licence or ID. Hosts see only your first name."
+      description="Your photo, and your name as it appears on your driver licence or ID. Hosts see only your photo and first name."
     >
+      <div className="mb-6 border-b border-line pb-6">
+        <ProfilePhotoPicker user={user} />
+      </div>
       {save.isSuccess && !editing && (
         <Alert variant="success" role="status" className="mb-5">
           Your name is saved.

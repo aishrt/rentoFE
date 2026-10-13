@@ -28,30 +28,56 @@ type RecoverFrom = NonNullable<AdminRefundRequest['recoverFrom']>;
 const isFunder = (value: string): value is FundedBy => FUNDERS.some((funder) => funder === value);
 const isRecovery = (value: string): value is RecoverFrom => RECOVERIES.some((recovery) => recovery === value);
 
-function refundSchema(maxCents: number) {
-  return z.object({
-    amount: z.string().superRefine((value, context) => {
-      const cents = dollarsToCents(value);
-      const message =
-        value.trim() === ''
-          ? 'Enter an amount'
-          : cents === null
-            ? 'Enter an amount in dollars, such as 25 or 25.50'
-            : cents <= 0
-              ? 'Enter an amount above $0'
-              : cents > maxCents
-                ? `You can refund up to ${formatNzd(maxCents)}`
-                : null;
-      if (message) context.addIssue({ code: 'custom', message });
-    }),
-    fundedBy: z.string().refine(isFunder, 'Choose who pays for the refund'),
-    recoverFrom: z.string().refine(isRecovery, 'Choose how the Host pays it back'),
-    reason: z
-      .string()
-      .trim()
-      .min(3, 'Add a short reason')
-      .max(REASON_MAX, `Keep it under ${REASON_MAX} characters`),
-  });
+type HostFunding = NonNullable<AdminBookingDetail['hostFunding']>;
+
+/**
+ * What the Host pays back for a refund they fund (plan §8.1, item 15): their share of it, as their payout was
+ * worked out, never more than their share left. Rento Vroom covers its commission. As the API works it out.
+ */
+function hostShareOf(terms: HostFunding, cents: number): number {
+  if (terms.baseCents <= 0) return 0;
+  return Math.max(
+    0,
+    Math.min(terms.hostLeftCents, Math.round((cents * terms.payoutCents) / terms.baseCents)),
+  );
+}
+
+/** A Host-funded refund covers only the rental and delivery (or the extra charge) the Host was paid for. */
+const hostLimitMessage = (hostMaxCents: number) =>
+  hostMaxCents > 0
+    ? `The Host can fund up to ${formatNzd(hostMaxCents)}: the rental and delivery they were paid for. Rento Vroom can fund the rest.`
+    : 'Nothing the Host was paid for is left to refund. Choose Rento Vroom.';
+
+function refundSchema(maxCents: number, hostMaxCents: number) {
+  return z
+    .object({
+      amount: z.string().superRefine((value, context) => {
+        const cents = dollarsToCents(value);
+        const message =
+          value.trim() === ''
+            ? 'Enter an amount'
+            : cents === null
+              ? 'Enter an amount in dollars, such as 25 or 25.50'
+              : cents <= 0
+                ? 'Enter an amount above $0'
+                : cents > maxCents
+                  ? `You can refund up to ${formatNzd(maxCents)}`
+                  : null;
+        if (message) context.addIssue({ code: 'custom', message });
+      }),
+      fundedBy: z.string().refine(isFunder, 'Choose who pays for the refund'),
+      recoverFrom: z.string().refine(isRecovery, 'Choose how the Host pays it back'),
+      reason: z
+        .string()
+        .trim()
+        .min(3, 'Add a short reason')
+        .max(REASON_MAX, `Keep it under ${REASON_MAX} characters`),
+    })
+    .superRefine((value, context) => {
+      const cents = dollarsToCents(value.amount);
+      if (value.fundedBy === 'HOST' && cents !== null && cents > hostMaxCents)
+        context.addIssue({ code: 'custom', path: ['amount'], message: hostLimitMessage(hostMaxCents) });
+    });
 }
 
 type RefundSchema = ReturnType<typeof refundSchema>;
@@ -65,7 +91,8 @@ const FUNDER_CHOICES = [
   {
     value: 'HOST',
     label: FUNDED_BY.HOST,
-    description: 'Taken from this trip’s payout, or from the Host’s next one if it’s already paid.',
+    description:
+      'The Host’s share of it, taken from this trip’s payout, or from their next one if it’s already paid. Rento Vroom covers its commission.',
   },
 ] as const;
 
@@ -91,6 +118,8 @@ interface RefundDialogProps {
   refundableCents: number;
   /** The trip's payout has been sent, so a Host-funded refund is taken back another way. */
   tripPayoutSent?: boolean;
+  /** How much of the booking's payment the Host can fund, and their share (plan §8.1, item 15). */
+  hostFunding?: AdminBookingDetail['hostFunding'];
   /** Paid extra charges that can be refunded too (plan §8.1, item 11). */
   charges?: AdminBookingDetail['refundableCharges'];
   guestName: string;
@@ -108,6 +137,7 @@ export function RefundDialog({
   onOpenChange,
   refundableCents,
   tripPayoutSent = false,
+  hostFunding,
   charges = [],
   guestName,
   onConfirm,
@@ -121,6 +151,7 @@ export function RefundDialog({
         <RefundForm
           refundableCents={refundableCents}
           tripPayoutSent={tripPayoutSent}
+          hostFunding={hostFunding}
           charges={charges}
           onConfirm={onConfirm}
         />
@@ -135,9 +166,10 @@ const BOOKING_PAYMENT = 'BOOKING';
 function RefundForm({
   refundableCents,
   tripPayoutSent,
+  hostFunding,
   charges = [],
   onConfirm,
-}: Pick<RefundDialogProps, 'refundableCents' | 'tripPayoutSent' | 'charges' | 'onConfirm'>) {
+}: Pick<RefundDialogProps, 'refundableCents' | 'tripPayoutSent' | 'hostFunding' | 'charges' | 'onConfirm'>) {
   const confirm = useMutation({ mutationFn: onConfirm });
   const [target, setTarget] = useState(
     refundableCents > 0 || charges.length === 0 ? BOOKING_PAYMENT : charges[0]!.paymentId,
@@ -145,7 +177,10 @@ function RefundForm({
   const charge = charges.find((candidate) => candidate.paymentId === target);
   const maxCents = charge ? charge.refundableCents : refundableCents;
   const payoutSent = charge ? charge.payoutSent : tripPayoutSent;
-  const schema = refundSchema(maxCents);
+  // Without the terms (an older API), the API still checks it.
+  const terms = charge ? charge.hostFunding : hostFunding;
+  const hostMaxCents = terms ? Math.min(maxCents, terms.maxCents) : maxCents;
+  const schema = refundSchema(maxCents, hostMaxCents);
   const targets = [
     ...(refundableCents > 0
       ? [
@@ -174,6 +209,11 @@ function RefundForm({
   });
   const funder = useWatch({ control, name: 'fundedBy' });
   const askRecovery = Boolean(payoutSent) && funder === 'HOST';
+  const amountCents = dollarsToCents(useWatch({ control, name: 'amount' }) ?? '');
+  const hostPays =
+    funder === 'HOST' && terms && amountCents !== null && amountCents > 0 && amountCents <= hostMaxCents
+      ? hostShareOf(terms, amountCents)
+      : null;
 
   const onSubmit = handleSubmit(async ({ amount, fundedBy, recoverFrom, reason }) => {
     const amountCents = dollarsToCents(amount);
@@ -217,7 +257,11 @@ function RefundForm({
         )}
         <Field
           label="Amount (NZD)"
-          description={`Up to ${formatNzd(maxCents)}.`}
+          description={
+            funder === 'HOST' && hostMaxCents < maxCents
+              ? `Up to ${formatNzd(hostMaxCents)} when the Host funds it: the rental and delivery they were paid for.`
+              : `Up to ${formatNzd(maxCents)}.`
+          }
           error={errors.amount?.message}
         >
           <Input
@@ -245,6 +289,13 @@ function RefundForm({
             />
           )}
         />
+        {hostPays !== null && amountCents !== null && (
+          <p className="text-sm text-muted" role="status">
+            {hostPays < amountCents
+              ? `The Host pays ${formatNzd(hostPays)} of this (their share); Rento Vroom covers its commission.`
+              : `The Host pays all ${formatNzd(hostPays)} of this.`}
+          </p>
+        )}
         {askRecovery && (
           <Controller
             name="recoverFrom"

@@ -221,5 +221,25 @@ describe('IncidentPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send update' }));
     const history = within(screen.getByRole('heading', { name: 'History' }).parentElement!);
     expect(await history.findByText('Here you go.')).toBeInTheDocument();
+    expect(screen.getByText('The other side and our support team see it.')).toBeInTheDocument();
+  });
+
+  it('says an answer to a question support asked only them goes to support only', async () => {
+    const asked = incident();
+    asked.events[1] = { ...asked.events[1]!, visibility: 'GUEST' };
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /incidents/IN-4F7K2Q':
+          return { status: 200, body: { incident: { ...asked, sharedWithOtherParty: false } } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter([{ path: '/incidents/:ref', element: <IncidentPage /> }], '/incidents/IN-4F7K2Q');
+
+    expect(await screen.findByText('Only our support team sees it.')).toBeInTheDocument();
+    expect(screen.getByText('(only you and our support team see this)')).toBeInTheDocument();
   });
 });

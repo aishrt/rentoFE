@@ -88,8 +88,12 @@ describe('SavedPage', () => {
       '/cars/2020-mazda-cx-5-auckland?start=2026-10-13T10%3A00&end=2026-10-16T10%3A00',
     );
     expect(within(items[1]!).getByText(/Not available for your dates/)).toBeInTheDocument();
-    expect(within(items[2]!).getByText(/No longer listed/)).toBeInTheDocument();
-    expect(within(items[2]!).getAllByRole('link')[0]).toHaveAttribute('href', '/cars/2015-honda-jazz');
+    // Its listing is gone: no link to it and no price, only the heart to take it off the list.
+    const gone = within(items[2]!);
+    expect(gone.getByText(/No longer listed/)).toBeInTheDocument();
+    expect(gone.queryByRole('link')).not.toBeInTheDocument();
+    expect(gone.queryByText(/\/day/)).not.toBeInTheDocument();
+    expect(gone.getByRole('button', { name: /Remove .*Jazz.* from saved cars/ })).toBeInTheDocument();
   });
 
   it('suggests a search with dates when there are none to price for', async () => {

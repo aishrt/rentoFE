@@ -1,5 +1,4 @@
 import {
-  BadgeCheck,
   Bell,
   CreditCard,
   Heart,
@@ -7,12 +6,11 @@ import {
   Luggage,
   Mail,
   Settings,
-  ShieldCheck,
   Star,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
-import type { CheckoutReadiness, SessionUser } from '@/api/types';
+import type { SessionUser } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { DotGrid } from '@/components/brand/patterns/dot-grid';
 import { Container } from '@/components/layout/container';
@@ -56,13 +54,6 @@ const SECTIONS: { to: string; title: string; description: string; icon: LucideIc
   },
 ];
 
-const IDENTITY: Record<CheckoutReadiness['identityStatus'], string> = {
-  NONE: 'Not checked yet. We’ll ask for a photo of your ID and a selfie before your first trip.',
-  PENDING: 'In review. We’ll let you know as soon as it’s done.',
-  APPROVED: 'Verified.',
-  REJECTED: 'We couldn’t verify your identity. Contact support and we’ll help.',
-};
-
 function EmailStatus({ user }: { user: SessionUser }) {
   return (
     <p className="flex items-start gap-2.5 text-sm">
@@ -84,9 +75,9 @@ function EmailStatus({ user }: { user: SessionUser }) {
   );
 }
 
+/** The identity check is part of VerificationSection: always offered here until it has passed. */
 function BookingDetails({ user }: { user: SessionUser }) {
   const readiness = useCheckoutReadiness(undefined, true);
-  const identity = readiness.data?.identityStatus;
   return (
     <SettingsSection
       title="Your details for booking"
@@ -95,33 +86,6 @@ function BookingDetails({ user }: { user: SessionUser }) {
       <div className="grid gap-8">
         <EmailStatus user={user} />
         <VerificationSection user={user} readiness={readiness} context="account" />
-        <section aria-labelledby="account-identity" className="grid gap-2">
-          <h3 id="account-identity" className="font-semibold text-ink">
-            Identity check
-          </h3>
-          {identity ? (
-            <p className="flex items-start gap-2.5 text-sm">
-              {identity === 'APPROVED' ? (
-                <BadgeCheck aria-hidden="true" className="mt-0.5 size-4.5 shrink-0 text-primary" />
-              ) : (
-                <ShieldCheck aria-hidden="true" className="mt-0.5 size-4.5 shrink-0 text-muted" />
-              )}
-              <span>
-                {IDENTITY[identity]}
-                {identity === 'REJECTED' && (
-                  <>
-                    {' '}
-                    <Link to="/contact?category=ACCOUNT" className="link-underline font-medium text-primary">
-                      Contact support
-                    </Link>
-                  </>
-                )}
-              </span>
-            </p>
-          ) : (
-            <Skeleton aria-hidden="true" className="h-5 w-72" />
-          )}
-        </section>
       </div>
     </SettingsSection>
   );

@@ -1,7 +1,8 @@
-import { ChevronDown, CreditCard, Lock, Tag } from 'lucide-react';
+import { ChevronDown, CreditCard, Lock, Tag, X } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { AdminPayment } from '@/api/types';
+import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Select } from '@/components/ui/select';
@@ -12,6 +13,7 @@ import { EmptyList, ListSkeleton, LoadError } from '@/features/admin/ops/query-f
 import { StatusBadge } from '@/features/booking/booking-parts';
 import { formatNzDate, formatNzd } from '@/features/booking/booking-format';
 import { cn } from '@/lib/cn';
+import { formatDateValue } from '@/lib/dates';
 import { EXTRA_CHARGE_STATUS } from '@/features/admin/bookings/bookings-labels';
 import {
   isForbidden,
@@ -46,7 +48,10 @@ const CHARGE_STATUS_OPTIONS = [
 
 const EMPTY: Record<PaymentView, { title: string; description: string }> = {
   all: { title: 'No payments', description: 'Guests’ payments for bookings and extra charges show here.' },
-  failed: { title: 'No failed payments', description: 'Payments that didn’t go through show here.' },
+  failed: {
+    title: 'No failed payments',
+    description: 'Payments that didn’t go through show here, including cards declined at checkout.',
+  },
   disputed: {
     title: 'No disputed payments',
     description: 'Card disputes Guests raise with their bank show here.',
@@ -65,6 +70,9 @@ const statusFrom = (value: string | null) =>
 
 const chargeStatusFrom = (value: string | null): ExtraChargeFilters['status'] =>
   CHARGE_STATUSES.find((status) => status === value);
+
+/** An NZ day from the address, as the API takes it (2026-10-07), or none. */
+const dayFrom = (value: string | null) => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined);
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -244,6 +252,7 @@ export function PaymentsPanel() {
   const type = typeFrom(searchParams.get('type'));
   const status = view === 'all' ? statusFrom(searchParams.get('status')) : undefined;
   const chargeStatus = charges ? chargeStatusFrom(searchParams.get('status')) : undefined;
+  const from = charges ? undefined : dayFrom(searchParams.get('from'));
   const page = pageFrom(searchParams.get('page'));
 
   /** Changes filters in the address; any change but the page's goes back to page 1. */
@@ -328,10 +337,19 @@ export function PaymentsPanel() {
         aria-labelledby={tabId(VIEW_PREFIX, view)}
         className="mt-6"
       >
+        {from && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <p>Made on or after {formatDateValue(from)}</p>
+            <Button variant="secondary" size="sm" onClick={() => update({ from: undefined })}>
+              Show every date
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+        )}
         {charges ? (
           <UnpaidCharges filters={{ status: chargeStatus, page }} onPage={onPage} />
         ) : (
-          <PaymentsList filters={{ view, type, status, page }} onPage={onPage} />
+          <PaymentsList filters={{ view, type, status, from, page }} onPage={onPage} />
         )}
       </div>
     </div>

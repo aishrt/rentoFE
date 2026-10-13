@@ -221,13 +221,23 @@ export function statusLabel(
   return labels[booking.status];
 }
 
-/** The refund and the kept part of a cancellation, in a sentence: "Refunded $506.50." */
+/**
+ * The refund and the kept part of a cancellation, in a sentence: "Refunded $506.50." A refund Stripe hasn't
+ * finished is on its way, and one that failed is with our team (plan §8.1, item 21).
+ */
 export function refundSentence(cancellation: NonNullable<Booking['cancellation']>): string | null {
-  const { refundCents, feeCents } = cancellation;
+  const { refundCents, feeCents, refundStatus } = cancellation;
   if (refundCents === undefined) return null;
   if (refundCents === 0 && !feeCents) return 'Nothing was charged.';
+  if (refundCents === 0)
+    return `Not refundable under the cancellation policy (${formatNzd(feeCents ?? 0)} kept).`;
+  const refund = `${feeCents ? '' : 'full '}refund of ${formatNzd(refundCents)}`;
+  const kept = feeCents ? ` ${formatNzd(feeCents)} is kept under the cancellation policy.` : '';
+  if (refundStatus === 'FAILED')
+    return `Your ${refund} didn’t go through to your card. Our team is sorting it and will be in touch.${kept}`;
+  if (refundStatus === 'PENDING')
+    return `Your ${refund} is on its way: it usually reaches your account within 5–10 working days.${kept}`;
   if (!feeCents) return `Refunded in full: ${formatNzd(refundCents)}.`;
-  if (refundCents === 0) return `Not refundable under the cancellation policy (${formatNzd(feeCents)} kept).`;
   return `Refunded ${formatNzd(refundCents)}; ${formatNzd(feeCents)} kept under the cancellation policy.`;
 }
 

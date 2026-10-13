@@ -39,7 +39,12 @@ export function contentTypeOf(file: Blob & { name?: string }): string {
 }
 
 /** Purposes that take photos only; documents and incident evidence can also be a PDF. */
-const PHOTO_PURPOSES: readonly UploadPurpose[] = ['VEHICLE_PHOTO', 'MESSAGE_PHOTO', 'INSPECTION_PHOTO'];
+const PHOTO_PURPOSES: readonly UploadPurpose[] = [
+  'VEHICLE_PHOTO',
+  'MESSAGE_PHOTO',
+  'INSPECTION_PHOTO',
+  'PROFILE_PHOTO',
+];
 
 /** Why a file can't be uploaded for this purpose, or null when it can. Checked before anything is sent. */
 export function uploadProblem(file: Blob & { name?: string }, purpose: UploadPurpose): string | null {

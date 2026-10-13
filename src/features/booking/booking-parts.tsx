@@ -16,12 +16,12 @@ import {
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { Booking, LineItem } from '@/api/types';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
+import { PersonAvatar } from '@/features/messages/person-avatar';
 import { useMyReviews } from '@/features/reviews/reviews-api';
 import { cn } from '@/lib/cn';
 import { formatNzDateTime, formatNzd, ratingText, type StatusLabel, type StatusTone } from './booking-format';
@@ -147,8 +147,8 @@ export function TripStops({ booking, hiddenNote }: { booking: Booking; hiddenNot
 }
 
 /**
- * The other party: first name, verified, rating and trips, a link to their profile and reviews, and their
- * mobile once the booking is confirmed.
+ * The other party: first name and photo, verified, rating and trips, a link to their profile and reviews,
+ * and their mobile once the booking is confirmed (plan §6.2).
  */
 export function PartyDetails({
   party,
@@ -162,7 +162,7 @@ export function PartyDetails({
   return (
     <div className="grid gap-3">
       <div className="flex items-center gap-3">
-        <Avatar initials={party.firstName.charAt(0).toUpperCase()} className="size-11 text-sm" />
+        <PersonAvatar name={party.firstName} photoUrl={party.avatarUrl} className="size-11 text-sm" />
         <div>
           <p className="font-semibold text-ink">{party.firstName}</p>
           <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
@@ -223,6 +223,42 @@ export function ProtectionDetails({ plan }: { plan: NonNullable<Booking['protect
         Excess <span className="font-semibold text-ink">{formatNzd(plan.excessCents)}</span>
       </p>
     </div>
+  );
+}
+
+/** The fuel and kilometre terms as booked (spec §8, §9: fixed at booking). */
+export function BookedTermsDetails({ terms }: { terms: Booking['terms'] }) {
+  return (
+    <dl className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="text-muted">Kilometre allowance</dt>
+        <dd className="font-medium text-ink">
+          {terms.unlimitedKm
+            ? 'Unlimited kilometres'
+            : terms.allowanceKm !== undefined
+              ? `${terms.kmAllowancePerDay} km/day (${terms.allowanceKm} km total)`
+              : `${terms.kmAllowancePerDay} km/day`}
+        </dd>
+      </div>
+      {!terms.unlimitedKm && (
+        <div className="flex items-baseline justify-between gap-4 text-muted">
+          <dt>Extra kilometre charge</dt>
+          <dd>{formatNzd(terms.extraKmCents)}/km</dd>
+        </div>
+      )}
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="text-muted">{terms.electric ? 'Battery policy' : 'Fuel policy'}</dt>
+        <dd className="font-medium text-ink">
+          {terms.fuelPolicy === 'FULL'
+            ? terms.electric
+              ? 'Return fully charged'
+              : 'Return with a full tank'
+            : terms.electric
+              ? 'Return at same charge level'
+              : 'Return at same fuel level'}
+        </dd>
+      </div>
+    </dl>
   );
 }
 

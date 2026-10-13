@@ -17,6 +17,16 @@ export async function updateNameRequest(input: {
   return (await unwrap(client.PATCH('/me', { body: input }))).user;
 }
 
+/** Makes the photo just uploaded (purpose PROFILE_PHOTO) the profile photo (PUT /me/photo). */
+export async function setProfilePhotoRequest(key: string): Promise<SessionUser> {
+  return (await unwrap(client.PUT('/me/photo', { body: { key } }))).user;
+}
+
+/** Removes the profile photo (DELETE /me/photo): back to initials. */
+export async function removeProfilePhotoRequest(): Promise<SessionUser> {
+  return (await unwrap(client.DELETE('/me/photo'))).user;
+}
+
 /** Emails a link to the new address; returns it. The current address works until the link is opened. */
 export async function changeEmailRequest(input: {
   newEmail: string;

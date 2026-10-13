@@ -60,11 +60,18 @@ const rangi: HostApplication = {
   vehicles: { total: 0, underReview: 0 },
 };
 
+/** A page of applications as the API sends it. */
+const listed = (applications: HostApplication[], page = 1, total = applications.length) => ({
+  applications,
+  total,
+  page,
+});
+
 const card = async (name: string) => within(await screen.findByRole('listitem', { name }));
 
 describe('AdminHostApplicationsPage', () => {
   it('lists each application with its contact details, GST, bio and cars', async () => {
-    mockApi({ 'GET /admin/host-applications': { status: 200, body: { applications: [aroha, rangi] } } });
+    mockApi({ 'GET /admin/host-applications': { status: 200, body: listed([aroha, rangi]) } });
     render();
 
     const first = await card('Aroha Ngata');
@@ -94,7 +101,7 @@ describe('AdminHostApplicationsPage', () => {
     const fetchMock = mockApi({
       'GET /admin/host-applications': () => ({
         status: 200,
-        body: { applications: approved ? [rangi] : [aroha, rangi] },
+        body: listed(approved ? [rangi] : [aroha, rangi]),
       }),
       'POST /admin/host-applications/u10/approve': (init) => {
         sent = JSON.parse(String(init?.body));
@@ -124,7 +131,7 @@ describe('AdminHostApplicationsPage', () => {
   it('needs a note to reject an application', async () => {
     let sent: unknown;
     mockApi({
-      'GET /admin/host-applications': { status: 200, body: { applications: [aroha] } },
+      'GET /admin/host-applications': { status: 200, body: listed([aroha]) },
       'POST /admin/host-applications/u10/reject': (init) => {
         sent = JSON.parse(String(init?.body));
         return { status: 200, body: { status: 'REJECTED' } };
@@ -150,7 +157,7 @@ describe('AdminHostApplicationsPage', () => {
 
   it("explains that an applicant can't be approved until their email is confirmed", async () => {
     const fetchMock = mockApi({
-      'GET /admin/host-applications': { status: 200, body: { applications: [rangi] } },
+      'GET /admin/host-applications': { status: 200, body: listed([rangi]) },
     });
     render();
 
@@ -168,7 +175,7 @@ describe('AdminHostApplicationsPage', () => {
     const hemi: HostApplication = { ...aroha, userId: 'u12', firstName: 'Hemi', identityStatus: 'NONE' };
     const mere: HostApplication = { ...aroha, userId: 'u13', firstName: 'Mere', identityStatus: 'PENDING' };
     const fetchMock = mockApi({
-      'GET /admin/host-applications': { status: 200, body: { applications: [hemi, mere] } },
+      'GET /admin/host-applications': { status: 200, body: listed([hemi, mere]) },
     });
     render();
 
@@ -200,7 +207,7 @@ describe('AdminHostApplicationsPage', () => {
       identityRequired: false,
     };
     mockApi({
-      'GET /admin/host-applications': { status: 200, body: { applications: [hemi] } },
+      'GET /admin/host-applications': { status: 200, body: listed([hemi]) },
       'POST /admin/host-applications/u10/approve': { status: 200, body: { status: 'APPROVED' } },
     });
     render();
@@ -215,7 +222,7 @@ describe('AdminHostApplicationsPage', () => {
 
   it("shows the API's reason when the list was out of date about their email", async () => {
     mockApi({
-      'GET /admin/host-applications': { status: 200, body: { applications: [aroha] } },
+      'GET /admin/host-applications': { status: 200, body: listed([aroha]) },
       'POST /admin/host-applications/u10/approve': {
         status: 409,
         body: {
@@ -241,7 +248,7 @@ describe('AdminHostApplicationsPage', () => {
     const fetchMock = mockApi({
       'GET /admin/host-applications': (_init) => ({
         status: 200,
-        body: { applications: fetchMock.mock.calls.length > 1 ? [{ ...aroha, status: 'APPROVED' }] : [] },
+        body: listed(fetchMock.mock.calls.length > 1 ? [{ ...aroha, status: 'APPROVED' }] : []),
       }),
     });
     const { router } = render();
@@ -254,6 +261,54 @@ describe('AdminHostApplicationsPage', () => {
     expect(router.state.location.search).toBe('?status=approved');
     const lastUrl = String((fetchMock.mock.calls.at(-1)?.[0] as Request).url);
     expect(lastUrl).toContain('status=APPROVED');
+  });
+
+  it('pages through a long list, keeping the page in the address', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/host-applications': (_init) => {
+        const url = new URL(String((fetchMock.mock.calls.at(-1)?.[0] as Request).url));
+        const page = Number(url.searchParams.get('page') ?? 1);
+        return { status: 200, body: listed(page === 1 ? [aroha] : [rangi], page, 30) };
+      },
+    });
+    const { router } = render();
+
+    await card('Aroha Ngata');
+    expect(screen.getByText('30 applications')).toBeInTheDocument();
+    expect(screen.getByText('1–25 of 30 applications')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await card('Rangi Walker');
+    expect(screen.getByText('26–30 of 30 applications')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2');
+  });
+
+  it('goes back to the last page when deciding the last applications on a later one empties it', async () => {
+    const hemi: HostApplication = { ...aroha, userId: 'u12', firstName: 'Hemi' };
+    let approved = false;
+    const fetchMock = mockApi({
+      'GET /admin/host-applications': (_init) => {
+        const url = new URL(String((fetchMock.mock.calls.at(-1)?.[0] as Request).url));
+        const page = Number(url.searchParams.get('page') ?? 1);
+        const onPage = page === 1 ? [aroha] : approved ? [] : [hemi];
+        return { status: 200, body: listed(onPage, page, approved ? 25 : 26) };
+      },
+      'POST /admin/host-applications/u12/approve': () => {
+        approved = true;
+        return { status: 200, body: { status: 'APPROVED' } };
+      },
+    });
+    const { router } = render('/admin/host-applications?page=2');
+
+    expect(await screen.findByText('26–26 of 26 applications')).toBeInTheDocument();
+    await userEvent.click((await card('Hemi Ngata')).getByRole('button', { name: 'Approve Hemi Ngata' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Hemi Ngata?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve' }));
+
+    await card('Aroha Ngata');
+    expect(router.state.location.search).toBe('');
+    expect(screen.getByText('25 applications')).toBeInTheDocument();
+    expect(screen.queryByText('No applications waiting')).not.toBeInTheDocument();
   });
 
   it('shows an error with a way to try again', async () => {

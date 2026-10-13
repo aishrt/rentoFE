@@ -116,6 +116,35 @@ describe('AdminAuditPage', () => {
     expect(router.state.location.search).toBe('');
   });
 
+  it('reaches older entries by NZ days, which stay in the address', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/audit': { status: 200, body: { entries: [held], total: 1, page: 1 } },
+    });
+    const { router } = render('/admin/audit?from=2025-01-01&to=2025-12-31&action=payout.held');
+
+    await row(/payout\.held/);
+    const sent = queries(fetchMock)[0];
+    expect(sent?.get('from')).toBe('2025-01-01');
+    expect(sent?.get('to')).toBe('2025-12-31');
+    expect(screen.getByRole('button', { name: /^From/ })).toHaveTextContent(/1 Jan/);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(router.state.location.search).toBe('');
+  });
+
+  it('stops at the last page the API lists, and says how to reach the rest', async () => {
+    mockApi({
+      'GET /admin/audit': { status: 200, body: { entries: [held], total: 30_000, page: 500 } },
+    });
+    render('/admin/audit?page=500');
+
+    expect(
+      await screen.findByText('24,951–25,000 of 30,000 entries. Narrow the search to see the rest.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+  });
+
   it('goes through the log a page at a time', async () => {
     const fetchMock = mockApi({
       'GET /admin/audit': { status: 200, body: { entries: [held], total: 120, page: 1 } },

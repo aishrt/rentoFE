@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Flag } from 'lucide-react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '@/api/client';
 import type { Incident, IncidentStatus, StaffIncidentUpdateRequest } from '@/api/types';
@@ -36,11 +36,43 @@ const updateSchema = z.object({
   visibility: z.enum(VISIBILITIES),
   status: z.string(),
   assignToMe: z.boolean(),
+  confirmShare: z.boolean(),
 });
 
 type UpdateValues = z.infer<typeof updateSchema>;
 
-const DEFAULTS: UpdateValues = { note: '', visibility: 'BOTH', status: '', assignToMe: false };
+/** Who sees the case now (the API's `audience`; worked out from the events if it's missing). */
+function caseAudience(incident: Pick<Incident, 'audience' | 'events'>): EventVisibility {
+  if (incident.audience) return incident.audience;
+  const sees = (party: 'GUEST' | 'HOST') =>
+    incident.events.some((event) => event.visibility === 'BOTH' || event.visibility === party);
+  const guest = sees('GUEST');
+  const host = sees('HOST');
+  return guest && host ? 'BOTH' : guest ? 'GUEST' : host ? 'HOST' : 'INTERNAL';
+}
+
+/** A fresh form: the update goes to whoever already sees the case, never wider by default. */
+const defaultsFor = (incident: Incident): UpdateValues => ({
+  note: '',
+  visibility: caseAudience(incident),
+  status: '',
+  assignToMe: false,
+  confirmShare: false,
+});
+
+const PARTIES: Record<EventVisibility, readonly ('Guest' | 'Host')[]> = {
+  BOTH: ['Guest', 'Host'],
+  GUEST: ['Guest'],
+  HOST: ['Host'],
+  INTERNAL: [],
+};
+
+const AUDIENCE_WORDS: Record<EventVisibility, string> = {
+  BOTH: 'both parties see this case',
+  GUEST: 'only the Guest sees this case',
+  HOST: 'only the Host sees this case',
+  INTERNAL: 'only staff see this case',
+};
 
 const isStatus = (value: string): value is IncidentStatus =>
   INCIDENT_STATUSES.some((status) => status === value);
@@ -63,18 +95,21 @@ function updatedToast(body: StaffIncidentUpdateRequest) {
   const parts = [
     body.status && `It’s now ${STAFF_INCIDENT_STATUS[body.status].label.toLowerCase()}.`,
     body.assignToMe && 'It’s assigned to you.',
-    (body.note || body.attachments.length > 0) && SEEN_BY[body.visibility],
+    (body.note || body.attachments.length > 0) && body.visibility && SEEN_BY[body.visibility],
   ];
   toast('Case updated', { description: parts.filter(Boolean).join(' ') });
 }
 
 /**
  * Support's update to a case (spec §15): a note for both parties, one of them or staff only, with photos or
- * documents, a new status, and taking the case. Resolving or closing it can release held payouts.
+ * documents, a new status, and taking the case. It goes to whoever already sees the case unless staff
+ * choose otherwise, and showing the case to a party who can't see it yet needs a tick to confirm. Taking
+ * the case with nothing else is internal. Resolving or closing it can release held payouts.
  */
 export function IncidentUpdateForm({ incident }: { incident: Incident }) {
   const update = useStaffIncidentUpdate(incident.caseRef);
   const evidence = useEvidence(incident.bookingRef);
+  const audience = caseAudience(incident);
   const {
     register,
     control,
@@ -82,7 +117,11 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
     setError,
     reset,
     formState: { errors },
-  } = useForm<UpdateValues>({ resolver: zodResolver(updateSchema), defaultValues: DEFAULTS });
+  } = useForm<UpdateValues>({ resolver: zodResolver(updateSchema), defaultValues: defaultsFor(incident) });
+  // The parties this update would show the case to for the first time.
+  const visibility = useWatch({ control, name: 'visibility' });
+  const newViewers = PARTIES[visibility].filter((party) => !PARTIES[audience].includes(party));
+  const newViewerWords = `the ${newViewers.join(' and the ')}`;
 
   // Only where the case can go from here (the API's workflow): a resolved case can be reopened, a closed
   // one is final.
@@ -99,15 +138,18 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
   ];
   const statusFinal = statusOptions.length === 1;
 
-  const onSubmit = handleSubmit(async ({ note, visibility, status, assignToMe }) => {
+  const onSubmit = handleSubmit(async ({ note, visibility, status, assignToMe, confirmShare }) => {
+    const changesStatus = isStatus(status) && status !== incident.status;
+    // Taking the case with nothing else is internal (the API keeps it so): it shows nobody anything.
+    const sharesSomething = Boolean(note || evidence.attachments.length > 0 || changesStatus);
     const body: StaffIncidentUpdateRequest = {
       note,
       attachments: evidence.attachments,
-      visibility,
-      ...(isStatus(status) && status !== incident.status && { status }),
+      visibility: sharesSomething ? visibility : 'INTERNAL',
+      ...(changesStatus && { status }),
       ...(assignToMe && { assignToMe: true }),
     };
-    if (!body.note && body.attachments.length === 0 && !body.status && !body.assignToMe) {
+    if (!sharesSomething && !body.assignToMe) {
       setError(
         'note',
         { message: 'Write an update, change the status or take the case' },
@@ -115,14 +157,23 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
       );
       return;
     }
+    if (sharesSomething && newViewers.length > 0 && !confirmShare) {
+      setError(
+        'confirmShare',
+        { message: `Tick to confirm you’re showing the case to ${newViewerWords}` },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    let updated: Incident;
     try {
-      await update.mutateAsync(body);
+      updated = await update.mutateAsync(body);
     } catch (error) {
       const noteError = error instanceof ApiError ? error.fields?.note : undefined;
       if (noteError) setError('note', { message: noteError }, { shouldFocus: true });
       return;
     }
-    reset(DEFAULTS);
+    reset(defaultsFor(updated));
     evidence.reset();
     updatedToast(body);
   });
@@ -156,6 +207,7 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
               <ChoiceCards
                 ref={field.ref}
                 legend="Who sees it"
+                description={`Now ${AUDIENCE_WORDS[audience]}.`}
                 name={field.name}
                 value={field.value}
                 onChange={field.onChange}
@@ -164,6 +216,23 @@ export function IncidentUpdateForm({ incident }: { incident: Incident }) {
               />
             )}
           />
+          {newViewers.length > 0 && (
+            <Alert variant="danger" title={`This shows the case to ${newViewerWords}`}>
+              <div className="grid gap-3">
+                <p>
+                  {newViewers.length === 1 ? `The ${newViewers[0]} can’t` : 'Neither party can'} see this case
+                  now. Once you save, {newViewers.length === 1 ? 'they' : 'they both'} see it, with this
+                  update and anything else shared with them, and we email them. Taking the case on its own
+                  stays internal.
+                </p>
+                <Checkbox
+                  label={`Show the case to ${newViewerWords}`}
+                  error={errors.confirmShare?.message}
+                  {...register('confirmShare')}
+                />
+              </div>
+            </Alert>
+          )}
           <div className="grid gap-5 sm:grid-cols-2 sm:items-end">
             <Controller
               name="status"

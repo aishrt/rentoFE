@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminDashboard } from '@/api/types';
+import { presetRange } from '@/features/admin/finance/date-range';
 import { formatNumber, formatNzdFromCents } from '@/lib/format';
 
 export interface OverviewMetric {
@@ -41,14 +42,14 @@ export const rangeMetrics: OverviewMetric[] = [
     label: 'Booking revenue',
     icon: Wallet,
     format: formatNzdFromCents,
-    hint: 'Paid for bookings made on these dates, less refunds',
+    hint: 'Trips starting on these dates, extra charges and cancellation fees kept, less their refunds',
   },
   {
     key: 'platformFeesCents',
     label: 'Platform fees',
     icon: Percent,
     format: formatNzdFromCents,
-    hint: 'Service fees and commission on bookings made on these dates',
+    hint: 'Service fees and commission on trips starting on these dates, and the platform’s share of fees kept and extra charges',
   },
   {
     key: 'hostPayoutsCents',
@@ -137,7 +138,8 @@ export interface QueueLink {
   key: keyof AdminDashboard['queues'];
   label: string;
   icon: LucideIcon;
-  to: string;
+  /** Where it's dealt with; a function of now for a queue that counts recent days. */
+  to: string | ((now: Date) => string);
   /** Hidden from the support team, who can't open the page. */
   adminOnly?: boolean;
 }
@@ -152,7 +154,13 @@ export const queueLinks: QueueLink[] = [
   { key: 'reports', label: 'Reports', icon: Flag, to: '/admin/moderation' },
   { key: 'heldReviews', label: 'Held reviews', icon: MessageSquareWarning, to: '/admin/moderation' },
   { key: 'riskFlags', label: 'Risk flags', icon: ShieldAlert, to: '/admin/risk' },
-  { key: 'failedPayments', label: 'Failed payments', icon: CreditCard, to: '/admin/payments?view=failed' },
+  // The last 30 NZ days, as the API counts them.
+  {
+    key: 'failedPayments',
+    label: 'Failed payments',
+    icon: CreditCard,
+    to: (now) => `/admin/payments?view=failed&from=${presetRange('30d', now).from}`,
+  },
   {
     key: 'heldPayouts',
     label: 'Held payouts',

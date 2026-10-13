@@ -82,24 +82,26 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
     );
   }
 
-  const { problems, licence } = readiness.data;
+  const { problems, licence, identityStatus } = readiness.data;
   const phoneNeeded = problems.some((problem) => problem.code === 'PHONE_REQUIRED');
+  // Settings ask for the check before the first booking, and it hasn't passed yet.
+  const identityNeeded = problems.some(
+    (problem) => problem.code === 'IDENTITY_REQUIRED' || problem.code === 'IDENTITY_PROCESSING',
+  );
+  // At checkout, shown when settings ask for it or once there's a check to report on. On the account page
+  // always, so the person can verify whenever they like (spec §8), and a turned-down check is said there once.
+  const showIdentity =
+    context === 'account' || identityNeeded || identityStatus === 'APPROVED' || identityStatus === 'PENDING';
   // The identity check has its own part of the step, below the mobile number.
   const licenceProblems = problems.filter(
     (problem) =>
       problem.code !== 'PHONE_REQUIRED' &&
       problem.code !== 'IDENTITY_REQUIRED' &&
-      problem.code !== 'IDENTITY_PROCESSING',
+      problem.code !== 'IDENTITY_PROCESSING' &&
+      !(problem.code === 'IDENTITY_REJECTED' && context === 'account'),
   );
   const needsForm = licenceProblems.some((problem) => problem.code !== 'IDENTITY_REJECTED') || editing;
   const firstTime = licenceProblems.some((problem) => problem.code === 'LICENCE_REQUIRED');
-  // Shown when settings ask for it, or once there's a check to report on.
-  const showIdentity =
-    problems.some(
-      (problem) => problem.code === 'IDENTITY_REQUIRED' || problem.code === 'IDENTITY_PROCESSING',
-    ) ||
-    readiness.data.identityStatus === 'APPROVED' ||
-    readiness.data.identityStatus === 'PENDING';
   const points = policies.data ? eligibilityPoints(policies.data.eligibility) : [];
 
   return (
@@ -128,6 +130,22 @@ export function VerificationSection({ user, readiness, context = 'checkout' }: V
           <h3 id="checkout-identity" className="font-semibold text-ink">
             Your identity
           </h3>
+          {context === 'account' && identityStatus === 'REJECTED' && (
+            <p className="text-sm text-ink/85">
+              We couldn’t verify your identity.{' '}
+              <Link to="/contact?category=ACCOUNT" className="link-underline font-medium text-primary">
+                Contact support
+              </Link>{' '}
+              and we’ll help.
+            </p>
+          )}
+          {context === 'account' && identityStatus === 'NONE' && !readiness.data.identityProcessing && (
+            <p className="text-sm text-ink/85">
+              {identityNeeded
+                ? 'Not checked yet. You’ll need it before your first booking.'
+                : 'Not checked yet, and optional for now. With your driver licence as the ID, the check confirms your licence too, so a booking doesn’t wait for our team to check it.'}
+            </p>
+          )}
           <IdentityCheck readiness={readiness.data} />
         </section>
       )}

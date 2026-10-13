@@ -40,6 +40,13 @@ export function openRealtime({ onReconnect, events = {} }: RealtimeOptions): () 
         renewed = false;
       });
 
+      // The server closes a connection once its access token has expired, or its session has ended
+      // (signed out elsewhere, password changed). Socket.IO doesn't reconnect by itself after that:
+      // connecting again renews the cookie below, or stops there if the session has ended.
+      connection.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect' && !closed) connection.connect();
+      });
+
       connection.on('connect_error', (error) => {
         // A network problem: Socket.IO keeps retrying by itself.
         if (connection.active) return;

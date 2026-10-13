@@ -335,7 +335,36 @@ describe('AdminPaymentsPage: payments', () => {
     render('/admin/payments?view=failed');
 
     expect(await screen.findByText('No failed payments')).toBeInTheDocument();
+    expect(
+      screen.getByText('Payments that didn’t go through show here, including cards declined at checkout.'),
+    ).toBeInTheDocument();
     expect(queries(fetchMock, '/admin/payments')[0]?.get('view')).toBe('failed');
+  });
+
+  it('shows the last 30 days’ failures the overview counts, a declined card with how it ended, and every date', async () => {
+    const declined: AdminPayment = {
+      ...refunded,
+      id: 'pay3',
+      status: 'CANCELLED',
+      failureReason: 'Your card was declined.',
+      refundedCents: 0,
+      refunds: [],
+    };
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [declined], total: 1, page: 1 } },
+    });
+    const { router } = render('/admin/payments?view=failed&from=2026-09-13');
+
+    const payment = await row(/RV-7K2Q9M/);
+    expect(payment.getByText('Cancelled')).toBeInTheDocument();
+    expect(payment.getByText('Your card was declined.')).toBeInTheDocument();
+    expect(queries(fetchMock, '/admin/payments')[0]?.get('from')).toBe('2026-09-13');
+    expect(screen.getByText(/Made on or after Sun, 13 Sep/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show every date' }));
+    await vi.waitFor(() => expect(queries(fetchMock, '/admin/payments').at(-1)?.get('from')).toBeNull());
+    expect(router.state.location.search).toBe('?view=failed');
   });
 
   it('asks support staff without the refunds permission to ask the admin, calmly', async () => {

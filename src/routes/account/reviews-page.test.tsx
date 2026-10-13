@@ -49,4 +49,27 @@ describe('ReviewsPage, shared by Guests and Hosts', () => {
     expect(params.get('as')).toBe('host');
     expect(screen.getByRole('navigation', { name: 'Hosting' })).toBeInTheDocument();
   });
+
+  it('says when the reviews didn’t load, and loads them again on request', async () => {
+    let fail = true;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: hostUser } },
+      'GET /threads/unread': { status: 200, body: { count: 0 } },
+      'GET /me/reviews': () =>
+        fail
+          ? {
+              status: 500,
+              body: { error: { code: 'INTERNAL', message: 'Something went wrong on our side.' } },
+            }
+          : { status: 200, body: { toWrite: [], written: [], received: [] } },
+    });
+    render('/account/reviews');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t load your reviews');
+    fail = false;
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('heading', { name: 'No reviews about you yet' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

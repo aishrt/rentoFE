@@ -89,9 +89,11 @@ function FigureGroup({
 function WaitingCard({
   queues,
   isAdmin,
+  now,
 }: {
   queues: AdminDashboard['queues'] | undefined;
   isAdmin: boolean;
+  now: Date;
 }) {
   const links = queueLinks.filter((link) => isAdmin || !link.adminOnly);
   return (
@@ -110,7 +112,7 @@ function WaitingCard({
               return (
                 <li key={key}>
                   <Link
-                    to={to}
+                    to={typeof to === 'function' ? to(now) : to}
                     className="group flex min-h-14 items-center gap-3 rounded-control border border-line px-4 py-3 transition-colors duration-120 hover:border-ink/25 hover:bg-ink/3"
                   >
                     <IconBadge size="sm" tone={count > 0 ? 'soft' : 'muted'}>
@@ -241,7 +243,7 @@ export function AdminOverviewPage() {
         )}
       </section>
 
-      {!dashboard.isError && <WaitingCard queues={data?.queues} isAdmin={isAdmin} />}
+      {!dashboard.isError && <WaitingCard queues={data?.queues} isAdmin={isAdmin} now={now} />}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Database, Lock, RefreshCw, ScrollText, Search, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Field } from '@/components/ui/field';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -25,16 +26,35 @@ const ENTITY_OPTIONS = [{ value: ALL, label: 'All records' }, ...AUDIT_ENTITIES]
 
 type FilterKey = (typeof AUDIT_FILTER_KEYS)[number];
 
+const DATE_KEYS: readonly FilterKey[] = ['from', 'to'];
+
 function readFilters(params: URLSearchParams): AuditFilters {
   const filters: AuditFilters = { page: pageFrom(params.get('page')) };
   for (const key of AUDIT_FILTER_KEYS) {
     const value = params.get(key)?.trim();
-    if (value) filters[key] = value;
+    // A date the API takes, or none.
+    if (value && (!DATE_KEYS.includes(key) || /^\d{4}-\d{2}-\d{2}$/.test(value))) filters[key] = value;
   }
   return filters;
 }
 
-/** The action, record and record id, applied together with Filter. */
+function ClearDate({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClear}
+      aria-label={label}
+      className="link-underline rounded-inner text-xs font-medium text-primary"
+    >
+      Clear
+    </button>
+  );
+}
+
+/**
+ * The action, record, record id and NZ days, applied together with Filter. The log is kept for years
+ * (plan §14), so the days reach entries further back than its pages do.
+ */
 function FilterForm({
   filters,
   onApply,
@@ -45,10 +65,18 @@ function FilterForm({
   const [action, setAction] = useState(filters.action ?? '');
   const [entity, setEntity] = useState(filters.entity ?? ALL);
   const [entityId, setEntityId] = useState(filters.entityId ?? '');
+  const [from, setFrom] = useState(filters.from ?? '');
+  const [to, setTo] = useState(filters.to ?? '');
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onApply({ action: action.trim(), entity: entity === ALL ? '' : entity, entityId: entityId.trim() });
+    onApply({
+      action: action.trim(),
+      entity: entity === ALL ? '' : entity,
+      entityId: entityId.trim(),
+      from,
+      to,
+    });
   };
 
   return (
@@ -56,7 +84,7 @@ function FilterForm({
       role="search"
       aria-label="Filter the audit log"
       onSubmit={submit}
-      className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]"
+      className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1fr_1fr_1fr_10rem_10rem_auto]"
     >
       <Field label="Action">
         <Input
@@ -77,6 +105,28 @@ function FilterForm({
       </Field>
       <Field label="Record id">
         <Input value={entityId} onChange={(event) => setEntityId(event.target.value)} maxLength={100} />
+      </Field>
+      <Field
+        label="From"
+        labelAside={from && <ClearDate label="Clear the from date" onClear={() => setFrom('')} />}
+      >
+        <DatePicker
+          value={from}
+          onChange={setFrom}
+          max={to || undefined}
+          placeholder="Any day"
+          calendarLabel="Entries from"
+        />
+      </Field>
+      <Field label="To" labelAside={to && <ClearDate label="Clear the to date" onClear={() => setTo('')} />}>
+        <DatePicker
+          value={to}
+          onChange={setTo}
+          min={from || undefined}
+          placeholder="Any day"
+          calendarLabel="Entries up to"
+          align="end"
+        />
       </Field>
       <Button type="submit" variant="secondary">
         <Search aria-hidden="true" />
@@ -156,7 +206,7 @@ export function AdminAuditPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => update({ action: '', entity: '', entityId: '', actor: '' })}
+              onClick={() => update({ action: '', entity: '', entityId: '', actor: '', from: '', to: '' })}
             >
               Clear filters
             </Button>

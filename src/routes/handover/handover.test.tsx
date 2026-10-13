@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Handover } from '@/api/types';
 import type * as UploadModule from '@/features/host/upload';
 import { uploadFile } from '@/features/host/upload';
+import { listPhotos, savePhoto, type StoredPhoto } from '@/features/handover/photo-store';
 import { ANGLES, handover, jpegWithExif, report } from '@/features/handover/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
@@ -338,6 +339,72 @@ describe('HandoverPage', () => {
       fromCheckOutDamage: true,
       attachments: [],
     });
+  });
+
+  it('offers the check-out on a trip support started without a check-in', async () => {
+    mockHandover(() =>
+      handover({
+        bookingStatus: 'ACTIVE',
+        actions: { ...handover().actions, checkIn: false, checkOut: true },
+      }),
+    );
+    render('/trips/RV-7K2Q9M/handover');
+
+    expect(await screen.findByRole('link', { name: 'Start check-out' })).toHaveAttribute(
+      'href',
+      '/trips/RV-7K2Q9M/check-out',
+    );
+    expect(screen.getByText(/There’s no check-in record to compare with/)).toBeInTheDocument();
+    expect(screen.queryByText('No handover yet')).not.toBeInTheDocument();
+  });
+
+  it('sends only the flagged damage photos it shows, each of which can be removed', async () => {
+    const stored = (id: string, stage: StoredPhoto['stage']): StoredPhoto => ({
+      id,
+      bookingRef: 'RV-7K2Q9M',
+      stage,
+      angle: 'DAMAGE',
+      blob: new Blob(['jpeg'], { type: 'image/jpeg' }),
+      name: `${id}.jpg`,
+      contentType: 'image/jpeg',
+      takenAt: '2026-10-12T01:00:00.000Z',
+      key: `bookings/b1/inspections/${id}.jpg`,
+    });
+    // A damage photo from a check-out someone else finished, and two from flagging that wasn't sent.
+    await savePhoto(stored('abandoned-check-out', 'CHECK_OUT'));
+    await savePhoto(stored('flag-1', 'FLAGGED_DAMAGE'));
+    await savePhoto(stored('flag-2', 'FLAGGED_DAMAGE'));
+    const sent = mockHandover(() =>
+      handover({
+        bookingStatus: 'COMPLETED',
+        checkIn: report(),
+        checkOut: report({ stage: 'CHECK_OUT', submittedBy: 'HOST', damagePins: [] }),
+        damageWindowEndsAt: '2026-10-16T21:00:00.000Z',
+        actions: { ...handover().actions, checkIn: false, confirmCheckOut: true, flagDamage: true },
+      }),
+    );
+    render('/trips/RV-7K2Q9M/handover');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Flag new damage' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Flag new damage' }));
+    const toSend = within(await dialog.findByRole('list', { name: 'Photos to send' }));
+    expect(toSend.getAllByRole('img')).toHaveLength(2);
+    await userEvent.click(toSend.getByRole('button', { name: 'Remove damage photo 1' }));
+    await vi.waitFor(() => expect(toSend.getAllByRole('img')).toHaveLength(1));
+
+    const diagram = dialog.getByRole('img', { name: /^A car seen from above/ });
+    vi.spyOn(diagram, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 200));
+    fireEvent.click(diagram, { clientX: 80, clientY: 124 });
+    await userEvent.click(dialog.getByRole('button', { name: 'Flag damage' }));
+
+    await screen.findByRole('dialog', { name: 'New damage flagged' });
+    const body = sent.find((request) => request.path.endsWith('/CHECK_OUT/damage'))?.body as {
+      photos: { key: string }[];
+    };
+    expect(body.photos.map((photo) => photo.key)).toEqual(['bookings/b1/inspections/flag-2.jpg']);
+    // The check-out is recorded, so its leftover photos are gone from the browser; so are those just sent.
+    expect(await listPhotos('RV-7K2Q9M', 'CHECK_OUT')).toEqual([]);
+    await vi.waitFor(async () => expect(await listPhotos('RV-7K2Q9M', 'FLAGGED_DAMAGE')).toEqual([]));
   });
 
   it('offers the case straight after a check-out that recorded new damage', async () => {
