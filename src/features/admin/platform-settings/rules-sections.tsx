@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { PlatformSettings } from '@/api/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LICENCE_CLASS_LABELS, type LicenceClass } from '@/features/booking/booking-format';
-import { RECORDED_ONLY, decimalField, textField, wholeField } from './field-rules';
+import { RECORDED_ONLY, decimalField, textField, timeField, wholeField } from './field-rules';
 import { NumberField, SwitchField, TextInputField } from './fields';
 import { SettingsForm } from './settings-form';
 
@@ -84,17 +84,17 @@ export function EligibilitySection({ settings }: { settings: PlatformSettings })
             <SwitchField
               name="identityBeforeFirstBooking"
               label="Guests pass an identity check before their first booking"
-              description={`${RECORDED_ONLY} the identity check is connected in Phase 3.`}
+              description="A photo of their ID and a selfie, at checkout. A check our team is reviewing can still book: the booking waits as a request until it's decided."
             />
             <SwitchField
               name="identityForHosts"
-              label="Hosts pass an identity check"
-              description={`${RECORDED_ONLY} the identity check is connected in Phase 3.`}
+              label="Hosts pass an identity check before their application is approved"
+              description="They start it from Hosting once they've applied. Approving waits until it passes."
             />
             <SwitchField
               name="emailBeforeTripStart"
               label="Guests confirm their email before the trip starts"
-              description={`${RECORDED_ONLY} trip start is built in Phase 3.`}
+              description="Check-in waits until they have."
             />
           </div>
         </>
@@ -103,28 +103,40 @@ export function EligibilitySection({ settings }: { settings: PlatformSettings })
   );
 }
 
-const reviewsAndTripsSchema = z.object({
-  windowDays: wholeField(1, 90, ' days'),
-  revealTogether: z.boolean(),
-  homepageThreshold: wholeField(0, 1000),
-  damageReportWindowHours: wholeField(1, 720, ' hours'),
-  lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
-});
+const reviewsAndTripsSchema = z
+  .object({
+    windowDays: wholeField(1, 90, ' days'),
+    revealTogether: z.boolean(),
+    homepageThreshold: wholeField(0, 1000),
+    damageReportWindowHours: wholeField(1, 720, ' hours'),
+    lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
+    threadReadOnlyDays: wholeField(0, 365, ' days'),
+    quietHoursStart: timeField(),
+    quietHoursEnd: timeField(),
+  })
+  // The same start and end would mean no quiet hours at all: texts at any hour of the night.
+  .refine((values) => values.quietHoursStart !== values.quietHoursEnd, {
+    message: 'Choose an end time different from the start',
+    path: ['quietHoursEnd'],
+  });
 
 export function ReviewsAndTripsSection({ settings }: { settings: PlatformSettings }) {
   return (
     <SettingsForm
       decision="reviewsAndTrips"
       title="Reviews and trips"
-      description="When reviews can be left and shown, and the windows after a trip. The review window and grace period are on the public pages now; reviews, damage reports and late returns themselves are built in Phase 3."
+      description="When reviews can be left and shown, the windows after a trip, and the quiet hours for text messages. The review window and grace period are also on the public pages."
       settings={settings}
       schema={reviewsAndTripsSchema}
-      toValues={({ reviews, trips }) => ({
+      toValues={({ reviews, trips, sms }) => ({
         windowDays: String(reviews.windowDays),
         revealTogether: reviews.revealTogether,
         homepageThreshold: String(reviews.homepageThreshold),
         damageReportWindowHours: String(trips.damageReportWindowHours),
         lateReturnGraceMinutes: String(trips.lateReturnGraceMinutes),
+        threadReadOnlyDays: String(trips.threadReadOnlyDays),
+        quietHoursStart: sms.quietHoursStart,
+        quietHoursEnd: sms.quietHoursEnd,
       })}
       toUpdate={(values, current) => ({
         reviews: {
@@ -136,7 +148,9 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
           ...current.trips,
           damageReportWindowHours: Number(values.damageReportWindowHours),
           lateReturnGraceMinutes: Number(values.lateReturnGraceMinutes),
+          threadReadOnlyDays: Number(values.threadReadOnlyDays),
         },
+        sms: { quietHoursStart: values.quietHoursStart, quietHoursEnd: values.quietHoursEnd },
       })}
     >
       {() => (
@@ -145,7 +159,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             name="windowDays"
             label="Time to leave a review"
             unit="days"
-            description="After the trip ends."
+            description="From when the trip is completed: at check-out, or when our team completes it."
           />
           <NumberField
             name="homepageThreshold"
@@ -164,13 +178,29 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             unit="minutes"
             description="Before a return counts as late."
           />
+          <NumberField
+            name="threadReadOnlyDays"
+            label="Messages stay open for"
+            unit="days"
+            description="After the trip ends or is cancelled, while no case on it is open. Then the conversation can be read but not added to."
+          />
           <div className="sm:col-span-2">
             <SwitchField
               name="revealTogether"
               label="Show both reviews of a trip at the same time"
-              description="So neither side can reply in kind. Applies once reviews are built."
+              description="Once both are in, or when the time to review runs out, so neither side can reply in kind."
             />
           </div>
+          <TextInputField
+            name="quietHoursStart"
+            label="Quiet hours for texts start at"
+            description="NZ time, 24-hour, like 21:00. Texts that can wait are sent when quiet hours end."
+          />
+          <TextInputField
+            name="quietHoursEnd"
+            label="Quiet hours end at"
+            description="Like 07:00. A pick-up reminder within 3 hours of pick-up, and alerts about check-in or a late return, still go at once. A return reminder waits like other texts, and isn’t sent if it would arrive after the return time."
+          />
         </>
       )}
     </SettingsForm>
@@ -289,7 +319,7 @@ export function BookingRulesSection({ settings }: { settings: PlatformSettings }
             <SwitchField
               name="enquiriesBeforeBooking"
               label="Guests can message a Host before booking"
-              description={`${RECORDED_ONLY} messaging opens with a booking or request, and is built in Phase 3.`}
+              description={`${RECORDED_ONLY} messaging opens with a booking or request. Messages before booking are built if the client chooses them.`}
             />
             <SwitchField
               name="additionalDrivers"

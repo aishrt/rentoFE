@@ -49,6 +49,9 @@ export function useLogout() {
       queryClient.setQueryData(sessionQueryKey, null);
       // Drop any staff data from memory so the next person on this device can't see it.
       queryClient.removeQueries({ queryKey: ['admin'] });
+      // Inspection photos waiting in this browser can say where the device was (plan §14). Loaded here, not
+      // up front, so the photo store stays out of every page's first load.
+      void import('@/features/handover/photo-store').then(({ clearPhotoStore }) => clearPhotoStore());
     },
   });
 }

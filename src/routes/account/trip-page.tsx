@@ -3,6 +3,8 @@ import {
   CalendarClock,
   CarFront,
   CircleCheck,
+  FileText,
+  Fuel,
   Hourglass,
   ReceiptText,
   ShieldCheck,
@@ -26,6 +28,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { toast } from '@/components/ui/toast';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import {
   bookingQueryKey,
@@ -43,8 +46,11 @@ import {
   statusLabel,
 } from '@/features/booking/booking-format';
 import {
+  BookedTermsDetails,
   BookingPageSkeleton,
   DetailCard,
+  MessageLink,
+  ReviewLink,
   PartyDetails,
   ProtectionDetails,
   Receipt,
@@ -53,10 +59,14 @@ import {
   TripStops,
 } from '@/features/booking/booking-parts';
 import { CancelDialogContent } from '@/features/booking/cancel-dialog';
+import { ExtraCharges } from '@/features/booking/extra-charges';
 import { HoldNotice } from '@/features/booking/hold-countdown';
 import { PayBooking, type PaidBooking } from '@/features/booking/pay-booking';
 import { CancellationPolicy } from '@/features/booking/trip-policies';
 import { useNow } from '@/features/booking/use-time-left';
+import { ActiveTripPanel } from '@/features/handover/active-trip';
+import { ReportIncidentLink } from '@/features/incidents/report-incident-link';
+import { HandoverCard } from '@/features/handover/handover-card';
 import { cn } from '@/lib/cn';
 
 type Tone = 'info' | 'success' | 'danger';
@@ -97,11 +107,102 @@ function Banner({
   );
 }
 
-const CANCELLED_BY: Record<NonNullable<Booking['cancellation']>['by'], (host: string) => string> = {
+/** A booking whose payment went through has a GST receipt, refunded or not. */
+const PAID: NonNullable<Booking['payment']>['status'][] = ['SUCCEEDED', 'REFUNDED', 'PARTIALLY_REFUNDED'];
+
+type Cancellation = NonNullable<Booking['cancellation']>;
+
+const CANCELLED_BY: Record<Cancellation['by'], (host: string) => string> = {
   GUEST: () => 'You cancelled this trip',
   HOST: (host) => `${host} cancelled this trip`,
   SUPPORT: () => 'Rento Vroom support cancelled this trip',
 };
+
+const HOST_REFUND = 'A host cancellation always gets you a full refund.';
+
+/**
+ * Why a trip was cancelled, in the Guest's words (plan §8.2: each labelled, and the Guest told what is
+ * happening): who cancelled it and, when support did, the reason they gave.
+ */
+function cancelledWords(cancellation: Cancellation, host: string): { title: string; why?: string } {
+  switch (cancellation.reason) {
+    case 'REQUEST_WITHDRAWN':
+      return { title: 'You withdrew this request' };
+    case 'GUEST_NO_SHOW':
+      return {
+        title: 'Cancelled as a no-show',
+        why: 'Rento Vroom support cancelled this trip as a no-show at the pick-up time, so the cancellation policy applies as at that time.',
+      };
+    case 'HOST_NO_SHOW':
+      return {
+        title: `${host} couldn’t provide the car`,
+        why: `Rento Vroom support cancelled this trip because ${host} couldn’t provide the car. ${HOST_REFUND}`,
+      };
+    case 'HOST_CANCELLED':
+      return {
+        title: `${host} cancelled this trip`,
+        why:
+          cancellation.by === 'SUPPORT'
+            ? `Rento Vroom support cancelled it for them. ${HOST_REFUND}`
+            : HOST_REFUND,
+      };
+    default:
+      return {
+        title: CANCELLED_BY[cancellation.by](host),
+        ...(cancellation.by === 'HOST' && { why: HOST_REFUND }),
+      };
+  }
+}
+
+type ExpiryReason = NonNullable<Booking['expiry']>['reason'];
+
+/** Why a booking expired, in the Guest's words (plan §8.2: each labelled). */
+const EXPIRED_WHY: Record<ExpiryReason, (host: string) => string> = {
+  PAYMENT_TIMEOUT: () => 'The payment wasn’t finished within 30 minutes, so the dates were released.',
+  CHECKOUT_ABANDONED: () => 'You left the checkout before paying, so the dates were released.',
+  HOST_NO_ANSWER: (host) => `${host} didn’t answer within 24 hours, so your card authorisation was released.`,
+  VERIFICATION_EXPIRED: () =>
+    'We couldn’t finish checking your ID and licence within 24 hours, so your card authorisation was released.',
+  VERIFICATION_REJECTED: () =>
+    'We weren’t able to verify your identity or driver licence, so your card authorisation was released.',
+  DATES_TAKEN: () =>
+    'Your payment came through after the dates were booked by someone else, so the booking wasn’t made.',
+  CAR_UNAVAILABLE: () =>
+    'Your payment came through after the car was taken off Rento Vroom, so the booking wasn’t made.',
+};
+
+/**
+ * Why an expired booking ended, and what happened to the money (plan §8.2: the Guest is told what is happening
+ * at every step). A payment taken after the booking ended is refunded in full; anything else was only an
+ * authorisation, released. A booking from before the API said why is read from what it shows.
+ */
+function expiredWords(booking: Booking): { reason: ExpiryReason; money: string } {
+  const expiry = booking.expiry;
+  const reason: ExpiryReason =
+    expiry?.reason ??
+    (booking.verificationReview === 'REJECTED'
+      ? 'VERIFICATION_REJECTED'
+      : booking.verificationReview === 'PENDING'
+        ? 'VERIFICATION_EXPIRED'
+        : booking.payment?.status === 'CANCELLED'
+          ? 'HOST_NO_ANSWER'
+          : 'PAYMENT_TIMEOUT');
+  if (!expiry?.paymentReturned) {
+    const held = reason === 'DATES_TAKEN' || reason === 'CAR_UNAVAILABLE';
+    return {
+      reason,
+      money: held ? 'The hold on your card is released, so nothing was charged.' : 'Nothing was charged.',
+    };
+  }
+  const amount = `NZ${formatNzd(expiry.refundCents ?? booking.price.totalCents)}`;
+  const money =
+    expiry.refundStatus === 'FAILED'
+      ? `We refunded your payment of ${amount} in full, but the refund didn’t go through to your card. Our team is sorting it and will be in touch.`
+      : expiry.refundStatus === 'SUCCEEDED'
+        ? `We’ve refunded your payment of ${amount} in full. It usually reaches your account within 5–10 working days.`
+        : `Your payment of ${amount} is being refunded in full. It usually reaches your account within 5–10 working days.`;
+  return { reason, money };
+}
 
 /** Where the trip stands, in the Guest's words (plan §8.2), with what to do next. */
 function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: PaidBooking) => void }) {
@@ -149,8 +250,8 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
         return (
           <Banner tone="info" icon={ShieldCheck} title="We’re checking your details">
             <p>
-              Your identity check needs a closer look from our team. The dates are held for you, and we’ll
-              confirm your booking as soon as it’s approved
+              Your ID or driver licence needs a closer look from our team. The dates are held for you, and
+              we’ll confirm your booking as soon as it’s approved
               {alsoHost ? ` and ${host} accepts` : ''}.
               {booking.hostAccepted ? ` ${host} has already accepted.` : ''} Your card is authorised for NZ
               {formatNzd(booking.price.totalCents)} and charged only then.
@@ -208,21 +309,16 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
           </div>
         </Banner>
       );
-    case 'EXPIRED':
+    case 'EXPIRED': {
+      const { reason, money } = expiredWords(booking);
       return (
         <Banner tone="danger" icon={Hourglass} title="This booking expired">
           <p>
-            {booking.verificationReview === 'REJECTED'
-              ? 'We weren’t able to verify your identity, so your card authorisation was released. Nothing was charged.'
-              : booking.verificationReview === 'PENDING'
-                ? 'We couldn’t finish your identity check within 24 hours, so your card authorisation was released. Nothing was charged.'
-                : booking.payment?.status === 'CANCELLED'
-                  ? `${host} didn’t answer within 24 hours, so your card authorisation was released. Nothing was charged.`
-                  : 'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.'}
+            {EXPIRED_WHY[reason](host)} {money}
           </p>
           <div>
             <Button asChild variant="secondary" size="sm">
-              {booking.verificationReview === 'REJECTED' ? (
+              {reason === 'VERIFICATION_REJECTED' ? (
                 <Link to={`/contact?category=ACCOUNT&booking=${booking.ref}`}>Contact support</Link>
               ) : (
                 <Link to="/cars">Find another car</Link>
@@ -231,27 +327,17 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
           </div>
         </Banner>
       );
+    }
     case 'CANCELLED': {
       const cancellation = booking.cancellation;
-      const withdrawn = cancellation?.reason === 'REQUEST_WITHDRAWN';
+      const words = cancellation ? cancelledWords(cancellation, host) : null;
       return (
-        <Banner
-          tone="danger"
-          icon={Undo2}
-          title={
-            withdrawn
-              ? 'You withdrew this request'
-              : cancellation
-                ? CANCELLED_BY[cancellation.by](host)
-                : 'This trip was cancelled'
-          }
-        >
+        <Banner tone="danger" icon={Undo2} title={words?.title ?? 'This trip was cancelled'}>
           {cancellation && (
             <p>
-              {withdrawn
+              {cancellation.reason === 'REQUEST_WITHDRAWN'
                 ? 'Your card authorisation was released. Nothing was charged.'
-                : refundSentence(cancellation)}
-              {cancellation.by === 'HOST' && ' A host cancellation always gets you a full refund.'}
+                : [words?.why, refundSentence(cancellation)].filter(Boolean).join(' ')}
             </p>
           )}
         </Banner>
@@ -327,7 +413,7 @@ function Trip({ tripRef }: { tripRef: string }) {
     const held = updated.verificationReview === 'PENDING';
     toast(held ? 'Your booking is held' : updated.status === 'PENDING' ? 'Request sent' : 'You’re booked', {
       description: held
-        ? 'We’re finishing your identity check. You’re only charged once it’s approved.'
+        ? 'We’re finishing the check of your details. You’re only charged once it’s approved.'
         : updated.status === 'PENDING'
           ? `${booking.host.firstName} has 24 hours to answer.`
           : `Your trip in the ${booking.vehicle.title} is confirmed.`,
@@ -361,9 +447,12 @@ function Trip({ tripRef }: { tripRef: string }) {
       </div>
 
       <TripStatus booking={booking} onPaid={paid} />
+      {booking.status === 'ACTIVE' && <ActiveTripPanel booking={booking} base={`/trips/${booking.ref}`} />}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      {/* Two columns once there's room beside the dashboard's sidebar, as on the Host's booking page. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="grid gap-6">
+          <HandoverCard booking={booking} base={`/trips/${booking.ref}`} />
           <DetailCard title="Pick-up and return" icon={CalendarClock}>
             <TripStops
               booking={booking}
@@ -379,6 +468,9 @@ function Trip({ tripRef }: { tripRef: string }) {
                 <span className="font-semibold tracking-wide text-ink">{booking.vehicle.regoPlate}</span>
               </p>
             )}
+          </DetailCard>
+          <DetailCard title="Fuel and kilometres" icon={Fuel}>
+            <BookedTermsDetails terms={booking.terms} />
           </DetailCard>
           <DetailCard title="Your host" icon={UserRound}>
             <PartyDetails
@@ -410,8 +502,21 @@ function Trip({ tripRef }: { tripRef: string }) {
         <div className="grid gap-6 lg:sticky lg:top-24">
           <DetailCard title="Receipt" icon={ReceiptText}>
             <Receipt booking={booking} />
+            {booking.payment && PAID.includes(booking.payment.status) && (
+              <Link
+                to={`/trips/${booking.ref}/receipt`}
+                viewTransition
+                className="link-underline mt-4 inline-flex items-center gap-2 font-medium text-primary"
+              >
+                <FileText aria-hidden="true" className="size-4" />
+                GST receipt to print or download
+              </Link>
+            )}
           </DetailCard>
+          <ExtraCharges booking={booking} viewer="GUEST" />
           <Card className="grid justify-items-start gap-3 p-5 text-sm sm:p-6">
+            <ReviewLink booking={booking} base={`/trips/${booking.ref}`} />
+            <MessageLink booking={booking} name={booking.host.firstName} />
             {cancelKind && cancelKind !== 'release' && (
               <Button variant="secondary" onClick={() => setCancelling(true)}>
                 {cancelKind === 'withdraw' ? 'Withdraw request' : 'Cancel trip'}
@@ -422,6 +527,7 @@ function Trip({ tripRef }: { tripRef: string }) {
                 Release these dates
               </Button>
             )}
+            <ReportIncidentLink booking={booking} />
             <SupportLink bookingRef={booking.ref} />
           </Card>
         </div>
@@ -445,7 +551,8 @@ function Trip({ tripRef }: { tripRef: string }) {
 
 /**
  * One trip as the Guest sees it (spec §8): where it stands, when and where to collect and return the car, the
- * host, protection, the cancellation policy and the receipt, and cancelling with the refund shown first.
+ * host, protection, the cancellation policy and the receipt, and cancelling with the refund shown first. In
+ * the Guest's dashboard (plan §12.6); the Host of the booking is sent to its page in the Host area.
  */
 export function TripPage() {
   const { ref = '' } = useParams();
@@ -453,9 +560,11 @@ export function TripPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
       <PageMeta title={ref ? `Trip ${ref}` : 'Trip'} noindex />
-      <RequireSignedIn fallback={<BookingPageSkeleton />}>
-        {() => <Trip key={ref} tripRef={ref} />}
-      </RequireSignedIn>
+      <AccountShell>
+        <RequireSignedIn fallback={<BookingPageSkeleton />}>
+          {() => <Trip key={ref} tripRef={ref} />}
+        </RequireSignedIn>
+      </AccountShell>
     </Container>
   );
 }

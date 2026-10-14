@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IconButton } from '@/components/ui/icon-button';
+import { toast } from '@/components/ui/toast';
 import { NotificationText } from './notification-text';
 import { BELL_SIZE, internalLink, useMarkNotificationsRead, useNotifications } from './notifications-api';
 
@@ -28,13 +29,16 @@ function NotificationRow({
   );
 }
 
+const failed = (error: Error) =>
+  toast('We couldn’t update your notifications', { tone: 'danger', description: error.message });
+
 /**
- * The header's bell (plan §7): the unread count, refreshed every minute until Socket.IO messaging arrives,
- * and the newest three notifications, with "Show all" to the Notifications page when there are more. Opening
- * one marks it read and goes to its page. Only signed-in visitors get it, and it loads on its own, after the
- * page (plan §12.5).
+ * The header's bell (plan §7): the unread count, updated live over Socket.IO, and the newest three
+ * notifications, with "Show all" to the Notifications page (`allPath`: the staff portal has its own) when
+ * there are more. Opening one marks it read and goes to its page. Only signed-in visitors get it, and it
+ * loads on its own, after the page (plan §12.5).
  */
-export function NotificationBell() {
+export function NotificationBell({ allPath = '/notifications' }: { allPath?: string }) {
   const navigate = useNavigate();
   const notifications = useNotifications();
   const markRead = useMarkNotificationsRead();
@@ -43,7 +47,7 @@ export function NotificationBell() {
   const total = notifications.data?.total ?? 0;
 
   const open = (item: NotificationItem) => {
-    if (!item.read) markRead.mutate([item.id]);
+    if (!item.read) markRead.mutate([item.id], { onError: failed });
     const link = internalLink(item);
     if (link) navigate(link, { viewTransition: true });
   };
@@ -79,7 +83,7 @@ export function NotificationBell() {
               onSelect={(event) => {
                 // Stays open, so the list can be seen turning read.
                 event.preventDefault();
-                markRead.mutate(undefined);
+                markRead.mutate(undefined, { onError: failed });
               }}
               className="min-h-9 text-primary [&_svg]:text-primary"
             >
@@ -106,7 +110,7 @@ export function NotificationBell() {
         {total > BELL_SIZE && (
           <div className="border-t border-line p-1.5">
             <DropdownMenuItem asChild className="justify-center text-primary [&_svg]:text-primary">
-              <Link to="/notifications" viewTransition>
+              <Link to={allPath} viewTransition>
                 Show all {total} notifications
                 <ArrowRight aria-hidden="true" className="nudge-right" />
               </Link>

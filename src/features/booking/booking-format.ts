@@ -29,6 +29,21 @@ const nzDayMonth = new Intl.DateTimeFormat('en-NZ', {
   timeZone: NZ_TIME_ZONE,
 });
 const nzYear = new Intl.DateTimeFormat('en-NZ', { year: 'numeric', timeZone: NZ_TIME_ZONE });
+const nzNumericDate = new Intl.DateTimeFormat('en-NZ', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: NZ_TIME_ZONE,
+});
+const nzDateTimeWithYear = new Intl.DateTimeFormat('en-NZ', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: NZ_TIME_ZONE,
+});
 // en-CA writes dates as 2026-10-12, the format the API and the date pickers use.
 const nzWallClock = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
@@ -45,6 +60,22 @@ export const formatNzDateTime = (iso: string) => nzDateTime.format(new Date(iso)
 
 /** "Mon, 12 Oct" in NZ time. */
 export const formatNzDate = (iso: string) => nzDate.format(new Date(iso));
+
+/** "12/10/2026" in NZ time (plan §3: DD/MM/YYYY), for receipts and payment history, where the year matters. */
+export const formatNzNumericDate = (iso: string) => nzNumericDate.format(new Date(iso));
+
+const calendarDate = new Intl.DateTimeFormat('en-NZ', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+/** "29/09/2031" (plan §3): a date with no time of day, such as a licence's expiry ("2031-09-29"). */
+export const formatCalendarDate = (date: string) =>
+  calendarDate.format(new Date(`${date.slice(0, 10)}T00:00:00Z`));
+
+/** "Mon, 12 Oct 2026, 10:00 am" in NZ time, for a receipt kept for years. */
+export const formatNzDateTimeWithYear = (iso: string) => nzDateTimeWithYear.format(new Date(iso));
 
 /** "12–15 Oct", "30 Oct – 2 Nov", with the year when the trip isn't this year: a trip on a card. */
 export function formatTripSpan(startIso: string, endIso: string, now = new Date()): string {
@@ -87,6 +118,10 @@ const nzdCents = new Intl.NumberFormat('en-NZ', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+/** "$506.50" and "$50.00": every amount with its cents, for a column of figures such as a receipt's. */
+export const formatNzdCents = (cents: number) =>
+  cents < 0 ? `−${nzdCents.format(-cents / 100)}` : nzdCents.format(cents / 100);
 
 /** "$506.50", or "$50" for whole dollars: an exact amount such as a total, a refund or a fee. */
 export function formatNzd(cents: number): string {
@@ -186,14 +221,39 @@ export function statusLabel(
   return labels[booking.status];
 }
 
-/** The refund and the kept part of a cancellation, in a sentence: "Refunded $506.50." */
+/**
+ * The refund and the kept part of a cancellation, in a sentence: "Refunded $506.50." A refund Stripe hasn't
+ * finished is on its way, and one that failed is with our team (plan §8.1, item 21). Refunds made before the
+ * cancellation came off what it gave back: all of the payment may have gone back already.
+ */
 export function refundSentence(cancellation: NonNullable<Booking['cancellation']>): string | null {
-  const { refundCents, feeCents } = cancellation;
+  const { refundCents, feeCents, refundStatus, earlierRefundCents } = cancellation;
   if (refundCents === undefined) return null;
-  if (refundCents === 0 && !feeCents) return 'Nothing was charged.';
-  if (!feeCents) return `Refunded in full: ${formatNzd(refundCents)}.`;
-  if (refundCents === 0) return `Not refundable under the cancellation policy (${formatNzd(feeCents)} kept).`;
-  return `Refunded ${formatNzd(refundCents)}; ${formatNzd(feeCents)} kept under the cancellation policy.`;
+  const earlier = earlierRefundCents ? formatNzd(earlierRefundCents) : null;
+  if (refundCents === 0 && !feeCents) {
+    return earlier
+      ? `Already refunded: ${earlier} went back to your card before it was cancelled.`
+      : 'Nothing was charged.';
+  }
+  const before = earlier ? ` ${earlier} was refunded before that.` : '';
+  if (refundCents === 0)
+    return `Not refundable under the cancellation policy (${formatNzd(feeCents ?? 0)} kept).${before}`;
+  // After an earlier refund, nothing kept means the rest of the payment, not a full refund.
+  const refund = feeCents
+    ? `refund of ${formatNzd(refundCents)}`
+    : earlier
+      ? `refund of the rest, ${formatNzd(refundCents)},`
+      : `full refund of ${formatNzd(refundCents)}`;
+  const kept = feeCents ? ` ${formatNzd(feeCents)} is kept under the cancellation policy.` : '';
+  if (refundStatus === 'FAILED')
+    return `Your ${refund} didn’t go through to your card. Our team is sorting it and will be in touch.${kept}${before}`;
+  if (refundStatus === 'PENDING')
+    return `Your ${refund} is on its way: it usually reaches your account within 5–10 working days.${kept}${before}`;
+  if (!feeCents)
+    return earlier
+      ? `Refunded the rest of your payment: ${formatNzd(refundCents)}.${before}`
+      : `Refunded in full: ${formatNzd(refundCents)}.`;
+  return `Refunded ${formatNzd(refundCents)}; ${formatNzd(feeCents)} kept under the cancellation policy.${before}`;
 }
 
 /**

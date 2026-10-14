@@ -15,8 +15,13 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostProfile } from '@/features/host/host-api';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
-import { MyVehicles } from '@/features/host/my-vehicles';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostMoreLinks, HostShell } from '@/features/host/host-shell';
+import { HostTodoList } from '@/features/host/todo-list';
+import { useCheckoutReadiness } from '@/features/booking/booking-api';
+import { IdentityCheck } from '@/features/booking/identity-check';
+import { CurrentTrips } from '@/features/handover/current-trips';
+import { VehiclesSummary } from '@/features/host/my-vehicles';
 
 type HostStatus = NonNullable<SessionUser['hostStatus']>;
 
@@ -95,17 +100,51 @@ function Proposition() {
   );
 }
 
+/**
+ * An application waiting for us, or first for the Host's identity check while approval needs one (the
+ * identityForHosts setting, spec §22).
+ */
+function ApplicationUnderReview({ identityRequired }: { identityRequired: boolean }) {
+  const readiness = useCheckoutReadiness(undefined, identityRequired);
+  const identity = identityRequired ? readiness.data?.identityStatus : undefined;
+  if (identity === 'NONE') {
+    return (
+      <Alert title="One step left: verify your identity">
+        We review your application once your identity is verified, and email you when it’s approved. You can
+        add your car now, so it’s ready to go.
+      </Alert>
+    );
+  }
+  if (identity === 'REJECTED') {
+    return (
+      <Alert
+        variant="danger"
+        title="We couldn’t verify your identity"
+        action={
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/contact">Contact us</Link>
+          </Button>
+        }
+      >
+        Hosts pass an identity check before their application is approved. Get in touch and we’ll help sort it
+        out.
+      </Alert>
+    );
+  }
+  return (
+    <Alert title="Your application is under review">
+      We’ll email you once it’s approved. You can add your car now, so it’s ready to go.
+    </Alert>
+  );
+}
+
 /** Where the Host application stands, and what it means for their cars. */
 function ApplicationStatus({ status }: { status: HostStatus }) {
-  const profile = useHostProfile(status === 'REJECTED');
+  const profile = useHostProfile(status === 'REJECTED' || status === 'APPLIED');
 
   switch (status) {
     case 'APPLIED':
-      return (
-        <Alert title="Your application is under review">
-          We’ll email you once it’s approved. You can add your car now, so it’s ready to go.
-        </Alert>
-      );
+      return <ApplicationUnderReview identityRequired={profile.data?.identityRequired ?? false} />;
     case 'APPROVED':
       return null;
     case 'REJECTED':
@@ -145,39 +184,68 @@ function ApplicationStatus({ status }: { status: HostStatus }) {
   }
 }
 
+/**
+ * Hosts verify their identity as part of the application (plan §9, Days 19–20): an ID photo and a selfie
+ * on Stripe's page, before the application is approved while the identityForHosts setting is on. Shown
+ * until it's verified or with our team.
+ */
+function HostIdentity() {
+  const readiness = useCheckoutReadiness(undefined, true);
+  const status = readiness.data?.identityStatus;
+  if (!readiness.data || status === 'APPROVED' || status === 'REJECTED') return null;
+  return (
+    <Card asChild className="grid gap-3 p-5 sm:p-6">
+      <section aria-labelledby="host-identity">
+        <h2 id="host-identity" className="font-semibold text-ink">
+          Verify your identity
+        </h2>
+        <IdentityCheck readiness={readiness.data} forHosting />
+      </section>
+    </Card>
+  );
+}
+
 function HostHome({ user }: { user: SessionUser }) {
   const status = user.hostStatus;
   if (!status) return <Proposition />;
 
   return (
-    <div className="grid gap-8">
-      <HostSubNav />
-      <HostPageHeader
-        eyebrow="Hosting"
-        title={`Kia ora ${user.firstName}`}
-        description={
-          status === 'APPROVED' ? (
-            <span className="inline-flex flex-wrap items-center gap-2">
-              <Badge variant="primary">
-                <BadgeCheck aria-hidden="true" />
-                Approved Host
-              </Badge>
-              Your cars, their listings and calendars.
-            </span>
-          ) : (
-            'Your cars, their listings and calendars.'
-          )
-        }
-      />
-      <ApplicationStatus status={status} />
-      <MyVehicles canAdd={status === 'APPLIED' || status === 'APPROVED'} />
-    </div>
+    <HostShell>
+      <div className="grid gap-8">
+        <HostPageHeader
+          eyebrow="Today"
+          title={`Kia ora ${user.firstName}`}
+          description={
+            status === 'APPROVED' ? (
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <Badge variant="primary">
+                  <BadgeCheck aria-hidden="true" />
+                  Approved Host
+                </Badge>
+                Trips under way, what needs doing, and your cars.
+              </span>
+            ) : (
+              'Where your application stands, and your cars.'
+            )
+          }
+        />
+        {/* On a phone, the places the tab bar has no room for. */}
+        <HostMoreLinks />
+        <ApplicationStatus status={status} />
+        {/* Trips under way sit at the top, from check-in to check-out (plan §12.6), even while suspended. */}
+        {(status === 'APPROVED' || status === 'SUSPENDED') && <CurrentTrips role="host" />}
+        {(status === 'APPLIED' || status === 'APPROVED') && <HostIdentity />}
+        {status === 'APPROVED' && <HostTodoList />}
+        <VehiclesSummary canAdd={status === 'APPLIED' || status === 'APPROVED'} />
+      </div>
+    </HostShell>
   );
 }
 
 /**
- * The Host's home for Phase 2 (plan §9, Days 8–11): where their application stands, and My Vehicles
- * with each car's status and what's left. Someone who hasn't applied sees why to host and where to start.
+ * The Host's home (spec §9), their Today (plan §12.6): where their application stands, the trips under way at
+ * the top, the to-do list, and their cars at a glance, with My Vehicles a tap away. Someone who hasn't applied
+ * sees why to host and where to start, without the Host area's navigation.
  */
 export function HostHomePage() {
   return (

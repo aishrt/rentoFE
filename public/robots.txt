@@ -9,6 +9,8 @@ Disallow: /checkout
 # Checkout and trips (plan §9, Days 11–14).
 Disallow: /book/
 Disallow: /trips
+# Members' profiles, for signed-in members only (plan §6.2).
+Disallow: /members
 Disallow: /login
 Disallow: /signup
 Disallow: /forgot-password

@@ -1,5 +1,5 @@
 # Deploys the website (plan §13.3): lint, test, check the API types against the backend's contract, build
-# with the API address, check the JavaScript and Lighthouse budgets, upload to S3 (hashed assets cached for
+# with the API address, check the Lighthouse budget, upload to S3 (hashed assets cached for
 # a year, everything else no-cache, nothing deleted so open pages keep working) and refresh CloudFront.
 # - A push to master deploys the live website, www.rentovroom.com.
 # - A push to staging deploys staging.rentovroom.com, to try a change before it goes to master. Both
@@ -105,10 +105,8 @@ jobs:
             exit 1
           fi
 
-      # Speed budget (plan §12.5): homepage JavaScript, then Lighthouse on mobile (lighthouserc.json).
-      - name: Check the JavaScript budget
-        run: npm run size
-
+      # Speed budget (plan §12.5): Lighthouse on mobile (lighthouserc.json). The homepage's JavaScript is
+      # measured by hand with `npm run size`, no longer here (the owner's choice, 08/10/2026).
       - name: Lighthouse
         run: npx --yes @lhci/cli@0.15.1 autorun
 

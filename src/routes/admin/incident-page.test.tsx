@@ -1,0 +1,551 @@
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { Incident } from '@/api/types';
+import { Toaster } from '@/components/ui/toast';
+import { sessionQueryKey } from '@/features/auth/use-session';
+import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
+import { AdminIncidentPage } from './incident-page';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+const render = (path = '/admin/incidents/IN-ABC123') =>
+  renderWithRouter(
+    [
+      {
+        path: '/admin/incidents/:ref',
+        element: (
+          <>
+            <AdminIncidentPage />
+            <Toaster />
+          </>
+        ),
+      },
+    ],
+    path,
+  );
+
+const incident = (overrides: Partial<Incident> = {}): Incident => ({
+  caseRef: 'IN-ABC123',
+  bookingRef: 'RV-7K2Q9M',
+  vehicleTitle: '2022 Toyota RAV4',
+  type: 'DAMAGE',
+  status: 'INVESTIGATING',
+  reportedBy: 'HOST',
+  role: 'STAFF',
+  assignedTo: 'Mere',
+  assignedToId: 'u2',
+  createdAt: '2026-10-05T20:00:00.000Z',
+  updatedAt: '2026-10-06T20:00:00.000Z',
+  description: 'A deep scratch along the passenger door.',
+  events: [
+    {
+      id: '0',
+      action: 'OPENED',
+      by: 'HOST',
+      byName: 'Aroha',
+      note: 'A deep scratch along the passenger door.',
+      attachments: [
+        { url: 'https://files.example/door.jpg', name: 'door.jpg', contentType: 'image/jpeg' },
+        { url: 'https://files.example/quote.pdf', name: 'quote.pdf', contentType: 'application/pdf' },
+      ],
+      visibility: 'BOTH',
+      status: 'OPEN',
+      createdAt: '2026-10-05T20:00:00.000Z',
+    },
+    {
+      id: '1',
+      action: 'COMMENT',
+      by: 'GUEST',
+      byName: 'Kiri',
+      note: 'It was there when I picked it up.',
+      attachments: [],
+      visibility: 'BOTH',
+      createdAt: '2026-10-06T01:00:00.000Z',
+    },
+    {
+      id: '2',
+      action: 'STATUS',
+      by: 'SUPPORT',
+      byName: 'Mere',
+      note: 'Checking the pick-up photos.',
+      attachments: [],
+      visibility: 'INTERNAL',
+      status: 'INVESTIGATING',
+      createdAt: '2026-10-06T20:00:00.000Z',
+    },
+  ],
+  canReply: true,
+  nextStatuses: ['AWAITING_RESPONSE', 'RESOLVED', 'CLOSED'],
+  extraCharges: [],
+  ...overrides,
+});
+
+const resolved = (overrides: Partial<Incident> = {}) =>
+  incident({
+    status: 'RESOLVED',
+    nextStatuses: ['INVESTIGATING', 'AWAITING_RESPONSE', 'CLOSED'],
+    ...overrides,
+  });
+
+// Who a case can be handed to; the signed-in staff member is Aroha.
+const team = {
+  'GET /admin/incidents/assignees': {
+    status: 200,
+    body: {
+      assignees: [
+        { id: 'u1', name: 'Aroha Admin', you: true },
+        { id: 'u2', name: 'Mere Tester', you: false },
+        { id: 'u3', name: 'Tama Tester', you: false },
+      ],
+    },
+  },
+};
+
+describe('AdminIncidentPage', () => {
+  it('shows the report, its evidence and every event with who could see it', async () => {
+    mockApi({ ...team, 'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } } });
+    render();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Case IN-ABC123' })).toBeInTheDocument();
+    expect(await screen.findByText('Damage · 2022 Toyota RAV4')).toBeInTheDocument();
+    expect(screen.getByText('A deep scratch along the passenger door.')).toBeInTheDocument();
+    const evidence = within(screen.getByRole('list', { name: 'Evidence' }));
+    expect(evidence.getByRole('img', { name: 'door.jpg' })).toHaveAttribute(
+      'src',
+      'https://files.example/door.jpg',
+    );
+    expect(evidence.getByRole('link', { name: 'quote.pdf' })).toHaveAttribute(
+      'href',
+      'https://files.example/quote.pdf',
+    );
+
+    const facts = within(screen.getByRole('region', { name: 'The case' }));
+    expect(facts.getByText('Investigating')).toBeInTheDocument();
+    expect(facts.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2Q9M',
+    );
+    expect(facts.getByText('Aroha (Host)')).toBeInTheDocument();
+    expect(await facts.findByRole('button', { name: 'Handled by Mere Tester' })).toBeEnabled();
+    expect(facts.getByRole('link', { name: 'Messages' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2Q9M/thread?context=INCIDENT:IN-ABC123',
+    );
+
+    // The events themselves, not the files listed inside them.
+    const events = Array.from(screen.getByRole('list', { name: 'History' }).children);
+    expect(events).toHaveLength(3);
+    expect(events[0]).toHaveTextContent('Aroha (Host) reported it');
+    expect(events[0]).toHaveTextContent('Both parties');
+    expect(events[1]).toHaveTextContent('Kiri (Guest) added an update');
+    expect(events[1]).toHaveTextContent('It was there when I picked it up.');
+    expect(events[2]).toHaveTextContent('Mere (Support) changed the status: Investigating');
+    expect(events[2]).toHaveTextContent('Internal note');
+    expect(events[2]).toHaveTextContent('Checking the pick-up photos.');
+
+    // Charges wait until the case is resolved.
+    expect(screen.getByText(/Once the case is resolved, you can charge the Guest/)).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Charge the Guest' })).not.toBeInTheDocument();
+  });
+
+  it('posts an internal note, a new status and takes the case', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent = JSON.parse(String(init?.body));
+        const current = incident();
+        return {
+          status: 200,
+          body: {
+            incident: {
+              ...current,
+              status: 'AWAITING_RESPONSE',
+              assignedTo: 'Aroha',
+              events: [
+                ...current.events,
+                {
+                  id: '3',
+                  action: 'STATUS',
+                  by: 'YOU',
+                  byName: 'Aroha',
+                  note: 'Asked the Host for the pick-up photos.',
+                  attachments: [],
+                  visibility: 'INTERNAL',
+                  status: 'AWAITING_RESPONSE',
+                  createdAt: '2026-10-07T01:00:00.000Z',
+                },
+              ],
+            },
+          },
+        };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    await userEvent.type(form.getByLabelText('Update'), 'Asked the Host for the pick-up photos.');
+    await userEvent.click(form.getByRole('radio', { name: /Internal note/ }));
+    await userEvent.click(form.getByRole('button', { name: /^Status/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Waiting on them' }));
+    await userEvent.click(form.getByRole('checkbox', { name: /Assign to me/ }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toEqual({
+      note: 'Asked the Host for the pick-up photos.',
+      attachments: [],
+      visibility: 'INTERNAL',
+      status: 'AWAITING_RESPONSE',
+      assignToMe: true,
+    });
+    expect(
+      screen.getByText(/It’s now waiting on them. It’s assigned to you. Only staff can see your note./),
+    ).toBeInTheDocument();
+    const history = within(screen.getByRole('list', { name: 'History' }));
+    expect(history.getByText(/^You$/)).toBeInTheDocument();
+    // The form is ready for the next update.
+    expect(form.getByLabelText('Update')).toHaveValue('');
+    expect(form.getByRole('radio', { name: /Both parties/ })).toBeChecked();
+  });
+
+  it('hands the case to someone else on the team, or to nobody, straight away', async () => {
+    const sent: unknown[] = [];
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
+      'POST /admin/incidents/IN-ABC123/assignee': (init) => {
+        const body = JSON.parse(String(init?.body)) as { userId: string | null };
+        sent.push(body);
+        const current = incident();
+        const handed = body.userId === 'u3';
+        return {
+          status: 200,
+          body: {
+            incident: {
+              ...current,
+              assignedTo: handed ? 'Tama' : undefined,
+              assignedToId: handed ? 'u3' : undefined,
+              events: [
+                ...current.events,
+                {
+                  id: '3',
+                  action: handed ? 'ASSIGNED' : 'UNASSIGNED',
+                  by: 'YOU',
+                  byName: 'Aroha',
+                  ...(handed && { assignedTo: 'Tama' }),
+                  attachments: [],
+                  visibility: 'INTERNAL',
+                  createdAt: '2026-10-07T01:00:00.000Z',
+                },
+              ],
+            },
+          },
+        };
+      },
+    });
+    render();
+
+    const facts = within(await screen.findByRole('region', { name: 'The case' }));
+    await userEvent.click(await facts.findByRole('button', { name: 'Handled by Mere Tester' }));
+    const list = within(await screen.findByRole('listbox', { name: 'Support team' }));
+    expect(list.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Nobody yet',
+      'Aroha Admin (you)',
+      'Mere Tester',
+      'Tama Tester',
+    ]);
+    await userEvent.click(list.getByRole('option', { name: 'Tama Tester' }));
+
+    expect(await screen.findByText('Assigned to Tama Tester')).toBeInTheDocument();
+    expect(screen.getByText('We’ve let them know.')).toBeInTheDocument();
+    expect(sent).toEqual([{ userId: 'u3' }]);
+    expect(facts.getByRole('button', { name: 'Handled by Tama Tester' })).toBeInTheDocument();
+    const history = Array.from(screen.getByRole('list', { name: 'History' }).children);
+    expect(history.at(-1)).toHaveTextContent('You assigned it to Tama');
+    expect(history.at(-1)).toHaveTextContent('Internal note');
+
+    await userEvent.click(facts.getByRole('button', { name: 'Handled by Tama Tester' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Nobody yet' }));
+    expect(await screen.findByText('Nobody has the case now')).toBeInTheDocument();
+    expect(sent).toEqual([{ userId: 'u3' }, { userId: null }]);
+    expect(facts.getByRole('button', { name: 'Handled by Nobody yet' })).toBeInTheDocument();
+    expect(Array.from(screen.getByRole('list', { name: 'History' }).children).at(-1)).toHaveTextContent(
+      'You unassigned the case',
+    );
+  });
+
+  it('needs something to post', async () => {
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: incident() } },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await form.findByText('Write an update, change the status or take the case')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  // A case support opened with the Host only: the Guest can't see it.
+  const hostOnly = (overrides: Partial<Incident> = {}) =>
+    incident({
+      reportedBy: 'SUPPORT',
+      audience: 'HOST',
+      events: [
+        {
+          id: '0',
+          action: 'OPENED',
+          by: 'SUPPORT',
+          byName: 'Mere',
+          note: 'The next guest found a scratch on the bumper.',
+          attachments: [],
+          visibility: 'HOST',
+          status: 'OPEN',
+          createdAt: '2026-10-05T20:00:00.000Z',
+        },
+      ],
+      ...overrides,
+    });
+
+  it('sends an update to whoever already sees the case, and asks before showing it to anyone else', async () => {
+    const sent: unknown[] = [];
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: hostOnly() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent.push(JSON.parse(String(init?.body)));
+        return { status: 200, body: { incident: hostOnly({ audience: 'BOTH' }) } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByText('Now only the Host sees this case.')).toBeInTheDocument();
+    expect(form.getByRole('radio', { name: /Host only/ })).toBeChecked();
+
+    await userEvent.type(form.getByLabelText('Update'), 'We’ve asked the guest about the bumper.');
+    await userEvent.click(form.getByRole('radio', { name: /Both parties/ }));
+    expect(form.getByText('This shows the case to the Guest')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+    expect(await form.findByText('Tick to confirm you’re showing the case to the Guest')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+
+    await userEvent.click(form.getByRole('checkbox', { name: 'Show the case to the Guest' }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toEqual([
+      { note: 'We’ve asked the guest about the bumper.', attachments: [], visibility: 'BOTH' },
+    ]);
+  });
+
+  it('keeps taking the case to staff, whoever the form says sees it', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: hostOnly() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { incident: hostOnly({ assignedTo: 'Aroha' }) } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    await userEvent.click(form.getByRole('radio', { name: /Both parties/ }));
+    await userEvent.click(form.getByRole('checkbox', { name: /Assign to me/ }));
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toEqual({ note: '', attachments: [], visibility: 'INTERNAL', assignToMe: true });
+  });
+
+  it('offers only the statuses the case can move to: reopening a resolved one, never back to Open', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
+      'POST /admin/incidents/IN-ABC123/events': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { incident: incident() } };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByText('Reopening holds the booking’s unpaid payouts again.')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: /^Status/ }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'No change (Resolved)',
+      'Reopen: investigating',
+      'Reopen: waiting on them',
+      'Closed',
+    ]);
+    await userEvent.click(screen.getByRole('option', { name: 'Reopen: investigating' }));
+    await userEvent.type(form.getByLabelText('Update'), 'The Guest disputes the cleaning charge.');
+    await userEvent.click(form.getByRole('button', { name: 'Save update' }));
+
+    expect(await screen.findByText('Case updated')).toBeInTheDocument();
+    expect(sent).toMatchObject({ status: 'INVESTIGATING' });
+  });
+
+  it('keeps a closed case’s status as it is', async () => {
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': {
+        status: 200,
+        body: { incident: incident({ status: 'CLOSED', canReply: true, nextStatuses: [] }) },
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Update the case' }));
+    expect(form.getByRole('button', { name: /^Status/ })).toBeDisabled();
+    expect(form.getByText('A closed case is final. Open a new case for anything new.')).toBeInTheDocument();
+  });
+
+  it('charges the Guest from a resolved case, in cents', async () => {
+    let sent: unknown;
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
+      'POST /admin/incidents/IN-ABC123/charges': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return {
+          status: 200,
+          body: {
+            incident: resolved({
+              extraCharges: [
+                {
+                  type: 'DAMAGE',
+                  description: 'Repair the passenger door',
+                  amountCents: 4550,
+                  status: 'PENDING',
+                },
+              ],
+            }),
+          },
+        };
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Charge the Guest' }));
+    expect(
+      screen.getByText(/Charged to the Guest’s saved card, and the Host’s share is paid on/),
+    ).toBeInTheDocument();
+    // A damage case starts on Damage.
+    expect(form.getByRole('button', { name: /^For/ })).toHaveTextContent('Damage');
+    await userEvent.type(form.getByLabelText('Description'), 'Repair the passenger door');
+    await userEvent.type(form.getByLabelText('Amount (NZD)'), '45.50');
+    await userEvent.click(form.getByRole('button', { name: 'Charge $45.50' }));
+
+    expect(await screen.findByText('$45.50 charge added')).toBeInTheDocument();
+    expect(sent).toEqual({
+      type: 'DAMAGE',
+      description: 'Repair the passenger door',
+      amountCents: 4550,
+      // Sent again with a repeated submit, so the API adds the charge once.
+      idempotencyKey: expect.any(String),
+    });
+    const charges = within(screen.getByRole('list', { name: 'Charges from this case' }));
+    expect(charges.getByText('Repair the passenger door')).toBeInTheDocument();
+    expect(charges.getByText('Charging')).toBeInTheDocument();
+  });
+
+  it('checks the amount before charging', async () => {
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Charge the Guest' }));
+    await userEvent.type(form.getByLabelText('Description'), 'Repair the passenger door');
+    await userEvent.type(form.getByLabelText('Amount (NZD)'), '45.555');
+    await userEvent.click(form.getByRole('button', { name: 'Charge the Guest' }));
+
+    expect(await form.findByText('Enter an amount in dollars, such as 45 or 45.50')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it('shows the protection plan’s excess, and keeps a damage case’s charges within it', async () => {
+    const fetchMock = mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': {
+        status: 200,
+        body: {
+          incident: resolved({
+            protectionPlan: { name: 'Basic protection', excessCents: 200_000 },
+            chargeLimitCents: 50_000,
+          }),
+        },
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Charge the Guest' }));
+    expect(screen.getByText(/The Guest booked Basic protection, with a/)).toHaveTextContent('$2,000 excess');
+    expect(
+      form.getByText('Up to $500 more on this case, within the protection plan’s excess.'),
+    ).toBeInTheDocument();
+    await userEvent.type(form.getByLabelText('Description'), 'Repair the passenger door');
+    await userEvent.type(form.getByLabelText('Amount (NZD)'), '600');
+    await userEvent.click(form.getByRole('button', { name: 'Charge the Guest' }));
+
+    expect(await form.findByText('Up to $500, within the protection plan’s excess')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => (input as Request).method === 'POST')).toBe(false);
+  });
+
+  it('explains that charging needs the refunds permission', async () => {
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } },
+      'POST /admin/incidents/IN-ABC123/charges': {
+        status: 403,
+        body: { error: { code: 'FORBIDDEN', message: "Your account can't do this." } },
+      },
+    });
+    render();
+
+    const form = within(await screen.findByRole('form', { name: 'Charge the Guest' }));
+    await userEvent.type(form.getByLabelText('Description'), 'Repair the passenger door');
+    await userEvent.type(form.getByLabelText('Amount (NZD)'), '120');
+    await userEvent.click(form.getByRole('button', { name: 'Charge $120' }));
+
+    expect(await form.findByRole('alert')).toHaveTextContent('You need the refunds permission');
+  });
+
+  it('leaves the charge form out for support staff without the refunds permission', async () => {
+    mockApi({ ...team, 'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } } });
+    const { queryClient } = render();
+    queryClient.setQueryData(sessionQueryKey, { ...adminUser, roles: ['SUPPORT'], permissions: [] });
+
+    expect(await screen.findByText(/Charging the Guest needs the refunds permission/)).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Charge the Guest' })).not.toBeInTheDocument();
+  });
+
+  it('says when there’s no such case', async () => {
+    mockApi({
+      ...team,
+      'GET /admin/incidents/IN-ZZZ999': {
+        status: 404,
+        body: { error: { code: 'NOT_FOUND', message: 'No such case.' } },
+      },
+    });
+    render('/admin/incidents/in-zzz999');
+
+    expect(await screen.findByText('We couldn’t find that case')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Incidents & disputes' })).toHaveAttribute(
+      'href',
+      '/admin/incidents',
+    );
+  });
+});

@@ -1,6 +1,8 @@
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { CalendarRange, Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { client, unwrap } from '@/api/client';
 import type { BookingSummary } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { ParkingBays } from '@/components/brand/patterns/parking-bays';
@@ -17,12 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { toast } from '@/components/ui/toast';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
-import { useAcceptBooking, useBookings } from '@/features/booking/booking-api';
+import { bookingsQueryKey, useAcceptBooking } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
 import { hostAnswers } from '@/features/booking/booking-format';
 import { acceptedToast } from '@/features/booking/accepted-toast';
 import { DeclineDialogContent } from '@/features/booking/decline-dialog';
-import { HostPageHeader, HostSubNav } from '@/features/host/host-nav';
+import { HostPageHeader } from '@/features/host/host-nav';
+import { HostShell } from '@/features/host/host-shell';
 
 const TABS = [
   { value: 'requests', label: 'Requests' },
@@ -82,27 +85,48 @@ function RequestActions({ booking }: { booking: BookingSummary }) {
   );
 }
 
-function BookingList({ group }: { group: Tab }) {
-  const bookings = useBookings('host', group);
+/**
+ * The Host's bookings in one tab, a page at a time, so a long history is all there (the API's pages hold 100).
+ * Any change to a booking refreshes it with the other lists (bookingsQueryKey).
+ */
+function useHostBookingPages(group: Tab) {
+  return useInfiniteQuery({
+    queryKey: [...bookingsQueryKey, 'host', group, 'pages'],
+    queryFn: ({ pageParam, signal }) =>
+      unwrap(
+        client.GET('/bookings', {
+          params: { query: { role: 'host', group, ...(pageParam > 1 && { page: pageParam }) } },
+          signal,
+        }),
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last) => last.nextPage,
+    staleTime: 30_000,
+  });
+}
 
-  if (bookings.isError) {
+function BookingList({ group }: { group: Tab }) {
+  const pages = useHostBookingPages(group);
+  const bookings = pages.data?.pages.flatMap((page) => page.bookings);
+
+  if (pages.isError) {
     return (
       <Alert
         variant="danger"
         role="alert"
         title="We couldn’t load your bookings"
         action={
-          <Button variant="secondary" size="sm" onClick={() => void bookings.refetch()}>
+          <Button variant="secondary" size="sm" onClick={() => void pages.refetch()}>
             Try again
           </Button>
         }
       >
-        {bookings.error.message}
+        {pages.error.message}
       </Alert>
     );
   }
-  if (!bookings.data) return <BookingListSkeleton />;
-  if (bookings.data.length === 0) {
+  if (!bookings) return <BookingListSkeleton />;
+  if (bookings.length === 0) {
     return (
       <EmptyState
         className="mx-auto py-8"
@@ -116,25 +140,38 @@ function BookingList({ group }: { group: Tab }) {
         description={EMPTY[group]}
         actions={
           <Button asChild variant="secondary">
-            <Link to="/host">Your cars</Link>
+            <Link to="/host/vehicles">Your cars</Link>
           </Button>
         }
       />
     );
   }
   return (
-    <ul className="grid gap-4">
-      {bookings.data.map((booking, index) => (
-        <li key={booking.id} className="stagger-in" style={staggerIndex(index)}>
-          <BookingCard
-            booking={booking}
-            viewer="HOST"
-            to={`/host/bookings/${booking.ref}`}
-            actions={hostAnswers(booking) ? <RequestActions booking={booking} /> : undefined}
-          />
-        </li>
-      ))}
-    </ul>
+    <div className="grid gap-6">
+      <ul className="grid gap-4">
+        {bookings.map((booking, index) => (
+          <li key={booking.id} className="stagger-in" style={staggerIndex(index % 100)}>
+            <BookingCard
+              booking={booking}
+              viewer="HOST"
+              to={`/host/bookings/${booking.ref}`}
+              actions={hostAnswers(booking) ? <RequestActions booking={booking} /> : undefined}
+            />
+          </li>
+        ))}
+      </ul>
+      {pages.hasNextPage && (
+        <div>
+          <Button
+            variant="secondary"
+            loading={pages.isFetchingNextPage}
+            onClick={() => void pages.fetchNextPage()}
+          >
+            Show more
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -145,7 +182,6 @@ function HostBookings() {
 
   return (
     <div className="grid gap-8">
-      <HostSubNav />
       <HostPageHeader
         eyebrow="Hosting"
         title="Bookings"
@@ -159,10 +195,12 @@ function HostBookings() {
         onChange={(value) => setParams(value === 'requests' ? {} : { tab: value }, { replace: true })}
         className="max-w-2xl max-sm:[&_button]:px-1 max-sm:[&_button]:text-xs"
       />
+      {/* The tabs and heading line up with the other Host pages; the list keeps a narrower width. */}
       <div
         role="tabpanel"
         id={tabPanelId('host-bookings', tab)}
         aria-labelledby={tabId('host-bookings', tab)}
+        className="max-w-4xl"
       >
         <BookingList key={tab} group={tab} />
       </div>
@@ -176,22 +214,25 @@ function HostBookingsSkeleton() {
       <Skeleton className="h-11 w-56" />
       <Skeleton className="h-12 w-48" />
       <Skeleton className="h-13 max-w-2xl rounded-full" />
-      <BookingListSkeleton />
+      <div className="max-w-4xl">
+        <BookingListSkeleton />
+      </div>
     </div>
   );
 }
 
 /**
  * The Host's bookings (spec §9, plan §9 Days 11–13): requests to answer, with the time left and Accept and
- * Decline on each, then Upcoming, Current, Completed and Cancelled. The full Host dashboard follows in
- * Phase 3.
+ * Decline on each, then Upcoming, Current, Completed and Cancelled.
  */
 export function HostBookingsPage() {
   return (
-    <Container className="max-w-4xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ParkingBays} />
       <PageMeta title="Bookings" noindex />
-      <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>
+      <HostShell>
+        <RequireSignedIn fallback={<HostBookingsSkeleton />}>{() => <HostBookings />}</RequireSignedIn>
+      </HostShell>
     </Container>
   );
 }

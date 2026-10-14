@@ -90,6 +90,25 @@ describe('openRealtime', () => {
     close();
   });
 
+  it('connects again when the server closes the connection, which renews an expired cookie', async () => {
+    const fetchMock = mockApi({ 'POST /auth/refresh': { status: 200, body: {} } });
+    const { socket, close } = await openConnection();
+    socket.fire('connect');
+
+    // The access token it connected with has expired: the server closes the connection.
+    socket.active = false;
+    socket.fire('disconnect', 'io server disconnect');
+    expect(socket.connect).toHaveBeenCalledOnce();
+    refuse(socket, 'UNAUTHENTICATED');
+    await vi.waitFor(() => expect(socket.connect).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    // A dropped network is left to Socket.IO, which reconnects by itself.
+    socket.fire('disconnect', 'transport close');
+    expect(socket.connect).toHaveBeenCalledTimes(2);
+    close();
+  });
+
   it('leaves network errors to Socket.IO, which retries by itself', async () => {
     const fetchMock = mockApi({});
     const { socket, close } = await openConnection();
@@ -110,5 +129,14 @@ describe('openRealtime', () => {
     openRealtime({ onReconnect: vi.fn() })();
     await vi.dynamicImportSettled();
     expect(io).not.toHaveBeenCalled();
+  });
+
+  it('passes each live event to its handler', async () => {
+    const message = vi.fn();
+    const close = openRealtime({ onReconnect: vi.fn(), events: { message } });
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+    sockets[0]!.fire('message', { ref: 'RV-7K2Q9M' });
+    expect(message).toHaveBeenCalledWith({ ref: 'RV-7K2Q9M' });
+    close();
   });
 });

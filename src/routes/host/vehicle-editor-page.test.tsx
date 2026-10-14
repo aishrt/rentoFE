@@ -14,7 +14,7 @@ const render = (path: string) =>
   renderWithRouter(
     [
       { path: '/host/vehicles/:id/:step?', element: <VehicleEditorPage /> },
-      { path: '/host', element: <p>Host home</p> },
+      { path: '/host/vehicles', element: <p>My vehicles page</p> },
       { path: '/host/bookings', element: <p>Host bookings</p> },
     ],
     path,
@@ -34,6 +34,37 @@ function api(vehicle: HostVehicle, handlers: Parameters<typeof mockApi>[0] = {})
 const body = (init: RequestInit | undefined) => JSON.parse(String(init?.body)) as Record<string, unknown>;
 
 describe('VehicleEditorPage', () => {
+  it('shows a live car’s new expiry date waiting for our check, on the car and on its documents', async () => {
+    const live = sampleVehicle({
+      status: 'ACTIVE',
+      regoExpiry: '2026-12-31',
+      pendingExpiries: { regoExpiry: '2027-12-31' },
+    });
+    api(live);
+    render('/host/vehicles/v1');
+    expect(await screen.findByText(/^New expiry dates waiting for our check/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/The registration date .*2027 applies once we’ve checked the new registration/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Until then, guests can book up to .*31 Dec/)).toBeInTheDocument();
+  });
+
+  it('starts the documents step with the date waiting for our check, and says so', async () => {
+    api(
+      sampleVehicle({
+        status: 'ACTIVE',
+        regoExpiry: '2026-12-31',
+        pendingExpiries: { regoExpiry: '2027-12-31' },
+      }),
+    );
+    render('/host/vehicles/v1/2');
+    expect(
+      await screen.findByText(
+        /Your new date applies once our team has checked the new registration\. Until then, guests can book up to .*31 Dec/,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('saves step 1 with PATCH, including the furthest step, then moves on to documents', async () => {
     let sent: Record<string, unknown> | undefined;
     api(sampleVehicle(), {
@@ -129,7 +160,7 @@ describe('VehicleEditorPage', () => {
     expect(patch).not.toHaveBeenCalled();
   });
 
-  it('saves and returns to the Host home with Save & exit', async () => {
+  it('saves and returns to My vehicles with Save & exit', async () => {
     let sent: Record<string, unknown> | undefined;
     api(sampleVehicle({ onboardingStep: 5 }), {
       'PATCH /host/vehicles/v1': (init) => {
@@ -142,22 +173,22 @@ describe('VehicleEditorPage', () => {
     await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Save & exit' }));
 
-    expect(await screen.findByText('Host home')).toBeInTheDocument();
+    expect(await screen.findByText('My vehicles page')).toBeInTheDocument();
     expect(sent).toEqual({
       rules: { minNoticeHours: 12, bufferHours: 2, instantBook: true },
       onboardingStep: 5,
     });
   });
 
-  it('saves the step on the way back to the Host home, as Save & exit does', async () => {
+  it('saves the step on the way back to My vehicles, as Save & exit does', async () => {
     const patch = vi.fn(() => ({ status: 200, body: { vehicle: sampleVehicle({ onboardingStep: 5 }) } }));
     api(sampleVehicle({ onboardingStep: 5 }), { 'PATCH /host/vehicles/v1': patch });
     render('/host/vehicles/v1/5');
 
     await userEvent.click(await screen.findByRole('radio', { name: /Instant Book on/ }));
-    await userEvent.click(screen.getByRole('link', { name: 'Hosting' }));
+    await userEvent.click(screen.getByRole('link', { name: 'My vehicles' }));
 
-    expect(await screen.findByText('Host home')).toBeInTheDocument();
+    expect(await screen.findByText('My vehicles page')).toBeInTheDocument();
     expect(patch).toHaveBeenCalledOnce();
   });
 
@@ -310,6 +341,43 @@ describe('VehicleEditorPage', () => {
       'href',
       '/host/vehicles/v1/calendar',
     );
+  });
+
+  it('frames a car’s overview in the Host area, under Vehicles, and keeps the steps focused', async () => {
+    api(sampleVehicle({ status: 'ACTIVE', onboardingStep: 6, title: '2021 Toyota Corolla' }));
+    const { router } = render('/host/vehicles/v1');
+
+    const hosting = within(await screen.findByRole('navigation', { name: 'Hosting' }));
+    expect(hosting.getByRole('link', { name: 'Vehicles' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('link', { name: 'My vehicles' })).toHaveAttribute(
+      'href',
+      '/host/vehicles',
+    );
+
+    await act(async () => {
+      await router.navigate('/host/vehicles/v1/5');
+    });
+    expect(await screen.findByRole('radio', { name: /Instant Book on/ })).toBeInTheDocument();
+    // The step's own bar of buttons takes the bottom of a phone, in place of the Host tabs.
+    expect(screen.queryByRole('navigation', { name: 'Hosting' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hosting, quick links' })).not.toBeInTheDocument();
+  });
+
+  it('says an approved car waits for payout setup instead of calling it live', async () => {
+    api(
+      sampleVehicle({
+        status: 'ACTIVE',
+        waitingForPayouts: true,
+        onboardingStep: 6,
+        title: '2021 Toyota Corolla',
+      }),
+    );
+    render('/host/vehicles/v1');
+
+    expect(await screen.findByText('Approved: set up payouts to go live')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up payouts' })).toHaveAttribute('href', '/host/earnings');
+    expect(screen.getByText('Waiting for payout setup')).toBeInTheDocument();
+    expect(screen.queryByText('Your car is live')).not.toBeInTheDocument();
   });
 
   it('asks before a key detail sends a live listing back for review', async () => {

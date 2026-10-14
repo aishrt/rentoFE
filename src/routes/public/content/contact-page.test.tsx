@@ -1,8 +1,21 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as UploadModule from '@/features/host/upload';
+import { uploadFile } from '@/features/host/upload';
 import { guestUser, mockApi, renderWithProviders } from '@/test/utils';
 import { ContactPage } from './contact-page';
+
+// Uploads go through XMLHttpRequest, which these tests don't run: each file gets a key straight away.
+vi.mock('@/features/host/upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof UploadModule>()),
+  uploadFile: vi.fn(async () => 'support/u2/7c9e1f20.jpg'),
+}));
+
+beforeEach(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:preview');
+  URL.revokeObjectURL = vi.fn();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -155,6 +168,71 @@ describe('ContactPage', () => {
     expect(screen.getByLabelText('Email address')).toHaveValue('kiri@example.co.nz');
     expect(screen.getByRole('button', { name: /What’s it about/ })).toHaveTextContent('Privacy and my data');
     expect(screen.getByLabelText('Booking reference (optional)')).toHaveValue('RV-7K2Q9M');
+  });
+
+  it('asks a visitor to log in to send photos or documents', async () => {
+    mockApi({ 'POST /auth/session': signedOut });
+    renderWithProviders(<ContactPage />, '/contact?category=BOOKING');
+
+    const login = await screen.findByRole('link', { name: 'log in' });
+    expect(login).toHaveAttribute('href', `/login?next=${encodeURIComponent('/contact?category=BOOKING')}`);
+    expect(login.parentElement).toHaveTextContent(
+      'To send photos or documents, log in first: they’re kept private, for you and our support team only.',
+    );
+    expect(screen.queryByRole('button', { name: 'Add photos or documents' })).not.toBeInTheDocument();
+  });
+
+  it('sends a signed-in member’s photos with the message', async () => {
+    const user = userEvent.setup();
+    let sent: Record<string, unknown> = {};
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: guestUser } },
+      'POST /support/tickets': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 201, body: { ref: 'ST-4HX8PA' } };
+      },
+    });
+    renderWithProviders(<ContactPage />, '/contact?category=BOOKING');
+
+    await user.click(await screen.findByRole('button', { name: 'Add photos or documents' }));
+    await user.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['jpeg'], 'scratch.jpg', { type: 'image/jpeg' }),
+    );
+    expect(await screen.findByText('scratch.jpg')).toBeInTheDocument();
+    expect(vi.mocked(uploadFile)).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: 'SUPPORT_FILE', filename: 'scratch.jpg' }),
+    );
+    await user.type(screen.getByLabelText('Subject'), 'Scratch on the bumper');
+    await user.type(screen.getByLabelText('Message'), 'It was there when I picked the car up.');
+    await send(user);
+
+    await screen.findByRole('heading', { name: 'Message sent' });
+    expect(sent.attachments).toEqual([
+      { key: 'support/u2/7c9e1f20.jpg', name: 'scratch.jpg', contentType: 'image/jpeg' },
+    ]);
+  });
+
+  it('says when an uploaded file has gone', async () => {
+    const user = userEvent.setup();
+    const message = "We couldn't find that upload. Please upload the file again.";
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: guestUser } },
+      'POST /support/tickets': { status: 400, body: { error: { code: 'UPLOAD_NOT_FOUND', message } } },
+    });
+    renderWithProviders(<ContactPage />, '/contact?category=BOOKING');
+
+    await screen.findByRole('button', { name: 'Add photos or documents' });
+    await user.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' }),
+    );
+    await screen.findByText('receipt.pdf');
+    await user.type(screen.getByLabelText('Subject'), 'My receipt');
+    await user.type(screen.getByLabelText('Message'), 'Here is the receipt for the fuel.');
+    await send(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
   });
 
   it('puts urgent help beside the form', async () => {

@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -6,17 +7,21 @@ import { bookFromListing, cancelForFullRefund, demoPassword, logIn, tripQuery } 
 /*
  * The Phase 2 deliverable from start to finish (MILESTONES.md, Day 15): "a test Host can list a car and
  * receive the booking, and a test Guest can find the car and book it." A new Host signs up, confirms their
- * email, applies, and lists a car through all six steps with its documents and photos. The admin approves
- * the Host and the car. The demo Guest finds it in search, sends a request and pays. The Host accepts, the
- * Guest is booked and gets a receipt, then cancels for a full refund, and the Host hides the car again.
+ * email, applies, verifies their identity, and lists a car through all six steps with its documents and
+ * photos. The admin approves the Host and the car, which waits for the Host's payout setup before it goes live (plan §8.2). Once that's
+ * done, the demo Guest finds it in search, sends a request and pays. The Host accepts, the Guest is booked and
+ * gets a receipt, then cancels for a full refund, and the Host hides the car again.
  *
  * Runs against a local API with the console mailer (its emails are read from backend/.mail), the stand-in
  * SMS driver (SMS_DRIVER=dummy, its SMS_DUMMY_CODE passed here as E2E_SMS_CODE), the seeded demo data and
- * Stripe's sandbox.
+ * Stripe's sandbox. Stripe's hosted identity check and payout setup can't be filled in by a test, so
+ * backend/scripts/e2e-identity-check.ts and e2e-payout-setup.ts stand in for them, on the database in
+ * backend/.env (the local API's).
  */
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
 const MAIL_DIR = resolve(process.env.E2E_MAIL_DIR ?? '../backend/.mail');
+const BACKEND_DIR = resolve(process.env.E2E_BACKEND_DIR ?? '../backend');
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@rentovroom.test';
 const GUEST_EMAIL = 'guest@rentovroom.test';
 /** Any picture will do: the photo checks only flag small or dark photos, they never block them. */
@@ -111,6 +116,24 @@ async function upload(page: Page, button: string) {
 const next = (page: Page, label = 'Continue') =>
   page.getByRole('button', { name: label, exact: true }).click();
 
+/** The car's slug if it's in search near Ponsonby, where the Host lists it. */
+async function findInSearch(page: Page, vehicleId: string): Promise<string | undefined> {
+  const found = await (
+    await page.request.get(`${API_URL}/api/v1/search?where=Ponsonby&sort=newest&pageSize=48`)
+  ).json();
+  return (found.results as { id: string; slug: string }[]).find((car) => car.id === vehicleId)?.slug;
+}
+
+/** What a passed check leaves behind when the Host verifies their identity on Stripe's pages. */
+function passIdentityCheck(email: string) {
+  execSync(`npx tsx scripts/e2e-identity-check.ts ${email}`, { cwd: BACKEND_DIR, stdio: 'pipe' });
+}
+
+/** What Stripe's `account.updated` webhook does when the Host finishes payout setup on Stripe's pages. */
+function finishPayoutSetup(email: string) {
+  execSync(`npx tsx scripts/e2e-payout-setup.ts ${email}`, { cwd: BACKEND_DIR, stdio: 'pipe' });
+}
+
 test('a new Host lists a car, the admin approves it, and a Guest books it', async ({ page, browser }) => {
   test.setTimeout(480_000);
   // A step that can't go on fails within seconds, not at the end of the test's time.
@@ -144,6 +167,8 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   await page.getByRole('button', { name: 'Submit application' }).click();
   await expect(page).toHaveURL(/\/host\/vehicles\/[a-f0-9]{24}/, { timeout: 30_000 });
   const vehicleId = /\/host\/vehicles\/([a-f0-9]{24})/.exec(page.url())![1]!;
+  // Hosts pass the identity check before they're approved (the identityForHosts setting).
+  passIdentityCheck(hostEmail);
 
   // 3. The six steps. Step 1: the car.
   await field(page, 'Number plate').fill(plate);
@@ -240,11 +265,16 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   await expect(admin.getByText(/Listing approved/).first()).toBeVisible();
   await adminContext.close();
 
-  // 5. The car is in search now; the demo Guest finds it there and sends a request.
-  const found = await (
-    await page.request.get(`${API_URL}/api/v1/search?where=Ponsonby&sort=newest&pageSize=48`)
-  ).json();
-  const slug = (found.results as { id: string; slug: string }[]).find((car) => car.id === vehicleId)?.slug;
+  // 5. Approved, the car waits for payout setup, so the Host can be paid for its trips (plan §8.2).
+  expect(await findInSearch(page, vehicleId), 'the car waits for payout setup').toBeUndefined();
+  await page.goto('/host/earnings');
+  await expect(page.getByRole('button', { name: 'Set up payouts' })).toBeVisible();
+  finishPayoutSetup(hostEmail);
+  await page.reload();
+  await expect(page.getByText('Payouts are set up')).toBeVisible();
+
+  // 6. The car is in search now; the demo Guest finds it there and sends a request.
+  const slug = await findInSearch(page, vehicleId);
   expect(slug, 'the approved car is in search').toBeTruthy();
 
   const guestContext = await browser.newContext();
@@ -255,7 +285,7 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   const ref = await bookFromListing(guest, slug!, 'Request to book');
   await expect(guest.getByText('Authorised on your card, not charged yet')).toBeVisible();
 
-  // 6. The Host receives the booking, by email and on their bookings page, and accepts it.
+  // 7. The Host receives the booking, by email and on their bookings page, and accepts it.
   await expect
     .poll(() => emailArrived(requestedAt, [ref, 'Accept or decline']), { timeout: 30_000 })
     .toBe(true);
@@ -273,7 +303,7 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
     .poll(() => emailArrived(requestedAt, [`Receipt for booking ${ref}`]), { timeout: 30_000 })
     .toBe(true);
 
-  // 7. Tidy up: the Guest cancels for a full refund, and the Host takes the car out of search.
+  // 8. Tidy up: the Guest cancels for a full refund, and the Host takes the car out of search.
   await cancelForFullRefund(guest);
   await guestContext.close();
   await page.goto(`/host/vehicles/${vehicleId}`);

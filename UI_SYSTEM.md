@@ -224,26 +224,26 @@ Every page has its own background art, about what the page is for. The home hero
 - **Line patterns** ([`components/brand/patterns`](src/components/brand/patterns)) are drawn in `currentColor` (faint `primary`), for `PageHero tone="light"` and for `PageBackdrop`.
 - `PageHero` takes the page's art as `art={…}`. App pages put `<PageBackdrop art={…} />` first inside their outer `Container`. It positions itself against `<main>` and fades into the canvas before the content.
 
-| Page                                         | Art                                                 |
-| -------------------------------------------- | --------------------------------------------------- |
-| Home                                         | `LandscapeArt`: alpine road at blue hour            |
-| How it works                                 | `JourneyArt`: from a farmhouse driveway to the road |
-| Safety                                       | `LighthouseArt`: its beam sweeps (`animate-sweep`)  |
-| About                                        | `HarbourArt`: a harbour town with its lights on     |
-| Become a host                                | `StreetArt`: a street with a car under a carport    |
-| Insurance                                    | `CoverRings`: rings of cover around a shield        |
-| FAQs                                         | `ContourLines`: a contour map                       |
-| Contact                                      | `ConnectionArcs`: places linked by arcs             |
-| Legal pages                                  | `RuledLines`: ruled paper and a seal                |
-| Browse cars, search                          | `StreetMap`: streets with cars pinned               |
-| Trips, a trip                                | `TripRoute`: a route across hill country            |
-| Hosting (overview, bookings, cars, apply)    | `ParkingBays`: a car park from above                |
-| Account settings                             | `DotGrid`: dots and switches                        |
-| Notifications                                | `SignalArcs`: a bell sending out arcs               |
-| Checkout                                     | `CalmWaves`: slow, even waves                       |
-| Log in, sign up and the other guest sign-ins | `CoastArt`: a coast road under the moon             |
-| Staff log-in and invitation                  | `CityArt`: the city at night                        |
-| Destinations                                 | Their `tone-*` gradients                            |
+| Page                                                                                         | Art                                                 |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Home                                                                                         | `LandscapeArt`: alpine road at blue hour            |
+| How it works                                                                                 | `JourneyArt`: from a farmhouse driveway to the road |
+| Safety                                                                                       | `LighthouseArt`: its beam sweeps (`animate-sweep`)  |
+| About                                                                                        | `HarbourArt`: a harbour town with its lights on     |
+| Become a host                                                                                | `StreetArt`: a street with a car under a carport    |
+| Insurance                                                                                    | `CoverRings`: rings of cover around a shield        |
+| FAQs, the help centre and its guides                                                         | `ContourLines`: a contour map                       |
+| Contact, Help and support, a support request, incidents                                      | `ConnectionArcs`: places linked by arcs             |
+| Legal pages                                                                                  | `RuledLines`: ruled paper and a seal                |
+| Browse cars, search, Saved cars                                                              | `StreetMap`: streets with cars pinned               |
+| Trips, a trip, its receipt, its handover, check-in and check-out, writing a review, Messages | `TripRoute`: a route across hill country            |
+| Hosting (overview, bookings, cars, apply, earnings, profile, maintenance)                    | `ParkingBays`: a car park from above                |
+| Account, its settings, payments and reviews                                                  | `DotGrid`: dots and switches                        |
+| Notifications, unsubscribe                                                                   | `SignalArcs`: a bell sending out arcs               |
+| Checkout, paying a charge after a trip                                                       | `CalmWaves`: slow, even waves                       |
+| Log in, sign up and the other guest sign-ins                                                 | `CoastArt`: a coast road under the moon             |
+| Staff log-in and invitation                                                                  | `CityArt`: the city at night                        |
+| Destinations                                                                                 | Their `tone-*` gradients                            |
 
 A new page picks a scene or pattern that suits it, or adds one. Keep it to a few KB of inline SVG, and keep focal points on the right, clear of the text.
 
@@ -298,9 +298,40 @@ Drag and layout animations need Motion's `domMax` features. Wrap the pages that 
 
 Marketplace components live in `src/features`: `VehicleCard` and the listing's parts (`features/vehicles`), `LocationAutocomplete` and the filters (`features/search`), `PriceBreakdown` (`features/booking`, used by the listing, checkout and trips).
 
+### Added in Phase 3
+
+```tsx
+<Container className="py-8 sm:py-12">
+  <PageBackdrop art={DotGrid} />
+  <AccountShell>                                  {/* the Guest dashboard's sidebar, and its tab bar on phones */}
+    <AccountPageHeader title="Payments" description="…" actions={…} />
+    …
+  </AccountShell>
+</Container>
+```
+
+`AccountShell` (`features/account/account-shell.tsx`) frames every Guest dashboard page (plan §12.6): a sidebar from tablets up, and a tab bar (Trips · Messages · Saved · Account) that sticks to the bottom of a phone while the page is in view, then scrolls away above the footer. Pages opened from a list, such as a trip, its receipt or a support request, use a `BackLink` instead. `print:hidden` keeps the header, footer and backgrounds off printed pages, such as receipts. `HostShell` (`features/host/host-shell.tsx`) frames every Host page the same way: a sidebar from tablets up (Today, Vehicles, Bookings, Calendar, Earnings, Inbox, Reviews, Profile), and on phones a tab bar with Today · Vehicles · Calendar · Earnings · Inbox, the other sections reached from Today. Both shells share their sidebar group, tab bar and frame (`features/account/dashboard-frame.tsx`), so Host pages don't load the Guest navigation. Each Host page keeps `HostPageHeader` (`features/host/host-nav.tsx`) for its heading. Pages Hosts share with Guests, the inbox and reviews, use `AreaShell` (`features/host/area-shell.tsx`): the Host frame when opened with `?as=host` (`host-links.ts`), the Guest frame otherwise. The listing steps and a new car keep their focused layout, and someone who hasn't applied to host sees `/host` and the application without the Host frame. Two-column layouts inside a framed page switch at `xl`, beside the sidebar. Staff pages use `AdminPageHeader` (`features/admin/ops`).
+
+| Component                                       | Where                                   | Use                                                                     |
+| ----------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
+| `DataTable`, `Th`, `Td`, `Tr`, `Pagination`     | `features/admin/ops/admin-table.tsx`    | The staff portal's tables: a card that scrolls sideways on a phone      |
+| `ListSkeleton`, `LoadError`, `EmptyList`        | `features/admin/ops/query-feedback.tsx` | A staff list loading, failing (with Try again) or empty                 |
+| `EarningsChart`                                 | `features/host/earnings-chart.tsx`      | Monthly bars with round axis steps, and Show as table                   |
+| `StarInput`, `ReviewCard`, `ReportReviewButton` | `features/reviews`                      | Rating a trip, showing a review, reporting one                          |
+| `CarDiagram`, `DamageEditor`, `PhotoCapture`    | `features/handover`                     | Damage pinned on a car outline, and guided photos with their time taken |
+| `Composer`, `MessageList`                       | `features/messages`                     | A conversation: photos, Enter to send on a computer, report a message   |
+| `ExtraCharges`                                  | `features/booking/extra-charges.tsx`    | Charges after a trip, on the trip and booking pages                     |
+
+Pickers inside a `DialogContent` open their list inside the dialog (`PopoverRootContext`), because a modal dialog won't let a list in the page body be clicked or focused. Two layout traps found in Phase 3's polish pass:
+
+- **Truncated text in a grid.** A grid's implicit column is `auto`, so a `truncate`d line's full width can still widen the page. Give the grid an explicit `grid-cols-1` (`minmax(0, 1fr)`), as the inbox and conversation do.
+- **A sideways scroller must be `relative`.** Absolutely positioned parts inside it, such as `sr-only` headings, are only clipped when the scroller is their containing block. Otherwise they widen the page (`DataTable` is `relative` for this reason).
+
+Actions that only appear on hover also show on touch screens (`pointer-coarse:opacity-100`), which have no hover.
+
 ### Not built yet
 
-Plan §12.3 also lists Chip, ListItem, a data table and charts. They will be built with the Phase 3 dashboards that need them, from the same tokens.
+Plan §12.3 also lists Chip and ListItem. They will be built when a screen needs them, from the same tokens.
 
 ## Motion
 
@@ -335,7 +366,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | `sheen`                                                                           | One band of light across on hover (accent button)                                                                         |
 | `parallax` / `parallax-exit`                                                      | Desktop scroll parallax on CSS scroll timelines, with no JavaScript. `parallax-exit` is for heroes at the top of the page |
 | `skeleton`, `glass`, `headline`, `eyebrow`                                        | Loading shimmer, sticky-bar blur, display font, small labels                                                              |
-| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-breathe`, `-bar-in`, …      | Keyframe animations                                                                                                       |
+| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-bar-in`, …                  | Keyframe animations                                                                                                       |
 | `spotlight` / `spotlight-on-dark`                                                 | A light that follows the mouse (driven by `trackSpotlight`; Cards use the `spotlight` prop)                               |
 | `shiny-text`                                                                      | A glint crosses accent text every few seconds. Short labels on dark backgrounds only; keep `text-accent` on the element   |
 | `gradient-text`                                                                   | Slow blue-to-ink fill for one large figure; keep a text colour on the element                                             |
@@ -360,7 +391,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                                                                                       |
 | Log-in pages       | Form fades up; the side panel's headline comes into focus word by word                                                                                                                                                                                                  |
 | 404                | A night drive: the car drives in, then cruises with turning wheels, a gentle suspension bob and puffs of exhaust; lane markings and marker posts stream past; two ranges of hills pan at their own speeds under a glowing 404; stars twinkle. Still with reduced motion |
-| Loading            | Skeleton shimmer; brand mark breathes on first load; the account menu fades in over its placeholder                                                                                                                                                                     |
+| Loading            | Skeleton shimmer; boot splash on first load (index.html: the logo's car drives on the spot, then pulls away); the account menu fades in over its placeholder                                                                                                            |
 
 ### From React Bits
 

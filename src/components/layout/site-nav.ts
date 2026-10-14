@@ -3,16 +3,15 @@ export interface NavLinkItem {
   to: string;
 }
 
-/**
- * Header navigation (plan §12.6). "Help" opens the FAQs until the help centre arrives in Phase 3 (plan §9).
- */
+/** Header navigation (plan §12.6). */
 export const primaryNav: NavLinkItem[] = [
   { label: 'Browse cars', to: '/cars' },
   { label: 'How it works', to: '/how-it-works' },
   { label: 'Become a host', to: '/become-a-host' },
-  { label: 'Help', to: '/faq' },
+  { label: 'Help', to: '/help' },
 ];
 
+/** The footer's links at launch; admins change them on the staff portal's Content page (plan §12.6). */
 export const footerNav: { title: string; links: NavLinkItem[] }[] = [
   {
     title: 'Rent',
@@ -50,5 +49,8 @@ export const footerNav: { title: string; links: NavLinkItem[] }[] = [
   },
 ];
 
-/** Social accounts for the footer (spec §4). Empty until the client supplies them; the footer hides the row. */
+/**
+ * Social accounts for the footer (spec §4), at launch. Empty until the client supplies them (admins add them
+ * on the Content page); the footer hides the row.
+ */
 export const socialLinks: { label: string; href: string }[] = [];

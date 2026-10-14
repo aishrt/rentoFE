@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { StaffList } from '@/api/types';
+import type { AdminUserDetail, StaffList } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
 import { AdminSidebar } from '@/features/admin/admin-sidebar';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
@@ -46,6 +46,7 @@ const team: StaffList = {
       status: 'ACTIVE',
       mfaEnabled: true,
       lastLoginAt: '2026-09-30T21:00:00.000Z',
+      permissions: ['REFUNDS'],
     },
     {
       id: 'u3',
@@ -55,10 +56,34 @@ const team: StaffList = {
       role: 'SUPPORT',
       status: 'ACTIVE',
       mfaEnabled: false,
+      permissions: [],
     },
   ],
   invites: [],
 };
+
+/** Sam's record, as the permissions request returns it. */
+const samRecord = (permissions: string[]): AdminUserDetail => ({
+  id: 'u3',
+  firstName: 'Sam',
+  lastName: 'Support',
+  email: 'sam@example.co.nz',
+  roles: ['SUPPORT'],
+  status: 'ACTIVE',
+  closed: false,
+  identityStatus: 'NONE',
+  hostStatus: null,
+  openRiskFlags: 0,
+  createdAt: '2026-09-01T00:00:00.000Z',
+  emailVerified: true,
+  phoneVerified: false,
+  permissions,
+  licence: null,
+  host: null,
+  riskFlags: [],
+  bookings: [],
+  upcomingBookings: [],
+});
 
 const merePending = {
   id: 'i1',
@@ -85,6 +110,64 @@ describe('AdminStaffPage', () => {
     expect(within(sam!).getByText(/not logged in yet/)).toBeInTheDocument();
     expect(within(sam!).getByRole('button', { name: 'Remove Sam Support' })).toBeInTheDocument();
     expect(screen.getByText('No open invitations.')).toBeInTheDocument();
+    // Each member's name opens their record.
+    expect(within(admin!).getByRole('link', { name: 'Aroha Admin' })).toHaveAttribute(
+      'href',
+      '/admin/users/u1',
+    );
+    expect(within(sam!).getByRole('link', { name: 'Sam Support' })).toHaveAttribute(
+      'href',
+      '/admin/users/u3',
+    );
+  });
+
+  it('shows what each member can do, and lets the admin give or take the refunds permission', async () => {
+    const sent: unknown[] = [];
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/staff': { status: 200, body: team },
+      'POST /admin/staff/u3/permissions': (init) => {
+        const body = JSON.parse(String(init?.body)) as { refunds: boolean };
+        sent.push(body);
+        return { status: 200, body: { user: samRecord(body.refunds ? ['REFUNDS'] : []) } };
+      },
+    });
+    render();
+
+    const list = within(await screen.findByRole('list', { name: 'Staff' }));
+    const [admin, sam] = list.getAllByRole('listitem');
+    expect(within(admin!).getByText('Every permission, refunds included.')).toBeInTheDocument();
+    expect(within(admin!).queryByRole('switch')).not.toBeInTheDocument();
+
+    const refunds = within(sam!).getByRole('switch', { name: 'Sam Support can issue refunds' });
+    expect(refunds).toHaveAttribute('aria-checked', 'false');
+    await userEvent.click(refunds);
+    expect(await screen.findByText('Sam can now issue refunds')).toBeInTheDocument();
+    expect(refunds).toHaveAttribute('aria-checked', 'true');
+
+    await userEvent.click(refunds);
+    expect(await screen.findByText('Sam can no longer issue refunds')).toBeInTheDocument();
+    expect(refunds).toHaveAttribute('aria-checked', 'false');
+    expect(sent).toEqual([{ refunds: true }, { refunds: false }]);
+  });
+
+  it('says when the permission couldn’t change', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/staff': { status: 200, body: team },
+      'POST /admin/staff/u3/permissions': {
+        status: 404,
+        body: { error: { code: 'NOT_FOUND', message: 'No support team member with that id.' } },
+      },
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('switch', { name: 'Sam Support can issue refunds' }));
+    expect(await screen.findByText('No support team member with that id.')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Sam Support can issue refunds' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
   it('invites someone and shows the invitation once it is sent', async () => {
@@ -164,6 +247,44 @@ describe('AdminStaffPage', () => {
     expect(await screen.findByText('Sam Support is off the support team')).toBeInTheDocument();
     expect(removed).toHaveBeenCalledOnce();
     expect(await screen.findAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it("resets a support member's lost authenticator after asking", async () => {
+    const withApp: StaffList = {
+      ...team,
+      staff: team.staff.map((member) => (member.id === 'u3' ? { ...member, mfaEnabled: true } : member)),
+    };
+    let list = withApp;
+    const reset = vi.fn();
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/staff': () => ({ status: 200, body: list }),
+      'POST /admin/staff/u3/mfa/reset': () => {
+        reset();
+        list = team;
+        return { status: 204 };
+      },
+    });
+    render();
+
+    const members = within(await screen.findByRole('list', { name: 'Staff' }));
+    const [admin] = members.getAllByRole('listitem');
+    // The admin resets their own with the server script, not here.
+    expect(within(admin!).queryByRole('button')).not.toBeInTheDocument();
+    await userEvent.click(members.getByRole('button', { name: "Reset Sam Support's authenticator" }));
+    const dialog = within(await screen.findByRole('dialog', { name: "Reset Sam Support's authenticator?" }));
+    expect(dialog.getByText(/set up a new app in Settings/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Reset authenticator' }));
+
+    expect(await screen.findByText("Sam Support's authenticator is reset")).toBeInTheDocument();
+    expect(reset).toHaveBeenCalledOnce();
+    // Without an authenticator app there's nothing left to reset.
+    expect(await screen.findByRole('button', { name: 'Remove Sam Support' })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: "Reset Sam Support's authenticator" }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it('cancels an open invitation, and can send it again', async () => {

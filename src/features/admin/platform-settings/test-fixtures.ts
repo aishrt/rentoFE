@@ -13,6 +13,7 @@ const DECISIONS: DecisionKey[] = [
   'company',
   'bookingRules',
   'verificationServices',
+  'retentionAndRisk',
 ];
 
 export const settingsFixture: PlatformSettings = {
@@ -105,7 +106,12 @@ export const settingsFixture: PlatformSettings = {
     maxDiscountPct: 50,
   },
   reviews: { windowDays: 14, revealTogether: true, homepageThreshold: 10 },
-  trips: { lateReturnGraceMinutes: 30, damageReportWindowHours: 48, threadReadOnlyDays: 30 },
+  trips: {
+    lateReturnGraceMinutes: 30,
+    damageReportWindowHours: 48,
+    threadReadOnlyDays: 30,
+    extraKmReviewAboveKmPerDay: 1000,
+  },
   search: { maxTripDays: 90, radiusKm: { min: 5, default: 25, max: 300 } },
   retention: { financialRecordsYears: 7, idImagesDays: 90, tripRecordsYears: 2, auditLogYears: 7 },
   risk: { failedPaymentsPerDay: 3, bookingsPerDay: 5, reportsBeforeFlag: 3, hostCancellationsPer90Days: 3 },

@@ -7,20 +7,32 @@ import { NZ_TIME_ZONE } from '@/lib/format';
  * only the staff portal needs them. Dates are New Zealand's, whatever the device's time zone.
  */
 
-const numericDate = new Intl.DateTimeFormat('en-NZ', {
-  day: '2-digit',
-  month: '2-digit',
+const dateWithYear = new Intl.DateTimeFormat('en-NZ', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
   year: 'numeric',
   timeZone: NZ_TIME_ZONE,
 });
 
-/** "30/09/2026": an instant's day in NZ, as New Zealanders write dates. */
-export const formatDateNz = (iso: string) => numericDate.format(new Date(iso));
+/**
+ * "Wed, 30 Sept 2026": an instant's day in NZ, such as when someone joined or applied. Written out like the
+ * portal's other dates (the audit log has "Wed, 30 Sept 2026, 9:30 am"), and with the year, as staff records
+ * go back years.
+ */
+export const formatDateNz = (iso: string) => dateWithYear.format(new Date(iso));
 
-/** "12/10/2027" for the API's "2027-10-12" dates, such as a WOF expiry. */
+// A day with no time of day is the same day everywhere, so it's formatted in UTC, where it starts.
+const calendarDay = new Intl.DateTimeFormat('en-NZ', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** "12 Oct 2027" for the API's "2027-10-12" dates, such as a WOF expiry or a date of birth. */
 export function formatDayValue(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? calendarDay.format(new Date(`${value}T00:00:00Z`)) : value;
 }
 
 // en-CA writes dates as "2026-09-30", the format of <input type="date"> and the API.

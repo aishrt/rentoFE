@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MailPlus, ShieldCheck, UserX, X } from 'lucide-react';
+import { KeyRound, MailPlus, ShieldCheck, UserX, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import type { StaffInvite, StaffMember } from '@/api/types';
+import { Link } from 'react-router';
+import type { StaffInvite, StaffList, StaffMember } from '@/api/types';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
@@ -11,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { ConfirmDialog } from '@/features/admin/listings/confirm-dialog';
 import { InviteSection } from '@/features/admin/staff/invite-section';
@@ -18,16 +20,25 @@ import {
   cancelInviteRequest,
   inviteStaffRequest,
   removeStaffRequest,
+  resetStaffMfaRequest,
   staffErrorMessage,
   staffName,
   staffQueryKey,
   useStaff,
 } from '@/features/admin/staff/staff-api';
+import {
+  adminUserQueryKey,
+  setRefundsPermissionRequest,
+  userErrorMessage,
+} from '@/features/admin/users/users-api';
 import { initials } from '@/features/auth/roles';
 import { useSession } from '@/features/auth/use-session';
 import { formatLongDateNz } from '@/lib/format';
 
-type Pending = { kind: 'remove'; member: StaffMember } | { kind: 'cancel'; invite: StaffInvite };
+type Pending =
+  | { kind: 'remove'; member: StaffMember }
+  | { kind: 'reset-mfa'; member: StaffMember }
+  | { kind: 'cancel'; invite: StaffInvite };
 
 /**
  * The staff (plan §6.2): the one admin, set on the server and not changeable here, and the support team,
@@ -87,6 +98,32 @@ function StaffSection() {
     },
     onError: (error) => toast(staffErrorMessage(error) ?? "We couldn't send it", { tone: 'danger' }),
   });
+  // The refunds permission (plan §6.2), through the same request as the member's record in Users.
+  const refunds = useMutation({
+    mutationFn: setRefundsPermissionRequest,
+    onSuccess: (updated) => {
+      const permissions: StaffMember['permissions'] = updated.permissions.includes('REFUNDS')
+        ? ['REFUNDS']
+        : [];
+      queryClient.setQueryData<StaffList>(
+        staffQueryKey,
+        (list) =>
+          list && {
+            ...list,
+            staff: list.staff.map((member) =>
+              member.id === updated.id ? { ...member, permissions } : member,
+            ),
+          },
+      );
+      queryClient.setQueryData(adminUserQueryKey(updated.id), { user: updated });
+      toast(
+        permissions.length > 0
+          ? `${updated.firstName} can now issue refunds`
+          : `${updated.firstName} can no longer issue refunds`,
+      );
+    },
+    onError: (error) => toast(userErrorMessage(error) ?? 'We couldn’t change it', { tone: 'danger' }),
+  });
 
   const ask = (next: Pending) => {
     setPending(next);
@@ -99,6 +136,11 @@ function StaffSection() {
       await removeStaffRequest(pending.member.id);
       toast(`${staffName(pending.member)} is off the support team`, {
         description: "They're signed out of the staff portal.",
+      });
+    } else if (pending.kind === 'reset-mfa') {
+      await resetStaffMfaRequest(pending.member.id);
+      toast(`${staffName(pending.member)}'s authenticator is reset`, {
+        description: 'They can sign in with their password and set up a new app.',
       });
     } else {
       await cancelInviteRequest(pending.invite.id);
@@ -144,7 +186,8 @@ function StaffSection() {
             Team
           </h2>
           <p className="mt-1 mb-6 text-sm text-muted">
-            The admin is set on the server and can&rsquo;t be changed or removed here.
+            The admin is set on the server and can&rsquo;t be changed or removed here. Support staff handle
+            money only with the refunds permission. Open someone for their record.
           </p>
           <ul aria-label="Staff" className="divide-y divide-line">
             {members.map((member) => (
@@ -155,7 +198,12 @@ function StaffSection() {
                 }
                 title={
                   <>
-                    {staffName(member)}
+                    <Link
+                      to={`/admin/users/${member.id}`}
+                      className="rounded-inner text-primary hover:underline"
+                    >
+                      {staffName(member)}
+                    </Link>
                     <Badge variant={member.role === 'ADMIN' ? 'accent' : 'neutral'}>
                       {member.role === 'ADMIN' ? 'Admin' : 'Support'}
                     </Badge>
@@ -167,17 +215,50 @@ function StaffSection() {
                     ? `last logged in ${formatLongDateNz(new Date(member.lastLoginAt))}`
                     : 'not logged in yet'
                 }${member.mfaEnabled ? ' · two-factor on' : ''}`}
+                permissions={
+                  member.role === 'ADMIN' ? (
+                    <p className="text-sm text-muted">Every permission, refunds included.</p>
+                  ) : (
+                    <Switch
+                      label="Can issue refunds"
+                      description="Refund Guests, and see payments, refunds and payouts."
+                      aria-label={`${staffName(member)} can issue refunds`}
+                      checked={
+                        refunds.isPending && refunds.variables.id === member.id
+                          ? refunds.variables.refunds
+                          : member.permissions.includes('REFUNDS')
+                      }
+                      disabled={refunds.isPending}
+                      onCheckedChange={(checked) => refunds.mutate({ id: member.id, refunds: checked })}
+                      className="max-w-md"
+                    />
+                  )
+                }
                 action={
                   member.role === 'SUPPORT' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Remove ${staffName(member)}`}
-                      onClick={() => ask({ kind: 'remove', member })}
-                    >
-                      <UserX aria-hidden="true" />
-                      Remove
-                    </Button>
+                    <div className="flex flex-wrap gap-1">
+                      {/* Only someone with an authenticator app can lose it. */}
+                      {member.mfaEnabled && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Reset ${staffName(member)}'s authenticator`}
+                          onClick={() => ask({ kind: 'reset-mfa', member })}
+                        >
+                          <KeyRound aria-hidden="true" />
+                          Reset authenticator
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Remove ${staffName(member)}`}
+                        onClick={() => ask({ kind: 'remove', member })}
+                      >
+                        <UserX aria-hidden="true" />
+                        Remove
+                      </Button>
+                    </div>
                   )
                 }
               />
@@ -241,14 +322,24 @@ function StaffSection() {
         title={
           pending?.kind === 'remove'
             ? `Remove ${staffName(pending.member)} from the support team?`
-            : `Cancel the invitation to ${pending?.invite.email ?? ''}?`
+            : pending?.kind === 'reset-mfa'
+              ? `Reset ${staffName(pending.member)}'s authenticator?`
+              : `Cancel the invitation to ${pending?.invite.email ?? ''}?`
         }
         description={
           pending?.kind === 'remove'
             ? "They're signed out of the staff portal straight away, and their authenticator apps are removed. Their account stays, and you can invite them again."
-            : 'The link in their email stops working. You can invite them again later.'
+            : pending?.kind === 'reset-mfa'
+              ? "For a lost phone. Their authenticator apps are removed and they're signed out everywhere. They sign in with their password, then can set up a new app in Settings."
+              : 'The link in their email stops working. You can invite them again later.'
         }
-        confirmLabel={pending?.kind === 'remove' ? 'Remove' : 'Cancel invitation'}
+        confirmLabel={
+          pending?.kind === 'remove'
+            ? 'Remove'
+            : pending?.kind === 'reset-mfa'
+              ? 'Reset authenticator'
+              : 'Cancel invitation'
+        }
         onConfirm={confirm}
       />
     </>
@@ -259,11 +350,14 @@ function Row({
   avatar,
   title,
   detail,
+  permissions,
   action,
 }: {
   avatar: ReactNode;
   title: ReactNode;
   detail: string;
+  /** What a staff member can do beyond their role (plan §6.2). */
+  permissions?: ReactNode;
   action?: ReactNode;
 }) {
   return (
@@ -273,6 +367,7 @@ function Row({
       <div className="min-w-0 flex-1 basis-48">
         <p className="flex flex-wrap items-center gap-2 font-medium text-ink">{title}</p>
         <p className="mt-0.5 text-sm break-words text-muted">{detail}</p>
+        {permissions && <div className="mt-2">{permissions}</div>}
       </div>
       {action && <div className="ml-12 sm:ml-0">{action}</div>}
     </li>

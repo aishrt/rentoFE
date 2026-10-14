@@ -2,9 +2,20 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { renderSeoHead, replaceSeoBlock } from './head';
-import { findSeoPage, isIndexable, pageFile, robotsFor, seoManifest, seoPage, seoPages } from './pages';
+import {
+  findSeoPage,
+  isIndexable,
+  pageFile,
+  robotsFor,
+  seoManifest,
+  seoPage,
+  seoPages,
+  type SeoPage,
+} from './pages';
 
 const SITE = 'https://www.example.co.nz';
+/** A page linked from the site but built in a later milestone. */
+const LATER: SeoPage = { path: '/later', title: 'Later', description: 'Built later.', comingSoon: true };
 
 describe('SEO table', () => {
   it('lists each page once, with a one-segment path', () => {
@@ -16,7 +27,7 @@ describe('SEO table', () => {
   it('keeps pages that are not built yet, sign-in pages and search results out of search engines', () => {
     expect(isIndexable(seoPage('/'))).toBe(true);
     expect(isIndexable(seoPage('/how-it-works'))).toBe(true);
-    expect(robotsFor(seoPage('/help'))).toBe('noindex, follow');
+    expect(robotsFor(LATER)).toBe('noindex, follow');
     expect(robotsFor(seoPage('/search'))).toBe('noindex, follow');
     expect(robotsFor(seoPage('/login'))).toBe('noindex, nofollow');
     expect(robotsFor(seoPage('/signup'))).toBe('noindex, nofollow');
@@ -50,11 +61,11 @@ describe('renderSeoHead', () => {
   });
 
   it('marks a page that is not built yet noindex, with no canonical URL or structured data', () => {
-    const head = renderSeoHead(seoPage('/help'), SITE);
+    const head = renderSeoHead(LATER, SITE);
 
-    expect(head).toContain('<title data-prerendered>Help centre · Rento Vroom</title>');
+    expect(head).toContain('<title data-prerendered>Later · Rento Vroom</title>');
     expect(head).toContain('<meta data-prerendered name="robots" content="noindex, follow" />');
-    expect(head).toContain(`<meta property="og:url" content="${SITE}/help" />`);
+    expect(head).toContain(`<meta property="og:url" content="${SITE}/later" />`);
     expect(head).not.toContain('rel="canonical"');
     expect(head).not.toContain('application/ld+json');
   });
@@ -157,7 +168,8 @@ describe('seoManifest', () => {
     expect(manifest.indexablePaths).toContain('/');
     expect(manifest.indexablePaths).toContain('/cars');
     expect(manifest.indexablePaths).toContain('/terms');
-    for (const path of ['/search', '/help', '/login', '/signup', '/forgot-password']) {
+    expect(manifest.indexablePaths).toContain('/help');
+    for (const path of ['/search', '/login', '/signup', '/forgot-password']) {
       expect(manifest.indexablePaths).not.toContain(path);
     }
   });

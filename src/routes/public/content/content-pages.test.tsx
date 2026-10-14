@@ -16,7 +16,7 @@ afterEach(() => {
 describe('Header navigation', () => {
   it('links to the public pages instead of homepage sections', async () => {
     mockApi({ 'POST /auth/session': { status: 200, body: { user: null } } });
-    renderWithProviders(<SiteHeader />, '/faq');
+    renderWithProviders(<SiteHeader />, '/help');
 
     const nav = await screen.findByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '/how-it-works');
@@ -25,7 +25,7 @@ describe('Header navigation', () => {
       '/become-a-host',
     );
     const help = within(nav).getByRole('link', { name: 'Help' });
-    expect(help).toHaveAttribute('href', '/faq');
+    expect(help).toHaveAttribute('href', '/help');
     expect(help).toHaveAttribute('aria-current', 'page');
   });
 });

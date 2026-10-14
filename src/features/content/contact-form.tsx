@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Hash, Tag } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { CheckDraw } from '@/components/motion/check-draw';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Select } from '@/components/ui/select';
 import { ApiError } from '@/api/client';
 import { formErrorMessage } from '@/features/account/form-errors';
 import { useSession } from '@/features/auth/use-session';
+import { EvidencePicker } from '@/features/incidents/evidence-picker';
+import { useTicketFiles } from '@/features/support/use-ticket-files';
 import { useContactRequest } from './content-api';
 import {
   categoryLabels,
@@ -87,11 +89,14 @@ function SentMessage({
 
 /**
  * Contact Us (plan §9, Days 12–14): creates a support ticket, signed in or not. Signed-in members start with
- * their name and email filled in. The API's answers show next to their fields; a rate limit shows above.
+ * their name and email filled in, and can add photos and documents: uploads need an account, so visitors
+ * are asked to log in for that. The API's answers show next to their fields; a rate limit shows above.
  */
 export function ContactForm({ initialCategory, initialBookingRef }: ContactFormProps) {
   const session = useSession();
   const contact = useContactRequest();
+  const files = useTicketFiles();
+  const location = useLocation();
   const errorId = useId();
   const user = session.data;
 
@@ -127,7 +132,12 @@ export function ContactForm({ initialCategory, initialBookingRef }: ContactFormP
 
   const onSubmit = handleSubmit(async ({ bookingRef, ...values }) => {
     try {
-      await contact.mutateAsync({ ...values, ...(bookingRef ? { bookingRef } : {}) });
+      await contact.mutateAsync({
+        ...values,
+        ...(bookingRef ? { bookingRef } : {}),
+        ...(user && files.attachments.length > 0 ? { attachments: files.attachments } : {}),
+      });
+      files.reset();
     } catch (error) {
       if (!(error instanceof ApiError) || !error.fields) return;
       // Only the first is focused: moving focus on would blur it, and re-checking a field on blur clears an
@@ -153,8 +163,15 @@ export function ContactForm({ initialCategory, initialBookingRef }: ContactFormP
     );
   }
 
-  const serverError = contact.isError ? formErrorMessage(contact.error) : null;
+  // The API's word on the files: from a visitor, or an upload it can't find.
+  const filesError =
+    contact.error instanceof ApiError
+      ? (contact.error.fields?.attachments ??
+        (contact.error.code === 'UPLOAD_NOT_FOUND' ? contact.error.message : undefined))
+      : undefined;
+  const serverError = contact.isError && !filesError ? formErrorMessage(contact.error) : null;
   const pending = contact.isPending;
+  const next = encodeURIComponent(`${location.pathname}${location.search}`);
 
   return (
     <form noValidate onSubmit={onSubmit} aria-describedby={serverError ? errorId : undefined}>
@@ -226,6 +243,31 @@ export function ContactForm({ initialCategory, initialBookingRef }: ContactFormP
           <Textarea rows={7} {...register('message')} />
         </Field>
 
+        {user ? (
+          <div className="grid gap-2">
+            <p className="text-sm font-medium text-ink">Photos or documents (optional)</p>
+            <p className="text-sm text-muted">
+              Screenshots, receipts or photos of the car. Only you and our support team see them.
+            </p>
+            <EvidencePicker evidence={files} />
+            {filesError && (
+              <Alert variant="danger" role="alert">
+                {filesError}
+              </Alert>
+            )}
+          </div>
+        ) : (
+          !session.isPending && (
+            <p className="text-sm text-muted">
+              To send photos or documents,{' '}
+              <Link to={`/login?next=${next}`} className="link-underline font-medium text-primary">
+                log in
+              </Link>{' '}
+              first: they’re kept private, for you and our support team only.
+            </p>
+          )
+        )}
+
         <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted">
             We use your details only to answer your message. Read our{' '}
@@ -234,7 +276,7 @@ export function ContactForm({ initialCategory, initialBookingRef }: ContactFormP
             </Link>
             .
           </p>
-          <Button type="submit" size="lg" loading={pending} className="shrink-0">
+          <Button type="submit" size="lg" loading={pending} disabled={files.uploading} className="shrink-0">
             {pending ? 'Sending…' : 'Send message'}
           </Button>
         </div>

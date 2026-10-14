@@ -28,6 +28,13 @@ export function dismissToast(id: number) {
   emit();
 }
 
+/** Clears every toast at once: the tests do after each case, so one case's toast never shows in the next. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function clearToasts() {
+  items = [];
+  emit();
+}
+
 /** Shows a toast for `duration` ms (5 s by default). At most three show at once. */
 export function toast(
   title: string,

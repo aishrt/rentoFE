@@ -36,11 +36,15 @@ export function mockApi(handlers: Record<string, Handler | MockResponse>) {
   return fetchMock;
 }
 
-export function renderWithRouter(routes: RouteObject[], initialPath: string) {
+export function renderWithRouter(
+  routes: RouteObject[],
+  initialPath: string,
+  options?: Omit<NonNullable<Parameters<typeof createMemoryRouter>[1]>, 'initialEntries'>,
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
+  const router = createMemoryRouter(routes, { ...options, initialEntries: [initialPath] });
   const utils = render(
     <QueryClientProvider client={queryClient}>
       <MotionProvider>

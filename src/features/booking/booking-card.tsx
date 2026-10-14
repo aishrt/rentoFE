@@ -1,4 +1,4 @@
-import { CarFront, ChevronRight, Hourglass } from 'lucide-react';
+import { BadgeCheck, CarFront, ChevronRight, Hourglass, Star } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { BookingSummary } from '@/api/types';
@@ -12,6 +12,7 @@ import {
   formatTimeLeft,
   formatTripSpan,
   hostAnswers,
+  ratingText,
   statusLabel,
 } from './booking-format';
 import { StatusBadge } from './booking-parts';
@@ -83,6 +84,7 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
             </span>
           </p>
           <p className="text-sm text-muted">Pick-up {formatNzDateTime(booking.start)}</p>
+          {viewer === 'HOST' && booking.status === 'PENDING' && <GuestFacts guest={booking.otherParty} />}
           {waiting && left > 0 && (
             <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
               <Hourglass aria-hidden="true" className="size-3.5" />
@@ -106,6 +108,35 @@ export function BookingCard({ booking, viewer, to, actions }: BookingCardProps) 
         <div className="flex flex-wrap gap-3 border-t border-line px-4 py-3 sm:px-5">{actions}</div>
       )}
     </Card>
+  );
+}
+
+/**
+ * A request's Guest, where the Host accepts or declines it (plan §9, Days 16–19): verified or not, rating and
+ * completed trips (plan §6.2: never their documents).
+ */
+function GuestFacts({ guest }: { guest: BookingSummary['otherParty'] }) {
+  if (guest.verified === undefined) return null;
+  const trips = guest.tripCount ?? 0;
+  return (
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+      {guest.verified ? (
+        <span className="flex items-center gap-1 text-primary">
+          <BadgeCheck aria-hidden="true" className="size-4" />
+          Identity verified
+        </span>
+      ) : (
+        <span>Identity not verified yet</span>
+      )}
+      <span className="flex items-center gap-1">
+        <Star aria-hidden="true" className="size-3.5 fill-current text-primary" />
+        <span className="sr-only">Rating</span>
+        {ratingText(guest.rating ?? { avg: 0, count: 0 })}
+      </span>
+      <span>
+        {trips} {trips === 1 ? 'trip' : 'trips'} completed
+      </span>
+    </p>
   );
 }
 

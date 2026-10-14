@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0254C2" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- SEO tags (plan §1.4): the build writes each page's own set in place of this block. -->
     <!-- seo:start -->
@@ -14,8 +16,173 @@
       content="Rent a car from local owners across New Zealand, or earn money by sharing your own car. All prices in NZD."
     />
     <!-- seo:end -->
+    <!--
+      The boot splash: the logo's car driving on the spot, shown from the first paint until the router has
+      the first page's code (main.tsx fades it out). Inline because nothing else has loaded yet. Colours are
+      the primary, accent, ink and canvas tokens, and the easings the motion tokens (src/styles/globals.css).
+    -->
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: #eeeeee;
+        transition: opacity 320ms cubic-bezier(0.65, 0, 0.35, 1);
+      }
+      #boot-splash.boot-splash-done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot-splash svg {
+        width: min(14rem, 62vw);
+        overflow: visible;
+      }
+      #boot-splash .bs-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      /* As the splash fades, the car pulls away to the right. */
+      .bs-drive {
+        transition: transform 320ms cubic-bezier(0.55, 0, 1, 0.45);
+      }
+      .boot-splash-done .bs-drive {
+        transform: translateX(480px);
+      }
+      .bs-car {
+        animation: bs-bob 450ms cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+      }
+      .bs-shadow {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: bs-shadow 450ms cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+      }
+      .bs-light {
+        animation: bs-light 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+      }
+      .bs-streak {
+        transform-box: fill-box;
+        transform-origin: right;
+        animation: bs-streak 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      }
+      .bs-streak:nth-child(2) {
+        animation-delay: -300ms;
+      }
+      .bs-streak:nth-child(3) {
+        animation-delay: -600ms;
+      }
+      .bs-road {
+        animation: bs-road 500ms linear infinite;
+      }
+      @keyframes bs-bob {
+        to {
+          transform: translateY(-14px);
+        }
+      }
+      @keyframes bs-shadow {
+        to {
+          transform: scaleX(0.9);
+          opacity: 0.6;
+        }
+      }
+      @keyframes bs-light {
+        from {
+          opacity: 0.35;
+        }
+      }
+      @keyframes bs-streak {
+        from {
+          transform: translateX(60px) scaleX(0.2);
+          opacity: 0;
+        }
+        30% {
+          opacity: 1;
+        }
+        to {
+          transform: translateX(-180px) scaleX(1);
+          opacity: 0;
+        }
+      }
+      /* One dash period (100 + 80), so the road loops without a seam. */
+      @keyframes bs-road {
+        to {
+          stroke-dashoffset: 180;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+      /* Without JavaScript nothing would ever hide it, and the <noscript> message below should show. */
+      @media (scripting: none) {
+        #boot-splash {
+          display: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" aria-busy="true">
+      <!-- In the logo's own units: the car (src/components/brand/logo.tsx) spans 0 0 805 685. -->
+      <svg viewBox="-440 -80 1680 880" aria-hidden="true">
+        <defs>
+          <linearGradient id="bs-beam" x1="0" x2="1">
+            <stop offset="0" stop-color="#0254c2" stop-opacity="0.28" />
+            <stop offset="1" stop-color="#0254c2" stop-opacity="0" />
+          </linearGradient>
+          <radialGradient id="bs-shade">
+            <stop offset="0" stop-color="#08101d" stop-opacity="0.16" />
+            <stop offset="1" stop-color="#08101d" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient id="bs-fade" x1="-440" x2="1240" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff" stop-opacity="0" />
+            <stop offset="0.25" stop-color="#fff" />
+            <stop offset="0.75" stop-color="#fff" />
+            <stop offset="1" stop-color="#fff" stop-opacity="0" />
+          </linearGradient>
+          <mask id="bs-road-mask" maskUnits="userSpaceOnUse" x="-440" y="700" width="1680" height="100">
+            <rect x="-440" y="700" width="1680" height="100" fill="url(#bs-fade)" />
+          </mask>
+        </defs>
+        <g fill="none" stroke="#0254c2" stroke-linecap="round" stroke-width="34" stroke-opacity="0.35">
+          <path class="bs-streak" d="M-300 40H-90" />
+          <path class="bs-streak" d="M-400 337H-70" />
+          <path class="bs-streak" d="M-320 590H-110" />
+        </g>
+        <path
+          class="bs-road"
+          mask="url(#bs-road-mask)"
+          d="M-440 742H1240"
+          stroke="#0254c2"
+          stroke-opacity="0.22"
+          stroke-width="16"
+          stroke-linecap="round"
+          stroke-dasharray="100 80"
+        />
+        <ellipse class="bs-shadow" cx="400" cy="712" rx="460" ry="30" fill="url(#bs-shade)" />
+        <g class="bs-drive">
+          <g class="bs-car">
+            <!-- The headlight: it glows through the logo's round window and casts a beam ahead. -->
+            <g class="bs-light">
+              <path d="M612 343L1240 210V476Z" fill="url(#bs-beam)" />
+              <circle cx="612" cy="343" r="60" fill="#c1d9fe" />
+            </g>
+            <path
+              fill="#0254c2"
+              fill-rule="evenodd"
+              d="M0 0H470.35A152.22 152.22 0 0 1 603.72 78.86L672.55 204H747A58 52 0 0 1 805 256V263A53 42 0 0 1 752 305H742Q734 306 731 315C741.5 342 754.5 365 754.5 393C754.5 421 746 441 743 462H690V589A96 96 0 0 1 498 589V462H112V684H0ZM112 79H445.25A68.41 68.41 0 0 1 504.86 113.86L557.8 208H112ZM135 305H460A23 23 0 0 1 483 328V346A23 23 0 0 1 460 369H135A23 23 0 0 1 112 346V328A23 23 0 0 1 135 305ZM560.5 343A51.5 51.5 0 1 0 663.5 343A51.5 51.5 0 1 0 560.5 343ZM534.5 462V589A59.5 59.5 0 0 0 653.5 589V462H627.5V589A33.5 33.5 0 0 1 560.5 589V462Z"
+            />
+          </g>
+        </g>
+      </svg>
+      <span class="bs-sr">Loading Rento Vroom</span>
+    </div>
     <div id="root"></div>
     <noscript>Rento Vroom needs JavaScript to run. Please enable it in your browser settings.</noscript>
     <script type="module" src="/src/main.tsx"></script>

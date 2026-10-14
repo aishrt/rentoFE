@@ -12,7 +12,6 @@ export type Role = SessionUser['roles'][number];
 export type AgreementType = SessionUser['pendingAgreements'][number];
 export type LoginRequest = paths['/auth/login']['post']['requestBody']['content']['application/json'];
 export type SignupRequest = paths['/auth/signup']['post']['requestBody']['content']['application/json'];
-export type AdminOverview = Schemas['AdminOverview'];
 /** A staff member's authenticator app setup: a QR code and the key to type by hand. */
 export type MfaSetup = Schemas['MfaSetupResponse'];
 /** A staff member's two-factor sign-in: whether it's on, and their authenticator apps (up to two). */
@@ -75,6 +74,9 @@ export type Faq = Schemas['Faq'];
 export type PublicPolicies = Schemas['PublicPolicies'];
 export type CancellationTier = PublicPolicies['cancellation']['tiers'][number];
 export type FeaturedReviews = Schemas['FeaturedReviews'];
+/** The homepage's headline and supporting line, and the footer's links (plan §12.6, `cmsBlocks`). */
+export type HomeHero = Schemas['HomeHero'];
+export type SiteFooter = Schemas['SiteFooter'];
 export type ContactRequest = Schemas['ContactRequest'];
 /** The ids of the cars the user saved with the heart. */
 export type Favourites = Schemas['Favourites'];
@@ -106,6 +108,9 @@ export type Notifications = Schemas['Notifications'];
 export type HostApplication = Schemas['HostApplication'];
 export type ReviewQueueItem = Schemas['ReviewQueueItem'];
 export type AdminVehicle = Schemas['AdminVehicle'];
+/** Every car, for staff to search (plan §12.6). */
+export type AdminVehicleRow = Schemas['AdminVehicleRow'];
+export type AdminVehicles = Schemas['AdminVehicles'];
 
 // Booking flow (Phase 2).
 export type CreateBookingRequest = Schemas['CreateBookingRequest'];
@@ -117,3 +122,139 @@ export type CancellationPreview = Schemas['CancellationPreview'];
 /** What checkout's verification step still needs: mobile, licence details and eligibility. */
 export type CheckoutReadiness = Schemas['CheckoutReadiness'];
 export type DriverLicenceInput = Schemas['DriverLicenceInput'];
+
+// Guest dashboard (Phase 3).
+/** The Saved cars page: each car, priced for the last searched dates when it can be booked for them. */
+export type SavedCars = Schemas['SavedCars'];
+export type SavedCar = Schemas['SavedCar'];
+/** A card saved with Stripe for checkout and post-trip charges. */
+export type SavedCard = Schemas['SavedCard'];
+export type PaymentHistoryItem = Schemas['PaymentHistoryItem'];
+/** The GST receipt for a paid booking. */
+export type Receipt = Schemas['Receipt'];
+/** Whether the account can be closed now, and what stops it. */
+export type AccountClosure = Schemas['AccountClosure'];
+export type PrivacyRequest = Schemas['PrivacyRequest'];
+export type PrivacyRequestResponse = Schemas['PrivacyRequestResponse'];
+export type SupportTicketSummary = Schemas['SupportTicketSummary'];
+/** One of the user's own support tickets, with its replies. */
+export type SupportTicket = Schemas['SupportTicket'];
+export type HelpArticleSummary = Schemas['HelpArticleSummary'];
+export type HelpArticle = Schemas['HelpArticle'];
+
+// Messaging (Phase 3).
+/** One message in a booking's chat: yours, theirs or an automated one from Rento Vroom. */
+export type Message = Schemas['Message'];
+export type Messages = Schemas['Messages'];
+/** A conversation in the inbox: one per booking. */
+export type ThreadSummary = Schemas['ThreadSummary'];
+export type Threads = Schemas['Threads'];
+/** A conversation with whether messages can be sent, and why not. */
+export type ThreadDetail = Schemas['ThreadDetail'];
+export type SendMessageRequest = Schemas['SendMessageRequest'];
+export type ReportRequest = Schemas['ReportRequest'];
+/** A private file: a link that works for 10 minutes. */
+export type Attachment = Schemas['Attachment'];
+export type AttachmentInput = Schemas['AttachmentInput'];
+export type StaffThread = Schemas['StaffThread'];
+
+// Digital vehicle handover (Phase 3).
+/** Both condition reports of a booking, and what the viewer can do next. */
+export type Handover = Schemas['Handover'];
+export type ConditionReport = NonNullable<Schemas['ConditionReport']>;
+export type InspectionRequest = Schemas['InspectionRequest'];
+export type InspectionAngle = InspectionRequest['photos'][number]['angle'];
+export type InspectionStage = InspectionRequest['stage'];
+export type DamagePinInput = Schemas['DamagePinInput'];
+export type FlagDamageRequest = Schemas['FlagDamageRequest'];
+/** Support completes a trip whose check-out is missing, with the Host's readings (plan §8.2). */
+export type StaffCompletionRequest = Schemas['StaffCompletionRequest'];
+/** Staff correct a reading on a condition report, with a note for the audit log (plan §8.2). */
+export type ReadingCorrectionRequest = Schemas['ReadingCorrectionRequest'];
+/** What charging or correcting the extra kilometres did, in words for staff. */
+export type ExtraKmResult = Schemas['ExtraKmResult'];
+export type StaffHandoverResponse = Schemas['StaffHandoverResponse'];
+
+// Host payouts and earnings (Phase 3).
+export type Earnings = Schemas['Earnings'];
+export type EarningsRow = Schemas['EarningsRow'];
+export type HostPayout = Schemas['HostPayout'];
+export type HostPayouts = Schemas['HostPayouts'];
+/** The Host's payout setup with Stripe Connect. */
+export type PayoutAccount = Schemas['PayoutAccount'];
+/** An extra charge the Guest pays from the link in their email. */
+export type PayLink = Schemas['PayLink'];
+/** A charge after the trip on a booking, such as extra kilometres or one from an incident. */
+export type BookingExtraCharge = NonNullable<Booking['extraCharges']>[number];
+export type TodoItem = Schemas['TodoItem'];
+export type MaintenanceReminders = Schemas['MaintenanceReminders'];
+export type MaintenanceRemindersRequest = Schemas['MaintenanceRemindersRequest'];
+
+// Reviews and notification preferences (Phase 3).
+export type Review = Schemas['Review'];
+export type MyReviews = Schemas['MyReviews'];
+export type ReviewToWrite = Schemas['ReviewToWrite'];
+export type ReviewRequest = Schemas['ReviewRequest'];
+export type PublicProfile = Schemas['PublicProfile'];
+export type NotificationPrefs = Schemas['NotificationPrefs'];
+
+// Incidents (Phase 3).
+export type Incident = Schemas['Incident'];
+export type IncidentSummary = Schemas['IncidentSummary'];
+export type IncidentEvent = Schemas['IncidentEvent'];
+export type NewIncidentRequest = Schemas['NewIncidentRequest'];
+export type IncidentType = NewIncidentRequest['type'];
+export type IncidentStatus = Incident['status'];
+
+// The staff portal's operations (Phase 3, spec §18).
+export type AdminDashboard = Schemas['AdminDashboard'];
+export type AdminUserRow = Schemas['AdminUserRow'];
+export type AdminUsers = Schemas['AdminUsers'];
+export type AdminUserDetail = Schemas['AdminUserDetail'];
+export type RiskFlag = Schemas['RiskFlag'];
+export type RiskUser = Schemas['RiskUser'];
+export type RiskQueue = Schemas['RiskQueue'];
+export type AdminBookingRow = Schemas['AdminBookingRow'];
+export type AdminBookings = Schemas['AdminBookings'];
+export type AdminBookingDetail = Schemas['AdminBookingDetail'];
+export type AdminStatusEditRequest = Schemas['AdminStatusEditRequest'];
+export type AdminRefundRequest = Schemas['AdminRefundRequest'];
+export type AdminCancelRequest = Schemas['AdminCancelRequest'];
+export type AdminCancellationPreview = Schemas['AdminCancellationPreview'];
+export type AdminVehicleSuspension = Schemas['AdminVehicleSuspension'];
+export type AdminPayment = Schemas['AdminPayment'];
+export type AdminPayments = Schemas['AdminPayments'];
+export type AdminPayout = Schemas['AdminPayout'];
+export type AdminPayouts = Schemas['AdminPayouts'];
+export type StaffTicketRow = Schemas['StaffTicketRow'];
+export type StaffTickets = Schemas['StaffTickets'];
+export type StaffTicket = Schemas['StaffTicket'];
+export type StaffTicketReplyRequest = Schemas['StaffTicketReplyRequest'];
+export type AdminReport = Schemas['AdminReport'];
+export type ModerationReview = Schemas['ModerationReviews']['reviews'][number];
+export type VerificationQueueItem = Schemas['VerificationQueueItem'];
+export type StaffIncidentUpdateRequest = Schemas['StaffIncidentUpdateRequest'];
+/** A case support opens themselves, for both parties, one of them or the team only. */
+export type StaffNewIncidentRequest = Schemas['StaffNewIncidentRequest'];
+export type IncidentChargeRequest = Schemas['IncidentChargeRequest'];
+export type IncidentAssignee = Schemas['IncidentAssignees']['assignees'][number];
+export type IncidentAssigneeRequest = Schemas['IncidentAssigneeRequest'];
+export type AdminVehicleChoice = Schemas['AdminVehicleChoice'];
+export type AdminFeaturedVehicles = Schemas['AdminFeaturedVehicles'];
+export type LegalPageEdit = Schemas['LegalPageEdit'];
+export type AdminDestination = Schemas['AdminDestination'];
+export type DestinationEdit = Schemas['DestinationEdit'];
+export type DestinationCreate = Schemas['DestinationCreate'];
+export type AdminHomeHero = Schemas['AdminHomeHero'];
+export type AdminSiteFooter = Schemas['AdminSiteFooter'];
+export type AdminReviewChoice = Schemas['AdminReviewChoice'];
+export type AdminFeaturedReviews = Schemas['AdminFeaturedReviews'];
+export type AdminFaq = Schemas['AdminFaq'];
+export type FaqInput = Schemas['FaqInput'];
+export type AdminHelpArticle = Schemas['AdminHelpArticle'];
+export type HelpArticleInput = Schemas['HelpArticleInput'];
+export type PlatformReport = Schemas['PlatformReport'];
+export type AuditEntry = Schemas['AuditEntry'];
+export type AuditLog = Schemas['AuditLog'];
+export type AdminJob = Schemas['AdminJob'];
+export type AdminJobs = Schemas['AdminJobs'];

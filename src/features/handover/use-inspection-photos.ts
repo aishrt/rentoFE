@@ -1,0 +1,267 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError } from '@/api/client';
+import type { Handover, InspectionAngle, InspectionRequest } from '@/api/types';
+import { contentTypeOf, uploadFile, uploadProblem } from '@/features/host/upload';
+import { readExifTakenAt } from './exif';
+import {
+  clearPhotos,
+  listPhotos,
+  removePhoto,
+  savePhoto,
+  type PhotoStage,
+  type StoredPhoto,
+} from './photo-store';
+import type { DeviceLocation } from './use-device-location';
+
+/** Where a photo is: on the server, on its way, waiting for a connection, or refused. */
+export type PhotoStatus = 'uploaded' | 'uploading' | 'waiting' | 'failed';
+
+export interface InspectionPhoto extends StoredPhoto {
+  status: PhotoStatus;
+  progress: number;
+  previewUrl: string;
+  error?: string;
+}
+
+interface AddOptions {
+  /** Replaces the angle's earlier photo: a retake. */
+  replace?: boolean;
+  /** Where the device is, if the person allowed it. */
+  location?: DeviceLocation | null;
+}
+
+const RETRY_MS = 20_000;
+
+const newId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/** A network problem waits for the connection; anything else is the file's fault and needs a retake. */
+const isNetworkProblem = (error: unknown) =>
+  !(error instanceof ApiError) ||
+  error.status === 0 ||
+  error.status >= 500 ||
+  error.code === 'UPLOAD_EXPIRED';
+
+/**
+ * The photos of one check-in, check-out or flagged damage (plan §12.6, Inspection): kept in the browser as
+ * they're taken and uploaded straight away, or as soon as the connection returns, so an inspection on a weak
+ * signal is never lost.
+ */
+export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
+  const [photos, setPhotos] = useState<InspectionPhoto[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const uploading = useRef(new Set<string>());
+  // Retaken or removed: an upload still running for one mustn't save it back in the browser.
+  const removed = useRef(new Set<string>());
+  const current = useRef<InspectionPhoto[]>([]);
+
+  useEffect(() => {
+    current.current = photos;
+  }, [photos]);
+
+  const patch = useCallback((id: string, change: Partial<InspectionPhoto>) => {
+    setPhotos((list) => list.map((photo) => (photo.id === id ? { ...photo, ...change } : photo)));
+  }, []);
+
+  const upload = useCallback(
+    async (photo: InspectionPhoto) => {
+      if (photo.key || uploading.current.has(photo.id)) return;
+      uploading.current.add(photo.id);
+      patch(photo.id, { status: 'uploading', progress: 0, error: undefined });
+      try {
+        const key = await uploadFile({
+          purpose: 'INSPECTION_PHOTO',
+          bookingId: bookingRef,
+          file: photo.blob,
+          filename: photo.name,
+          contentType: photo.contentType,
+          onProgress: (fraction) => patch(photo.id, { progress: fraction }),
+        });
+        if (removed.current.has(photo.id)) return;
+        await savePhoto({ ...stored(photo), key });
+        // Removed while it was being saved: take it out again.
+        if (removed.current.has(photo.id)) {
+          await removePhoto(photo.id);
+          return;
+        }
+        patch(photo.id, { key, status: 'uploaded', progress: 1 });
+      } catch (error) {
+        if (removed.current.has(photo.id)) return;
+        patch(
+          photo.id,
+          isNetworkProblem(error)
+            ? { status: 'waiting' }
+            : { status: 'failed', error: error instanceof Error ? error.message : 'The upload failed.' },
+        );
+      } finally {
+        uploading.current.delete(photo.id);
+      }
+    },
+    [bookingRef, patch],
+  );
+
+  // What's already waiting in the browser, from before a reload or a lost connection.
+  useEffect(() => {
+    let cancelled = false;
+    void listPhotos(bookingRef, stage).then((saved) => {
+      if (cancelled) return;
+      const restored = saved.map((photo): InspectionPhoto => ({
+        ...photo,
+        status: photo.key ? 'uploaded' : 'waiting',
+        progress: photo.key ? 1 : 0,
+        previewUrl: URL.createObjectURL(photo.blob),
+      }));
+      setPhotos(restored);
+      setLoaded(true);
+      restored.filter((photo) => !photo.key).forEach((photo) => void upload(photo));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingRef, stage, upload]);
+
+  // Free the previews' memory when the page goes.
+  useEffect(() => () => current.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl)), []);
+
+  // Try the waiting ones again when the connection returns, and every 20 seconds meanwhile.
+  useEffect(() => {
+    const retry = () =>
+      current.current.filter((photo) => photo.status === 'waiting').forEach((photo) => void upload(photo));
+    const goOnline = () => {
+      setOnline(true);
+      retry();
+    };
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    const timer = setInterval(retry, RETRY_MS);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+      clearInterval(timer);
+    };
+  }, [upload]);
+
+  /**
+   * Keeps a photo just taken and starts its upload, with the device's clock and location and, for a photo
+   * chosen from the device, the date it says it was taken (plan §3). Resolves with why it can't be used,
+   * or null.
+   */
+  const add = useCallback(
+    async (
+      angle: InspectionAngle,
+      file: File,
+      { replace = false, location }: AddOptions = {},
+    ): Promise<string | null> => {
+      const problem = uploadProblem(file, 'INSPECTION_PHOTO');
+      if (problem) return problem;
+      const takenAt = new Date().toISOString();
+      const exifTakenAt = await readExifTakenAt(file);
+      if (replace) {
+        for (const old of current.current.filter((photo) => photo.angle === angle)) {
+          removed.current.add(old.id);
+          URL.revokeObjectURL(old.previewUrl);
+          await removePhoto(old.id);
+        }
+        setPhotos((list) => list.filter((photo) => photo.angle !== angle));
+      }
+      const photo: InspectionPhoto = {
+        id: newId(),
+        bookingRef,
+        stage,
+        angle,
+        blob: file,
+        name: file.name || `${angle.toLowerCase()}.jpg`,
+        contentType: contentTypeOf(file),
+        takenAt,
+        ...(exifTakenAt && { exifTakenAt }),
+        ...(location && { lat: location.lat, lng: location.lng }),
+        status: 'waiting',
+        progress: 0,
+        previewUrl: URL.createObjectURL(file),
+      };
+      await savePhoto(stored(photo));
+      setPhotos((list) => [...list, photo]);
+      void upload(photo);
+      return null;
+    },
+    [bookingRef, stage, upload],
+  );
+
+  const remove = useCallback(async (id: string) => {
+    removed.current.add(id);
+    const gone = current.current.find((photo) => photo.id === id);
+    if (gone) URL.revokeObjectURL(gone.previewUrl);
+    await removePhoto(id);
+    setPhotos((list) => list.filter((photo) => photo.id !== id));
+  }, []);
+
+  /**
+   * Uploads every photo again. The API refuses an upload it can't find (UPLOAD_NOT_FOUND): one sent with a
+   * report that then failed, as each is attached once, or one left unsent for over a day.
+   */
+  const uploadAgain = useCallback(async () => {
+    const sent = current.current.filter((photo) => photo.key);
+    const fresh = sent.map(({ key: _sent, ...photo }): InspectionPhoto => ({
+      ...photo,
+      status: 'waiting',
+      progress: 0,
+    }));
+    for (const photo of fresh) await savePhoto(stored(photo));
+    setPhotos((list) => list.map((photo) => fresh.find((again) => again.id === photo.id) ?? photo));
+    fresh.forEach((photo) => void upload(photo));
+  }, [upload]);
+
+  const clear = useCallback(() => clearPhotos(bookingRef, stage), [bookingRef, stage]);
+
+  return { photos, loaded, online, add, remove, clear, retry: upload, uploadAgain };
+}
+
+/**
+ * Forgets the photos this browser still keeps for a stage whose report is recorded, whoever recorded it
+ * (an abandoned check-out's, say), and those for flagging damage once the damage-report window has closed.
+ * They can say where the device was, so they don't linger on a shared device (plan §14).
+ */
+export function useForgetRecordedPhotos(handover: Handover | undefined) {
+  const ref = handover?.ref;
+  const checkInDone = Boolean(handover?.checkIn);
+  const checkOutDone = Boolean(handover?.checkOut);
+  const flaggingOver = checkOutDone && handover?.actions.flagDamage === false;
+  useEffect(() => {
+    if (!ref) return;
+    if (checkInDone) void clearPhotos(ref, 'CHECK_IN');
+    if (checkOutDone) void clearPhotos(ref, 'CHECK_OUT');
+    if (flaggingOver) void clearPhotos(ref, 'FLAGGED_DAMAGE');
+  }, [ref, checkInDone, checkOutDone, flaggingOver]);
+}
+
+/** What's kept in the browser for a photo: everything but its on-screen state. */
+function stored(photo: InspectionPhoto): StoredPhoto {
+  return {
+    id: photo.id,
+    bookingRef: photo.bookingRef,
+    stage: photo.stage,
+    angle: photo.angle,
+    blob: photo.blob,
+    name: photo.name,
+    contentType: photo.contentType,
+    takenAt: photo.takenAt,
+    ...(photo.exifTakenAt && { exifTakenAt: photo.exifTakenAt }),
+    ...(photo.lat !== undefined && photo.lng !== undefined && { lat: photo.lat, lng: photo.lng }),
+    ...(photo.key && { key: photo.key }),
+  };
+}
+
+/** An uploaded photo as the inspection and damage requests send it (plan §3, conditionReports.photos). */
+export function photoInput(photo: StoredPhoto & { key: string }): InspectionRequest['photos'][number] {
+  return {
+    angle: photo.angle,
+    key: photo.key,
+    takenAt: photo.takenAt,
+    ...(photo.exifTakenAt && { exifTakenAt: photo.exifTakenAt }),
+    ...(photo.lat !== undefined && photo.lng !== undefined && { lat: photo.lat, lng: photo.lng }),
+  };
+}

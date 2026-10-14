@@ -80,6 +80,41 @@ describe('TripPage', () => {
       'href',
       `/contact?category=BOOKING&booking=${REF}`,
     );
+    // An incident can be reported before, during and after the trip, with this booking chosen.
+    expect(screen.getByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      `/incidents/new?booking=${REF}`,
+    );
+    // In the Guest's dashboard, under Trips, with the phone's tab bar.
+    const sidebar = within(screen.getByRole('navigation', { name: 'Your dashboard' }));
+    expect(sidebar.getByRole('link', { name: 'Trips' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('navigation', { name: 'Your dashboard, quick links' })).toBeInTheDocument();
+  });
+
+  it('offers to report an incident after the trip, but not on a booking that never went ahead', async () => {
+    mockTrip(confirmedBooking({ status: 'COMPLETED' }));
+    const { unmount } = render();
+    expect(await screen.findByRole('link', { name: 'Report an incident' })).toHaveAttribute(
+      'href',
+      `/incidents/new?booking=${REF}`,
+    );
+    unmount();
+    vi.unstubAllGlobals();
+
+    mockTrip(confirmedBooking({ status: 'CANCELLED' }));
+    render();
+    expect(await screen.findByRole('heading', { level: 1, name: '2022 Toyota RAV4' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Report an incident' })).not.toBeInTheDocument();
+  });
+
+  it('says the return is at the pick-up place, rather than repeating it', async () => {
+    const confirmed = confirmedBooking();
+    mockTrip({ ...confirmed, dropoff: { ...confirmed.pickup } });
+    render();
+
+    const stops = within(await screen.findByRole('region', { name: 'Pick-up and return' }));
+    expect(stops.getByText('Same place as pick-up')).toBeInTheDocument();
+    expect(stops.getAllByText('12 Hawthorne Drive, Frankton, Queenstown 9300')).toHaveLength(1);
   });
 
   it('keeps the address and mobile back until the booking is confirmed', async () => {
@@ -171,6 +206,78 @@ describe('TripPage', () => {
     );
   });
 
+  it('says why an expired booking ended, not that the Host didn’t answer an Instant Book', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        instantBook: true,
+        holdExpiresAt: undefined,
+        payment: { status: 'CANCELLED' },
+        expiry: { reason: 'PAYMENT_TIMEOUT', paymentReturned: false },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(
+      await screen.findByText(
+        'The payment wasn’t finished within 30 minutes, so the dates were released. Nothing was charged.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/didn’t answer/)).not.toBeInTheDocument();
+  });
+
+  it('says a payment that went through after the booking ended is refunded in full', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        holdExpiresAt: undefined,
+        payment: { status: 'SUCCEEDED' },
+        expiry: {
+          reason: 'DATES_TAKEN',
+          paymentReturned: true,
+          refundCents: 33_870,
+          refundStatus: 'PENDING',
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    const status = (await screen.findByText('This booking expired')).closest(
+      '[role="status"]',
+    ) as HTMLElement;
+    expect(status).toHaveTextContent(
+      'Your payment came through after the dates were booked by someone else, so the booking wasn’t made. Your payment of NZ$338.70 is being refunded in full. It usually reaches your account within 5–10 working days.',
+    );
+    expect(status).not.toHaveTextContent(/Nothing was charged/);
+  });
+
+  it('says a cancellation’s refund that didn’t go through is being sorted', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'CANCELLED',
+        payment: { status: 'SUCCEEDED' },
+        cancellation: {
+          at: new Date().toISOString(),
+          by: 'HOST',
+          reason: 'HOST_CANCELLED',
+          refundCents: 105_080,
+          refundStatus: 'FAILED',
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(
+      await screen.findByText(
+        /Your full refund of \$1,050\.80 didn’t go through to your card\. Our team is sorting it/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Refunded in full/)).not.toBeInTheDocument();
+  });
+
   it('shows the refund before cancelling, then cancels with the reason', async () => {
     const cancelled = confirmedBooking({
       status: 'CANCELLED',
@@ -210,11 +317,102 @@ describe('TripPage', () => {
     expect(
       screen.getByText(/Refunded \$525\.40; \$525\.40 kept under the cancellation policy\./),
     ).toBeInTheDocument();
+    // The refund shown goes with it, so a lower one by now isn't taken without asking again.
     expect(sent.find((request) => request.path.endsWith('/cancel'))?.body).toEqual({
       reason: 'Plans changed',
+      expectedRefundCents: 52_540,
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Cancel trip' })).not.toBeInTheDocument();
+  });
+
+  it('shows the new refund and asks again when it dropped after the preview', async () => {
+    let previews = 0;
+    const sent = mockTrip(confirmedBooking(), (request) => {
+      if (request.path === `/bookings/${REF}/cancellation-preview`) {
+        previews += 1;
+        return {
+          status: 200,
+          body:
+            previews === 1
+              ? preview({
+                  refundCents: 105_080,
+                  feeCents: 0,
+                  message: 'You’ll get a full refund of $1,050.80.',
+                })
+              : preview(),
+        };
+      }
+      if (request.path === `/bookings/${REF}/cancel`) {
+        return {
+          status: 409,
+          body: {
+            error: {
+              code: 'REFUND_CHANGED',
+              message:
+                'The refund has changed since you opened this: it’s now $525.40, not $1,050.80. Check it, then confirm again.',
+              fields: { expectedRefundCents: 'You’ll get 50% back.' },
+            },
+          },
+        };
+      }
+      return undefined;
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel trip' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Cancel this booking?' }));
+    expect(await dialog.findByText('You’ll get a full refund of $1,050.80.')).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel booking' }));
+
+    expect(await dialog.findByText('The refund has changed')).toBeInTheDocument();
+    expect(dialog.getByText(/it’s now \$525\.40, not \$1,050\.80/)).toBeInTheDocument();
+    // The preview is asked for again, and shows the new figure to confirm.
+    await waitFor(() =>
+      expect(dialog.getByText('Refund to your card').nextElementSibling).toHaveTextContent('$525.40'),
+    );
+    expect(sent.find((request) => request.path.endsWith('/cancel'))?.body).toEqual({
+      expectedRefundCents: 105_080,
+    });
+    expect(dialog.getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
+  });
+
+  it('says why support cancelled a trip, and when the payment was already refunded', async () => {
+    const cancelled = (cancellation: NonNullable<Booking['cancellation']>) =>
+      confirmedBooking({
+        status: 'CANCELLED',
+        payment: { status: 'REFUNDED' },
+        cancellation,
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      });
+    const at = new Date().toISOString();
+    mockTrip(
+      cancelled({ at, by: 'SUPPORT', reason: 'GUEST_NO_SHOW', refundCents: 4_500, feeCents: 101_580 }),
+    );
+    const { unmount } = render();
+    const noShow = (await screen.findByText('Cancelled as a no-show')).closest('[role="status"]');
+    expect(noShow).toHaveTextContent(
+      'Rento Vroom support cancelled this trip as a no-show at the pick-up time, so the cancellation policy applies as at that time. Refunded $45; $1,015.80 kept under the cancellation policy.',
+    );
+    unmount();
+
+    mockTrip(
+      cancelled({
+        at,
+        by: 'SUPPORT',
+        reason: 'HOST_NO_SHOW',
+        refundCents: 0,
+        feeCents: 0,
+        earlierRefundCents: 105_080,
+      }),
+    );
+    render();
+    const hostNoShow = (await screen.findByText('Liam couldn’t provide the car')).closest('[role="status"]');
+    // Staff had refunded it all already: not "Nothing was charged".
+    expect(hostNoShow).toHaveTextContent(
+      'Rento Vroom support cancelled this trip because Liam couldn’t provide the car. A host cancellation always gets you a full refund. Already refunded: $1,050.80 went back to your card before it was cancelled.',
+    );
+    expect(hostNoShow).not.toHaveTextContent(/Nothing was charged/);
   });
 
   it('doesn’t promise an address or a mobile number on a booking that has ended', async () => {
@@ -303,6 +501,45 @@ describe('TripPage', () => {
     // No money moves, so there are no figures and no reason to ask for.
     expect(dialog.queryByText('Refund to your card')).not.toBeInTheDocument();
     expect(dialog.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('lists charges after the trip, with a way to pay one the saved card didn’t cover', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'COMPLETED',
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+        extraCharges: [
+          {
+            id: 'xc1',
+            type: 'EXTRA_KM',
+            description: '50 km over the 750 km included, at $0.35 a km',
+            amountCents: 1750,
+            status: 'PAID',
+            addedAt: '2026-10-09T01:00:00.000Z',
+          },
+          {
+            id: 'xc2',
+            type: 'CLEANING',
+            description: 'Sand through the back seats',
+            amountCents: 6000,
+            status: 'UNPAID',
+            addedAt: '2026-10-10T01:00:00.000Z',
+            payPath: '/pay/pay123',
+          },
+        ],
+      }),
+    );
+    render();
+
+    const charges = within(await screen.findByRole('region', { name: 'Extra charges' }));
+    expect(charges.getByText('Extra kilometres')).toBeInTheDocument();
+    expect(charges.getByText('50 km over the 750 km included, at $0.35 a km')).toBeInTheDocument();
+    expect(charges.getByText('$17.50')).toBeInTheDocument();
+    expect(charges.getByText('Paid')).toBeInTheDocument();
+    expect(charges.getByText('Cleaning')).toBeInTheDocument();
+    expect(charges.getByText('Not paid yet')).toBeInTheDocument();
+    expect(charges.getByText(/Your saved card didn’t go through/)).toBeInTheDocument();
+    expect(charges.getByRole('link', { name: 'Pay $60' })).toHaveAttribute('href', '/pay/pay123');
   });
 
   it('sends the car’s Host to their own page for the booking', async () => {

@@ -31,8 +31,8 @@ describe('api client', () => {
         calls.push('me');
         return refreshed ? { status: 200, body: { user: adminUser } } : { status: 401 };
       },
-      'GET /admin/overview': () => {
-        calls.push('overview');
+      'GET /admin/dashboard': () => {
+        calls.push('dashboard');
         return refreshed ? { status: 200, body: {} } : { status: 401 };
       },
       'POST /auth/refresh': () => {
@@ -42,7 +42,7 @@ describe('api client', () => {
       },
     });
 
-    await Promise.all([unwrap(client.GET('/me')), unwrap(client.GET('/admin/overview'))]);
+    await Promise.all([unwrap(client.GET('/me')), unwrap(client.GET('/admin/dashboard'))]);
     expect(calls.filter((call) => call === 'refresh')).toHaveLength(1);
   });
 

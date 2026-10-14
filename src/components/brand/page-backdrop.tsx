@@ -14,7 +14,7 @@ export function PageBackdrop({ art: Art }: PageBackdropProps) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 overflow-hidden sm:h-96"
+      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 overflow-hidden sm:h-96 print:hidden"
     >
       <Art className="absolute inset-0 size-full text-primary/15" />
       <div className="absolute inset-0 bg-linear-to-b from-canvas/10 via-canvas/60 to-canvas" />

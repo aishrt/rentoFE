@@ -72,7 +72,6 @@ export const seoPages: SeoPage[] = [
     path: '/help',
     title: 'Help centre',
     description: 'Guides for guests and hosts, and a way to contact our support team.',
-    comingSoon: true,
   },
   {
     path: '/about',

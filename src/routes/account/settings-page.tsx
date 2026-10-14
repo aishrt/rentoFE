@@ -3,9 +3,14 @@ import { DotGrid } from '@/components/brand/patterns/dot-grid';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
+import { BlockedSection } from '@/features/account/blocked-section';
 import { EmailSection } from '@/features/account/email-section';
+import { NotificationsSection } from '@/features/account/notifications-section';
 import { PasswordSection } from '@/features/account/password-section';
+import { PersonalDetailsSection } from '@/features/account/personal-details-section';
 import { PhoneSection } from '@/features/account/phone-section';
+import { PrivacySection } from '@/features/account/privacy-section';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 
 function SettingsSkeleton() {
@@ -19,29 +24,34 @@ function SettingsSkeleton() {
 }
 
 /**
- * Account settings (plan §6.1): the email address, mobile number and password. The Guest and Host
- * dashboards (Phase 3) will link here for personal details.
+ * Account settings (plan §6.1): personal details (the name and date of birth, plan §11), the email address,
+ * mobile number and password, notification choices (plan §7), the people blocked in messages, and privacy
+ * requests, including closing the account (plan §8.2). Part of the Guest dashboard.
  */
 export function AccountSettingsPage() {
   return (
-    <Container className="py-10 sm:py-14">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={DotGrid} />
       <PageMeta title="Account settings" noindex />
-      <RequireSignedIn fallback={<SettingsSkeleton />}>
-        {(user) => (
-          <div className="grid max-w-2xl gap-6">
-            <div>
-              <h1 className="headline text-title-3 font-medium">Account settings</h1>
-              <p className="mt-2 text-muted">
-                Kia ora {user.firstName}. How you log in, and how we reach you.
-              </p>
+      <AccountShell>
+        <RequireSignedIn fallback={<SettingsSkeleton />}>
+          {(user) => (
+            <div className="grid max-w-2xl gap-6">
+              <AccountPageHeader
+                title="Account settings"
+                description={`Kia ora ${user.firstName}. Your details, how you log in, how we reach you, what we send you, and your privacy.`}
+              />
+              <PersonalDetailsSection user={user} />
+              <EmailSection user={user} />
+              <PhoneSection user={user} />
+              <PasswordSection />
+              <NotificationsSection />
+              <BlockedSection />
+              <PrivacySection />
             </div>
-            <EmailSection user={user} />
-            <PhoneSection user={user} />
-            <PasswordSection />
-          </div>
-        )}
-      </RequireSignedIn>
+          )}
+        </RequireSignedIn>
+      </AccountShell>
     </Container>
   );
 }

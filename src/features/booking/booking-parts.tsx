@@ -7,18 +7,22 @@ import {
   Flag,
   LifeBuoy,
   MapPin,
+  MessagesSquare,
   Phone,
   Star,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { Booking, LineItem } from '@/api/types';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
+import { PersonAvatar } from '@/features/messages/person-avatar';
+import { useMyReviews } from '@/features/reviews/reviews-api';
 import { cn } from '@/lib/cn';
 import { formatNzDateTime, formatNzd, ratingText, type StatusLabel, type StatusTone } from './booking-format';
 
@@ -78,7 +82,27 @@ export function DetailCard({
   );
 }
 
-function Stop({ label, at, point }: { label: string; at: string; point: Booking['pickup'] }) {
+function Stop({
+  label,
+  at,
+  point,
+  samePlace,
+}: {
+  label: string;
+  at: string;
+  point: Booking['pickup'];
+  /** The return is where the trip started: say so, rather than repeat the place and its notes. */
+  samePlace?: boolean;
+}) {
+  if (samePlace) {
+    return (
+      <div className="grid gap-1">
+        <dt className="eyebrow text-muted">{label}</dt>
+        <dd className="font-semibold text-ink">{formatNzDateTime(at)}</dd>
+        <dd>Same place as pick-up</dd>
+      </div>
+    );
+  }
   return (
     <div className="grid gap-1">
       <dt className="eyebrow text-muted">{label}</dt>
@@ -106,7 +130,14 @@ export function TripStops({ booking, hiddenNote }: { booking: Booking; hiddenNot
     <>
       <dl className="grid gap-5 sm:grid-cols-2">
         <Stop label="Pick-up" at={booking.start} point={booking.pickup} />
-        <Stop label="Return" at={booking.end} point={booking.dropoff} />
+        <Stop
+          label="Return"
+          at={booking.end}
+          point={booking.dropoff}
+          samePlace={
+            booking.dropoff.id === booking.pickup.id && booking.dropoff.address === booking.pickup.address
+          }
+        />
       </dl>
       <p className="mt-4 text-xs text-muted">
         Times are in NZ time.{!exact && hiddenNote ? ` ${hiddenNote}` : ''}
@@ -115,7 +146,10 @@ export function TripStops({ booking, hiddenNote }: { booking: Booking; hiddenNot
   );
 }
 
-/** The other party: first name, verified, rating and trips, and their mobile once the booking is confirmed. */
+/**
+ * The other party: first name and photo, verified, rating and trips, a link to their profile and reviews,
+ * and their mobile once the booking is confirmed (plan §6.2).
+ */
 export function PartyDetails({
   party,
   role,
@@ -128,7 +162,7 @@ export function PartyDetails({
   return (
     <div className="grid gap-3">
       <div className="flex items-center gap-3">
-        <Avatar initials={party.firstName.charAt(0).toUpperCase()} className="size-11 text-sm" />
+        <PersonAvatar name={party.firstName} photoUrl={party.avatarUrl} className="size-11 text-sm" />
         <div>
           <p className="font-semibold text-ink">{party.firstName}</p>
           <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
@@ -141,15 +175,28 @@ export function PartyDetails({
               {party.tripCount} {party.tripCount === 1 ? 'trip' : 'trips'}
               {role === 'guest' ? ' completed' : ''}
             </span>
-            {party.verified && (
+            {party.verified ? (
               <span className="flex items-center gap-1 text-primary">
                 <BadgeCheck aria-hidden="true" className="size-4" />
                 Identity verified
               </span>
+            ) : (
+              // A Host sees whether the Guest is verified, either way (plan §6.2).
+              role === 'guest' && <span>Identity not verified yet</span>
             )}
           </p>
         </div>
       </div>
+      {party.id && (
+        <Link
+          to={`/members/${party.id}`}
+          viewTransition
+          className="link-underline inline-flex items-center gap-2 justify-self-start font-medium text-primary"
+        >
+          <UserRound aria-hidden="true" className="size-4" />
+          {party.firstName}’s profile and reviews
+        </Link>
+      )}
       {party.phone ? (
         <a
           href={`tel:${party.phone}`}
@@ -176,6 +223,42 @@ export function ProtectionDetails({ plan }: { plan: NonNullable<Booking['protect
         Excess <span className="font-semibold text-ink">{formatNzd(plan.excessCents)}</span>
       </p>
     </div>
+  );
+}
+
+/** The fuel and kilometre terms as booked (spec §8, §9: fixed at booking). */
+export function BookedTermsDetails({ terms }: { terms: Booking['terms'] }) {
+  return (
+    <dl className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="text-muted">Kilometre allowance</dt>
+        <dd className="font-medium text-ink">
+          {terms.unlimitedKm
+            ? 'Unlimited kilometres'
+            : terms.allowanceKm !== undefined
+              ? `${terms.kmAllowancePerDay} km/day (${terms.allowanceKm} km total)`
+              : `${terms.kmAllowancePerDay} km/day`}
+        </dd>
+      </div>
+      {!terms.unlimitedKm && (
+        <div className="flex items-baseline justify-between gap-4 text-muted">
+          <dt>Extra kilometre charge</dt>
+          <dd>{formatNzd(terms.extraKmCents)}/km</dd>
+        </div>
+      )}
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="text-muted">{terms.electric ? 'Battery policy' : 'Fuel policy'}</dt>
+        <dd className="font-medium text-ink">
+          {terms.fuelPolicy === 'FULL'
+            ? terms.electric
+              ? 'Return fully charged'
+              : 'Return with a full tank'
+            : terms.electric
+              ? 'Return at same charge level'
+              : 'Return at same fuel level'}
+        </dd>
+      </div>
+    </dl>
   );
 }
 
@@ -214,6 +297,43 @@ export function SupportLink({ bookingRef }: { bookingRef: string }) {
       <LifeBuoy aria-hidden="true" className="size-4" />
       Contact support
     </Link>
+  );
+}
+
+/** Bookings with a conversation: once a booking or request has reached the Host (spec §13). */
+const MESSAGING_STATUSES: Booking['status'][] = [
+  'PENDING',
+  'CONFIRMED',
+  'ACTIVE',
+  'COMPLETED',
+  'CANCELLED',
+  'DECLINED',
+];
+
+/** "Message Hana": the booking's conversation, once there is one. */
+export function MessageLink({ booking, name }: { booking: Pick<Booking, 'ref' | 'status'>; name: string }) {
+  if (!MESSAGING_STATUSES.includes(booking.status)) return null;
+  return (
+    <Button asChild variant="secondary">
+      <Link to={`/messages/${booking.ref}`} viewTransition>
+        <MessagesSquare aria-hidden="true" />
+        Message {name}
+      </Link>
+    </Button>
+  );
+}
+
+/** "Write a review" for a completed trip still waiting for this person's review (spec §16). */
+export function ReviewLink({ booking, base }: { booking: Pick<Booking, 'ref' | 'status'>; base: string }) {
+  const reviews = useMyReviews(booking.status === 'COMPLETED');
+  if (!reviews.data?.toWrite.some((item) => item.bookingRef === booking.ref)) return null;
+  return (
+    <Button asChild>
+      <Link to={`${base}/review`} viewTransition>
+        <Star aria-hidden="true" className="fill-current" />
+        Write a review
+      </Link>
+    </Button>
   );
 }
 

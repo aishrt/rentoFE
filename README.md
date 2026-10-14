@@ -68,7 +68,7 @@ src/
                         Stagger, CheckDraw, and the React Bits ports: BlurText, Counter, TiltedCard,
                         Magnet, trackSpotlight
     layout/             Site header and footer, auth and public layouts, Container, PageMeta
-    brand/              Logo (placeholder until the client's logo arrives), landscape art
+    brand/              Logo (traced from the client's public/Ologo.PNG), landscape art
   api/                  Typed client (openapi-fetch: cookies, one shared token refresh) and the API types
                         generated from the backend's openapi.json (schema.d.ts)
   lib/                  cn, formatters (NZD, NZ dates), dates, safe redirects, Socket.IO connection, Sentry monitoring

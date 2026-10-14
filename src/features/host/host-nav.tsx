@@ -1,44 +1,10 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
 import { cn } from '@/lib/cn';
 
-const LINKS = [
-  { to: '/host', label: 'Overview' },
-  { to: '/host/bookings', label: 'Bookings' },
-] as const;
-
-/**
- * The Host area's own navigation, shared by its pages (plan §12.6). A car's editor and calendar belong to
- * Overview, where My Vehicles lists them. The full Host dashboard's tabs arrive in Phase 3.
+/*
+ * The Host area's navigation is its frame, HostShell (host-shell.tsx): a sidebar from tablets up and a tab
+ * bar on phones (plan §12.6). Each Host page starts with this heading inside it.
  */
-export function HostSubNav({ className }: { className?: string }) {
-  const { pathname } = useLocation();
-  const bookings = pathname.startsWith('/host/bookings');
-
-  return (
-    <nav aria-label="Hosting" className={cn('flex gap-2 border-b border-line', className)}>
-      {LINKS.map((link) => {
-        const active = link.to === '/host/bookings' ? bookings : !bookings;
-        return (
-          <Link
-            key={link.to}
-            to={link.to}
-            viewTransition
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'relative -mb-px inline-flex min-h-11 items-center px-3 text-ui font-medium transition-colors duration-120',
-              'rounded-t-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-              'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:origin-left after:rounded-full after:bg-primary after:transition-[scale] after:duration-200 after:ease-out',
-              active ? 'text-primary after:scale-x-100' : 'text-muted after:scale-x-0 hover:text-ink',
-            )}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
 
 interface HostPageHeaderProps {
   /** A `BackLink`, above everything else. */

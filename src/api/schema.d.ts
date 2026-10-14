@@ -892,6 +892,189 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change the name
+         * @description Personal details (plan §11): the first and last name, trimmed, 1 to 50 characters each. Allowed until the identity check has passed or is being checked (`nameLocked`); after that the name must match the ID, so it is refused with 409 NAME_LOCKED and corrected through a privacy request (POST /me/privacy-requests, CORRECTION). Written to the audit log.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateMeRequest"];
+                };
+            };
+            responses: {
+                /** @description The signed-in user, with the new name */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/me/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the profile photo
+         * @description Spec §8, plan §6.2: the other party on a booking sees your first name and photo, as does your public profile. Upload the photo first with POST /uploads/signature (purpose PROFILE_PHOTO: JPEG, PNG, WebP or HEIC, up to 15 MB), then send its key here. It is stored as an upright WebP without its metadata, and replaces any photo you had, which is deleted. 400 UPLOAD_NOT_FOUND for a key that is not your own upload; 400 UNREADABLE_IMAGE when the file is not a photo we can read.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilePhotoRequest"];
+                };
+            };
+            responses: {
+                /** @description The signed-in user, with the photo in avatarUrl */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove the profile photo
+         * @description Deletes the photo; you show as your initials again. Fine when there is no photo.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The signed-in user, without avatarUrl */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -1711,7 +1894,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/overview": {
+    "/me/saved-cars": {
         parameters: {
             query?: never;
             header?: never;
@@ -1719,8 +1902,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * KPI figures for the staff portal
-         * @description Admin and Support only.
+         * The Saved cars page
+         * @description Each saved car as a card, with its estimated total for the last searched dates when it can be booked for them (spec §8, §28: comparing cars). A car its Host has taken down shows `listed: false`.
          */
         get: {
             parameters: {
@@ -1731,13 +1914,423 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description The overview figures */
+                /** @description Saved cars */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AdminOverview"];
+                        "application/json": components["schemas"]["SavedCars"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saved cards
+         * @description The cards saved to the Guest’s Stripe customer, from checkout or added here (plan §8.1, item 7). Empty until the first one.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Saved cards */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SavedCards"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start saving a card
+         * @description A Stripe SetupIntent for the Payment Element to save one card for checkout and post-trip charges. Card details go straight to Stripe.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Ready for the Payment Element */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CardSetup"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payment-methods/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a saved card */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The card’s id (pm_…) */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payment history
+         * @description What the Guest has paid, newest first, with refunds and whether each has a receipt (plan §8.1, item 7). Attempts that never charged anything are left out.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Payments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaymentHistory"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/account-closure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the account can be closed now
+         * @description Closing is refused while a trip or booking is requested, booked or under way, an incident is open, an extra charge is unpaid or a payout is due (plan §8.2).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Whether, and why not */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountClosure"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/privacy-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a copy or correction of personal information, or to close the account
+         * @description Opens a PRIVACY support ticket for staff to carry out, and emails its reference (NZ Privacy Act 2020, plan §14). The same request while one is open returns that one. Closing the account answers 409 CLOSURE_BLOCKED while GET /me/account-closure lists blockers.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequest"];
+                };
+            };
+            responses: {
+                /** @description The ticket */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrivacyRequestResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: the verification queue
+         * @description Identity checks Stripe couldn’t decide or that don’t match what the person entered, then driver licences no ID document has confirmed.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description To review */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VerificationQueue"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -1751,6 +2344,164 @@ export interface paths {
                 };
                 /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/licence-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: approve or reject a driver licence checked by hand
+         * @description Approving confirms the bookings that waited for it (requests still go to their Host), unless the identity check still waits too (`stillInReview`) or the licence doesn’t meet the rules for that trip (`licenceNotEligible`). Rejecting releases every request of the person’s with its card authorisation, and alerts support to each confirmed trip, whose check-in is then refused. The person is emailed either way. 409 NOT_IN_REVIEW when the licence isn’t waiting for a check; 403 OWN_RECORD for a support member’s own licence.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LicenceReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Decided */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LicenceReviewResult"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/licence-number": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: show the full driver licence number
+         * @description Decrypted to check the licence by hand. Each time it’s shown is written to the audit log (plan §14). Not cached.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The number */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LicenceNumber"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3125,7 +3876,7 @@ export interface paths {
         };
         /**
          * City and destination landing pages
-         * @description Public. Featured ones first: they are the homepage tiles.
+         * @description Public. Published ones only, featured first: they are the homepage tiles.
          */
         get: {
             parameters: {
@@ -3252,6 +4003,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cms/home.hero": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The homepage’s headline and supporting line
+         * @description Public. The original text until an admin saves their own.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The text */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HomeHeroResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cms/site.footer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The footer’s links and social accounts
+         * @description Public. The original links until an admin saves their own.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The links */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SiteFooterResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/faqs": {
         parameters: {
             query?: never;
@@ -3341,7 +4170,7 @@ export interface paths {
         };
         /**
          * Customer reviews for the homepage
-         * @description Public. Real published reviews only, and `show: false` until there are enough (settings).
+         * @description Public. Real published reviews only, and `show: false` until there are enough (settings). The ones admins picked, in order, or else the newest well-rated ones.
          */
         get: {
             parameters: {
@@ -3378,7 +4207,39 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * My support requests
+         * @description The signed-in user’s own tickets, most recently active first: from the Contact form while signed in, a booking’s Contact support link or a privacy request.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Tickets */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTickets"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Contact Us
@@ -3426,6 +4287,237 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One of my support requests, with its replies
+         * @description The staff’s internal notes are never included.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ticket reference, e.g. ST-4HX8PA */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The ticket */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTicketResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ref}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply on my support request
+         * @description It goes back to the support team, reopening a resolved ticket. Rate-limited per user.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ticket reference, e.g. ST-4HX8PA */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TicketReply"];
+                };
+            };
+            responses: {
+                /** @description The ticket */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportTicketResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/help/articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Help centre articles
+         * @description Public. Published articles in the order admins set; with an audience, the ones for Guests or Hosts and the ones for everyone.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Also includes the articles for everyone */
+                    audience?: "GUEST" | "HOST";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Articles */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HelpArticles"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/help/articles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One help article */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The article */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HelpArticleResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4516,6 +5608,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/host/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calendar across all my cars
+         * @description The Host’s own cars with a calendar (not drafts, rejected or suspended listings), in the order they were added, each with its blocks between two NZ days: up to 62 days at a time. Blocks are as on each car’s own calendar. 400 VALIDATION_ERROR for a longer or backwards range.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The first NZ day, 2026-10-01 */
+                    from: string;
+                    /** @description The NZ day after the last one (exclusive), 2026-11-01 */
+                    to: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Each car’s calendar */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AllCarsCalendar"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/host/vehicles/{id}/blocks": {
         parameters: {
             query?: never;
@@ -4851,6 +6005,184 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/host/todo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Host’s to-do list
+         * @description Payout setup, requests to answer, check-ins due, handovers to confirm, documents expiring within 30 days, Road User Charges and maintenance due, and listings with changes requested. Urgent ones first.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description To do */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HostTodo"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/vehicles/{id}/maintenance-reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A car’s maintenance reminders */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reminders */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MaintenanceReminders"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Replace a car’s maintenance reminders
+         * @description Each is due by a date, an odometer reading, or both. The Host is reminded at 9 am when it’s near.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MaintenanceRemindersRequest"];
+                };
+            };
+            responses: {
+                /** @description Saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MaintenanceReminders"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -5150,6 +6482,148 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notification-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which non-essential emails and texts the user gets
+         * @description Booking and account messages are always sent (plan §7).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Choices */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationPrefsResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change notification choices */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NotificationPrefsPatch"];
+                };
+            };
+            responses: {
+                /** @description Choices */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationPrefsResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/notifications/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unsubscribe from marketing email and texts, or from unread-message emails
+         * @description The link in every marketing email and unread-message email; works without signing in. An email app’s one-click unsubscribe (RFC 8058) posts here with `?token=` and a form body instead.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UnsubscribeRequest"];
+                };
+            };
+            responses: {
+                /** @description What was turned off */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnsubscribeResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/host-applications": {
         parameters: {
             query?: never;
@@ -5159,12 +6633,13 @@ export interface paths {
         };
         /**
          * Host applications
-         * @description Oldest first. `status` is APPLIED by default.
+         * @description 25 a page. `status` is APPLIED by default, listed oldest first; the others are listed newest first.
          */
         get: {
             parameters: {
                 query?: {
                     status?: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                    page?: number;
                 };
                 header?: never;
                 path?: never;
@@ -5179,6 +6654,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["HostApplications"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -5220,7 +6704,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a Host application
-         * @description 409 EMAIL_NOT_VERIFIED until the applicant has confirmed their email. Emails the Host.
+         * @description An application waiting for a decision, or one rejected before (409 NOT_APPLIED otherwise). 409 EMAIL_NOT_VERIFIED until the applicant has confirmed their email, and 409 IDENTITY_NOT_VERIFIED until their identity check has passed (while the identityForHosts setting is on). 403 OWN_RECORD for a support member’s own application. Emails the Host.
          */
         post: {
             parameters: {
@@ -5299,7 +6783,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject a Host application */
+        /**
+         * Reject a Host application
+         * @description Only an application waiting for a decision: 409 NOT_APPLIED for a Host already approved, who is suspended instead. 403 OWN_RECORD for a support member’s own application.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5362,6 +6849,15 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -5397,6 +6893,79 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ReviewQueue"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vehicles/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every car, to search
+         * @description Whatever its status (live, switched off, suspended, draft, under review…), 25 a page, most recently changed first. Each word of `q` must match the year, make, model or variant, the plate, or the Host’s name or email.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Words to match: the year, make or model, the plate, or the Host’s name or email */
+                    q?: string;
+                    status?: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+                    /** @description Only this Host’s cars */
+                    hostId?: string;
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The cars */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminVehicles"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -5504,7 +7073,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a listing (and its pending photos and documents)
-         * @description 409 HOST_NOT_APPROVED until the Host’s application is approved.
+         * @description 409 HOST_NOT_APPROVED until the Host’s application is approved. A listing back for review over its key details goes back on or off as its Host had it. 403 OWN_RECORD when it’s the support member’s own car.
          */
         post: {
             parameters: {
@@ -5593,7 +7162,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Send a listing back to the Host for changes */
+        /**
+         * Send a listing back to the Host for changes
+         * @description 403 OWN_RECORD when it’s the support member’s own car.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5681,7 +7253,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject a listing */
+        /**
+         * Reject a listing
+         * @description 403 OWN_RECORD when it’s the support member’s own car.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -6162,12 +7737,13 @@ export interface paths {
         };
         /**
          * What checkout’s verification step still needs
-         * @description Mobile, licence details and the eligibility rules in settings. With `end`, the licence is checked against that trip end.
+         * @description Mobile, licence details and the eligibility rules in settings. With `end`, the licence is checked against that trip end; with `start`, age and years licensed count to that trip start (otherwise to today).
          */
         get: {
             parameters: {
                 query?: {
                     end?: string;
+                    start?: string;
                 };
                 header?: never;
                 path?: never;
@@ -6213,7 +7789,7 @@ export interface paths {
         get?: never;
         /**
          * Save driver licence details
-         * @description The number is encrypted, and a keyed hash finds the same licence on another account (a risk flag, not an error). Support staff check licences until the identity check arrives.
+         * @description The number is encrypted, and a keyed hash finds the same licence on another account (a risk flag, not an error). The identity check confirms it when the person uses their licence as the ID; otherwise support staff check it. The person’s upcoming bookings are checked against the new details: a request that no longer qualifies waits for support, and support hear of a confirmed trip that no longer does.
          */
         put: {
             parameters: {
@@ -6264,6 +7840,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the identity check stands
+         * @description Read again from Stripe while it’s under way, so checkout can wait for the result.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The check */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IdentityResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Start the identity check (Stripe Identity)
+         * @description A photo of an ID (the driver licence if possible) and a matching selfie, on Stripe’s page. Stripe brings the person back to `returnTo`, a path on the website. A check under way carries on: one waiting for the person reopens; 409 IDENTITY_PROCESSING while Stripe is checking one, ALREADY_VERIFIED or IN_REVIEW once its result is applied. A new check starts only when the last was cancelled.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["IdentityCheckRequest"];
+                };
+            };
+            responses: {
+                /** @description Stripe’s identity page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IdentityCheckLink"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings": {
         parameters: {
             query?: never;
@@ -6273,13 +7960,14 @@ export interface paths {
         };
         /**
          * My trips, or my bookings as a Host
-         * @description Groups (plan §8.2): upcoming (confirmed, and requests), current, completed, cancelled (cancelled, declined, expired), and requests (Hosts: waiting for an answer). Unpaid checkouts are left out.
+         * @description Groups (plan §8.2): upcoming (confirmed, and requests), current, completed, cancelled (cancelled, declined, expired), and requests (Hosts: waiting for an answer). Unpaid checkouts are left out. A page at a time: nextPage is set when there are more.
          */
         get: {
             parameters: {
                 query?: {
                     role?: "guest" | "host";
                     group?: "upcoming" | "current" | "completed" | "cancelled" | "requests";
+                    page?: number;
                 };
                 header?: never;
                 path?: never;
@@ -6640,6 +8328,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GST receipt
+         * @description For the Guest (and staff) once the booking is paid (plan §8.1, item 18): every line, the GST included, how it was paid and any refunds. 409 NO_RECEIPT before payment; 403 for the Host.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The receipt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceiptResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/receipt.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GST receipt as a PDF
+         * @description The same receipt as an A4 PDF to download.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The PDF, as an attachment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings/{id}/cancellation-preview": {
         parameters: {
             query?: never;
@@ -6711,7 +8555,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a booking, or withdraw a request
-         * @description The Guest: an unpaid checkout is released, a request withdrawn (nothing charged), a confirmed booking refunded under its tier. The Host: a confirmed booking is refunded in full and any Host cancellation fee applies; a request is declined instead (409 USE_DECLINE).
+         * @description The Guest: an unpaid checkout is released, a request withdrawn (nothing charged), a confirmed booking refunded under its tier; after the pick-up time it counts as not turning up, so the tier applies as at the start time. The Host: a confirmed booking is refunded in full and any Host cancellation fee applies, until the start time (then 409 TRIP_STARTED: support handles it); a request is declined instead (409 USE_DECLINE). With expectedRefundCents, a refund now lower than the preview showed cancels nothing (409 REFUND_CHANGED).
          */
         post: {
             parameters: {
@@ -6962,7 +8806,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: cancel for a no-show, or as a platform cancellation
-         * @description Admins, and support staff with the REFUNDS permission. A Guest no-show is a Guest cancellation at the start time; a Host no-show a Host cancellation; a platform cancellation a full refund.
+         * @description Admins, and support staff with the REFUNDS permission. A confirmed booking: a Guest no-show is a Guest cancellation at the start time; a Host no-show a Host cancellation; a platform cancellation a full refund. A PENDING booking (a request, or one waiting for the Guest’s verification) is a platform cancellation only (409 NOT_CONFIRMED for a no-show): its card authorisation is released and its held dates freed. An ACTIVE trip only as a Guest no-show, when the Host did the check-in alone and the Guest hasn’t confirmed it (409 NOT_CANCELLABLE otherwise). Earlier refunds come off the refund. Both parties are told, except the Host of an Instant Book that never reached them.
          */
         post: {
             parameters: {
@@ -6987,6 +8831,179 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["BookingResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: what a cancellation would refund and cost
+         * @description For the reason chosen, from the same policy engine as the cancellation (plan §8.2): the Guest’s refund (less any earlier refunds), what’s kept and the Host’s share, any Host cancellation fee, or the authorisation released for a pending booking. `allowed` is false, with the reason in `message`, when that cancellation isn’t possible.
+         */
+        get: {
+            parameters: {
+                query: {
+                    reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
+                };
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminCancellationPreview"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/extra-charges/{chargeId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: cancel an extra charge that hasn’t been paid
+         * @description Only a PENDING or FAILED charge (409 NOT_CANCELLABLE otherwise; 409 ALREADY_PAID when the Guest paid it a moment ago, to refund instead). Its PaymentIntent and retries stop, it’s no longer owed, its pay link says it was cancelled, the Guest is told, and the reason goes to the audit log (plan §8.1, item 11).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking’s reference (RV-7K2Q9M) or id */
+                    id: string;
+                    /** @description The extra charge’s id */
+                    chargeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CancelExtraChargeRequest"];
+                };
+            };
+            responses: {
+                /** @description The booking’s whole record */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBookingDetail"];
                     };
                 };
                 /** @description Invalid input. `error.fields` has one message per invalid field. */
@@ -7133,6 +9150,7150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your conversations, most recent first
+         * @description One thread per booking, as Guest and as Host, 100 to a page unless fewer are asked for; `nextCursor` asks for the next. Live updates arrive over Socket.IO as `message`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The `nextCursor` of the page before, for the next page */
+                    cursor?: string;
+                    /** @description How many to return, most recent first: 1 to 100 */
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Threads"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/threads/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many messages are unread, for the Messages badge */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Unread messages */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnreadMessages"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/threads/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A booking's conversation
+         * @description For the booking’s Guest and Host, once it has reached the Host. Says whether messages can be sent: a thread is read-only 30 days after the trip (unless an incident is open), and when either side has blocked the other.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking reference, e.g. RV-7K2Q9M */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The conversation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThreadResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/threads/{ref}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A page of messages, oldest first
+         * @description The newest page by default; pass `before` for older ones. Contact details in messages are hidden until the booking is confirmed. Photo links work for 10 minutes.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description An older page: the messages before this message id */
+                    before?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description The booking reference, e.g. RV-7K2Q9M */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Messages */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Messages"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Send a message, with up to 6 photos
+         * @description Photos are uploaded first with POST /uploads/signature (purpose MESSAGE_PHOTO). The other side is emailed if it’s still unread after 10 minutes. 403 ACCOUNT_SUSPENDED while your account is suspended; 409 THREAD_CLOSED when the conversation can’t take messages (`readOnlyReason` says why).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking reference, e.g. RV-7K2Q9M */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SendMessageRequest"];
+                };
+            };
+            responses: {
+                /** @description Sent */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/threads/{ref}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark the conversation read
+         * @description The other side sees “Seen” on their messages (Socket.IO `thread:read`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking reference, e.g. RV-7K2Q9M */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Marked read */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a user, message, review or listing to support
+         * @description Reports go to the moderation queue. Several people reporting one person raises a risk flag.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReportRequest"];
+                };
+            };
+            responses: {
+                /** @description Reported */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReportResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests; try again later */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block someone from messaging you
+         * @description Booking-critical automated messages still arrive. A Host who blocks a Guest also stops their bookings.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Blocked */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /** Unblock someone */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Unblocked */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/blocked-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The people you have blocked */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Blocked people */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BlockedUsers"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/thread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: a booking's messages, from a report, incident or ticket
+         * @description Support staff open a thread only from a report, incident or support ticket about the booking, and each opening is written to the audit log (plan §6.2).
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description REPORT:<report id>, INCIDENT:<case number> or TICKET:<ticket reference> */
+                    context: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The conversation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffThread"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/inspections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The check-in and check-out reports, and what you can do next
+         * @description For the Guest, the Host and staff (role STAFF, with no actions: staff complete a trip with POST /admin/bookings/{id}/complete).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The handover */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HandoverResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Record the check-in or check-out
+         * @description Photos of every required angle (uploaded first with POST /uploads/signature, purpose INSPECTION_PHOTO), the odometer, the fuel or battery level and damage pins. Each upload is attached once: a key sent twice, or already on a report, is refused (400). A party’s photos can’t be taken before check-in opened, or, for check-out, before the check-in (400 PHOTOS_TOO_EARLY). Check-in opens 2 hours before the start and starts the trip, and closes at the end time (409 CHECK_IN_CLOSED: support sorts out the booking); check-out completes it, also on a trip support marked as started without a check-in (no extra kilometres are then worked out). The Guest must have confirmed their email before check-in. 409 NOT_CHECK_IN or NOT_CHECK_OUT when it’s already done, also by the other party at the same moment. The other party is asked to confirm.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["InspectionRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HandoverResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/inspections/{stage}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm the other party’s report */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                    stage: "CHECK_IN" | "CHECK_OUT";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Confirmed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HandoverResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/inspections/CHECK_OUT/damage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Flag new damage after the trip
+         * @description Either party, once the check-out is recorded, until the damage-report window in settings closes (409 DAMAGE_WINDOW_CLOSED after it). Open an incident to claim for it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FlagDamageRequest"];
+                };
+            };
+            responses: {
+                /** @description Flagged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HandoverResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: complete a trip whose check-out is missing
+         * @description With the Host’s odometer and fuel or battery reading, and any photos they sent (plan §8.2), which become the check-out record. The booking becomes COMPLETED, and extra kilometres (worked out against the check-in reading, when there is one), reviews and the payout follow as normal. 409 NOT_CHECK_OUT unless the trip is under way without a check-out; 400 when the odometer is below the check-in reading.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffCompletionRequest"];
+                };
+            };
+            responses: {
+                /** @description Completed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HandoverResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: correct a reading on a condition report
+         * @description The odometer and/or fuel or battery level of the CHECK_IN or CHECK_OUT report, with a note for the audit log (before and after are logged). The check-out odometer can’t be below the check-in one (400). Both parties see the correction in the booking’s messages. On a completed trip a changed odometer works the extra kilometres out again at once (`extraKm`): a charge not yet paid is cancelled and replaced; one paid already stays, with any more due charged on top, or what was paid over to refund with the refund tools. 404 when that report isn’t done yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReadingCorrectionRequest"];
+                };
+            };
+            responses: {
+                /** @description Corrected */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffHandoverResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/extra-km": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: charge the extra kilometres now
+         * @description From the readings as they stand, without the daily review limit (`trips.extraKmReviewAboveKmPerDay`) and without waiting for the other party to confirm the check-out: for a charge held for review once staff have checked the readings. A charge not yet paid is replaced if the amount differs. 409 NOT_COMPLETED or NO_READINGS when there’s nothing to work it out from.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Charged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffHandoverResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Host’s payout setup and payouts
+         * @description Payouts still to be sent (scheduled, held or delayed), soonest first, then paid ones, newest first, a page at a time (cursor), with the commission and its GST, deductions, and when each should reach the bank.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The nextCursor of the page before: the next page of paid payouts */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Payouts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HostPayouts"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The earnings dashboard
+         * @description Earnings count on the trip’s start date in NZ time, weeks run Monday to Sunday, and amounts are net of Host-funded refunds and Host cancellation fees. With `month`, the per-trip breakdown has every trip starting that month.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description A month, 2026-10: every trip starting in it, rather than the latest 100 */
+                    month?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Earnings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Earnings"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/earnings/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A GST-ready earnings statement (CSV)
+         * @description By month or NZ tax year (1 April–31 March): rental, delivery, extra charges, commission, deductions and GST on separate columns.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description A month, 2026-10, or the NZ tax year ending 31 March, 2027 */
+                    period: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The statement */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/csv": string;
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/connect/onboarding-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start or continue payout setup with Stripe
+         * @description Makes the Host’s Stripe Connect Express account the first time. Send the Host to the link; Stripe returns them to /host/earnings.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stripe’s setup page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StripeLink"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/connect/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read the payout account from Stripe
+         * @description For when the Host comes back from Stripe. Releases payouts held for the setup once it’s done.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The payout account */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PayoutAccountResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/host/connect/dashboard-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open Stripe’s Express dashboard
+         * @description Where the Host changes their bank account and sees Stripe’s payouts to it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The dashboard */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StripeLink"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An extra charge to pay
+         * @description For the booking’s Guest: the link in the email when a charge to their saved card didn’t go through.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The charge */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PayLinkResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay an extra charge with another card or a wallet
+         * @description Returns what Stripe.js needs; then POST /payments/{id}/sync.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description For Stripe.js */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PayLinkSession"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply the payment straight after Stripe.js confirms it */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The charge */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PayLinkResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a completed trip
+         * @description The Guest reviews the Host and car (cleanliness), the Host reviews the Guest (care), once each, within the review window. Both are published together once both are in, or when the window closes. A review with contact details, links or abusive language waits for a moderator.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Saved */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reviews to write, written and received */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reviews */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MyReviews"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A member’s public profile and the published reviews about them
+         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. Open to visitors. A closed or suspended account is not found.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Profile and reviews */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserReviews"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A member’s public profile
+         * @description The public profile of plan §11: only the fields of plan §6.2 (first name, photo, year joined, whether verified, ratings and trips as Guest and Host, and a Host’s bio and response rate), as GET /users/{id}/reviews gives it, without the reviews. Open to visitors. A closed or suspended account is not found.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserProfileResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: reviews held for moderation, published ones, or hidden ones
+         * @description HELD (the default) oldest first; PUBLISHED and HIDDEN newest first, 100 at most. A published review that breaks the rules can be hidden with a reason.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    state?: "HELD" | "PUBLISHED" | "HIDDEN";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reviews */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ModerationReviews"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reviews/{id}/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff: clear a held review, or hide one with a reason */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ModerateReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Moderated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cases on your bookings */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cases */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Incidents"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Report damage or an incident on a booking
+         * @description By the booking’s Guest or Host, with photos and documents uploaded first (purpose INCIDENT_FILE). Damage must be reported within the damage-report window after check-out. With fromCheckOutDamage, a damage report opens with the new damage flagged on the check-out record that no other case has yet: its photos as evidence and its notes in the description (409 NO_NEW_DAMAGE when there is none). Holds the booking’s payouts until the case is settled.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NewIncidentRequest"];
+                };
+            };
+            responses: {
+                /** @description Opened */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A case and its history
+         * @description Each party sees the events for both parties and their own; internal notes are for staff.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The case */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{ref}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add an update or evidence to an open case
+         * @description Shared with the other party when they see the case, unless it answers something support asked this party alone (the case’s `sharedWithOtherParty`). 409 CASE_CLOSED on a resolved or closed case; 409 CASE_CHANGED when support changed its status meanwhile.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IncidentReplyRequest"];
+                };
+            };
+            responses: {
+                /** @description Added */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: cases, open ones by default
+         * @description Last updated first, 50 a page.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cases */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffIncidents"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Staff: open a case on a booking
+         * @description Outside the damage-report window, on any booking past checkout (404 otherwise). For both parties, only the Guest or the Host it’s about, or the team only (INTERNAL) until an update is shared; a party never sees a case with nothing for them. The staff member who opens it has it. Holds the booking’s payouts until the case is settled, tells the parties who can see it, and is written to the audit log.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffNewIncidentRequest"];
+                };
+            };
+            responses: {
+                /** @description Opened */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: who a case can be assigned to
+         * @description The admin first, then the active support team by name.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Assignees */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentAssignees"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: a case with every event */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The case */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/{ref}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: post an update, change the status or take the case
+         * @description Updates go to both parties, one of them, or the team only (INTERNAL); by default, to whoever already sees the case (`audience`). Taking the case with nothing else is always INTERNAL, and nobody is told. The status moves only to one of the case’s `nextStatuses`: nothing goes back to OPEN, a resolved case can be reopened (INVESTIGATING or AWAITING_RESPONSE), and a closed one is final (409 INVALID_STATUS_CHANGE; 409 CASE_CHANGED when someone else changed the status meanwhile). Resolving or closing the last open case on a booking releases its payouts; reopening a case holds the unpaid ones again.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffIncidentUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/{ref}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: assign the case to a staff member, or to nobody
+         * @description Any support member or the admin can hand a case to any of them (409 NOT_STAFF for anyone else). Recorded as an internal ASSIGNED or UNASSIGNED event and in the audit log; the new assignee is notified. Choosing whoever has it already changes nothing.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IncidentAssigneeRequest"];
+                };
+            };
+            responses: {
+                /** @description Assigned */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/incidents/{ref}/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: charge the guest from a resolved case
+         * @description Charged to the Guest’s saved card; the Host’s share is paid out as its own payout. On a damage, accident or theft case under a protection plan, the case’s charges stay within the plan’s excess (409 OVER_EXCESS above `chargeLimitCents`). The same `idempotencyKey` sent again adds no second charge and answers with the case as it is.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The case number, e.g. IN-4F7K2Q */
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IncidentChargeRequest"];
+                };
+            };
+            responses: {
+                /** @description Charged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IncidentResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: the overview figures for a date range, and the queues waiting */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description First NZ day of the range; the last 30 days when left out */
+                    from?: string;
+                    /** @description Last NZ day, inclusive */
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminDashboard"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: search users */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Name, email or mobile */
+                    q?: string;
+                    role?: "GUEST" | "HOST" | "ADMIN" | "SUPPORT";
+                    status?: "ACTIVE" | "SUSPENDED";
+                    /** @description Only people with a risk flag to review */
+                    flagged?: "true";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUsers"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: a user’s record */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Staff: correct a person’s name, date of birth or email (a privacy request)
+         * @description After checking the details, e.g. against their ID (plan §14). Changes a name or date of birth a passed identity check has locked, noted in the audit log, which has each change before and after with the reason. A new email is marked unverified and a confirmation link sent to it; the old address is told. 409 EMAIL_TAKEN, ACCOUNT_CLOSED; 403 OWN_RECORD for their own account, FORBIDDEN for a staff account unless the admin.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminUserUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: suspend a user
+         * @description They’re signed out and can’t sign in, their listings are hidden and their payouts held. Their upcoming bookings are returned for staff to keep or cancel (plan §8.2).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SuspendRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: lift a suspension
+         * @description Their listings return to search and held payouts are sent. 409 ACCOUNT_CLOSED for an account closed on request, which stays suspended.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/risk-flags/{flagId}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: clear a risk flag after looking into it
+         * @description 403 OWN_RECORD for a support member’s own flags: another team member clears them.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    flagId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin: close and anonymise an account on request
+         * @description Refused while a trip, booking, incident, unpaid charge or payout is under way. Bookings, payments and audit records stay for the periods the law requires (plan §8.2, §14).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/waive-host-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin: waive Host cancellation fees owed
+         * @description Some or all of what the Host owes; written to the audit log (plan §8.1, item 10).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WaiveFeeRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/staff/{id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: give or take a support member’s refunds permission */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffPermissionsRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: people with risk flags to review
+         * @description Most open flags first, then the longest waiting; 25 a page, with nextPage when there are more.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RiskQueue"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: download a copy of a person’s information (a privacy request)
+         * @description A JSON file of their account, bookings, payments and refunds, payouts, messages they sent, reviews by and about them, support requests and the incidents they reported (plan §14). Other people’s details, internal notes and staff-only fields are left out. Any staff member, audit-logged; 403 OWN_RECORD for their own account.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The JSON file */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: search bookings */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Booking reference; or words each in the Guest’s or Host’s name, email or mobile, or in the car */
+                    q?: string;
+                    status?: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+                    /** @description Trips starting on or after this NZ date */
+                    from?: string;
+                    /** @description Trips starting on or before this NZ date */
+                    to?: string;
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBookings"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: a booking’s whole record
+         * @description By id or reference: the booking, both parties, its status history, payments, payouts, cases and tickets.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBookingDetail"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: mark a trip as started or completed
+         * @description Only CONFIRMED → ACTIVE and ACTIVE → COMPLETED, with the same side effects as check-in and check-out (plan §8.2). 403 OWN_RECORD when the support member is its Guest or Host.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminStatusEditRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBookingDetail"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: refund the Guest
+         * @description A Host-funded refund comes off the trip’s payout, or once that’s sent, off the Host’s next payout or back from the Stripe transfer as staff choose (recoverFrom). The answer’s hostRefund says which (plan §8.1, item 15).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminRefundRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminBookingDetail"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vehicles/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: suspend a car
+         * @description Hidden at once; its upcoming bookings are returned for staff to keep or cancel (plan §8.2). 403 OWN_RECORD for a support member’s own car, here and when lifting it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SuspendRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminVehicleSuspension"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vehicles/{id}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff: lift a car’s suspension */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminVehicleSuspension"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff with the refunds permission: payments
+         * @description Newest first. view=failed lists those that didn’t go through, including cards declined at checkout, each with its failure reason and the status it ended in.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING" | "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
+                    type?: "BOOKING" | "EXTRA_CHARGE";
+                    /** @description failed: payments that didn’t go through, including cards declined at checkout (PENDING, then CANCELLED, with a failureReason) */
+                    view?: "all" | "failed" | "disputed" | "refunds-failed";
+                    /** @description Only payments made on or after this NZ date */
+                    from?: string;
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminPayments"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff with the refunds permission: Host payouts */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "SCHEDULED" | "HELD" | "PAID" | "FAILED" | "CANCELLED";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminPayouts"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff with the refunds permission: every refund
+         * @description Refunds on every payment, newest first, by status, who funds them and why they were made, or by booking reference. A Host-funded refund says how it has been recovered from the Host (plan §8.1, item 15).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description A booking reference, or part of one */
+                    q?: string;
+                    status?: "PENDING" | "SUCCEEDED" | "FAILED";
+                    fundedBy?: "PLATFORM" | "HOST";
+                    kind?: "CANCELLATION" | "LATE_PAYMENT" | "STAFF";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminRefunds"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/extra-charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff with the refunds permission: unpaid extra charges
+         * @description Extra charges on any booking still being collected (PENDING) or that failed, newest first, with the last failure and the tries on the saved card (plan §8.1, item 6).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Both when left out */
+                    status?: "PENDING" | "FAILED";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminExtraCharges"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts/{id}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: hold a payout */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HoldPayoutRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminPayoutResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin: release a held payout
+         * @description It is checked again now: a hold that still applies puts it back on hold.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminPayoutResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payouts/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: send a failed payout again */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminPayoutResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: the support inbox */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "OPEN" | "PENDING" | "RESOLVED";
+                    category?: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+                    q?: string;
+                    mine?: "true";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffTickets"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/tickets/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: a support ticket, with internal notes */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffTicketResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Staff: change a ticket’s status, take it, or hand it to someone
+         * @description Whoever is handed the ticket is notified; it is in the audit log. Not to someone the ticket is about (409 OWN_RECORD), nor to anyone who isn’t active staff (409 NOT_STAFF).
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TicketUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffTicketResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/admin/support/tickets/{ref}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff: reply to a ticket (emailed) or add an internal note */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffTicketReplyRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffTicketResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff: what members reported */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "OPEN" | "ACTIONED" | "DISMISSED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminReports"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/reports/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff: action or dismiss a report, with what was done */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResolveReportRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminReportResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/messages/{id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: remove a member’s message
+         * @description Only a reported message (409 NOT_REPORTED otherwise). Both sides then see “This message was removed by Rento Vroom support.” in its place, without its photos, also in the recipient’s new-message notice; staff still see it in the conversation, marked removed. 409 ALREADY_REMOVED, or SYSTEM_MESSAGE for Rento Vroom’s own messages.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RemoveMessageRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RemovedMessageResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/featured-vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: the homepage’s featured cars */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedVehicles"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Admin: choose the homepage’s featured cars
+         * @description Up to eight, in order. None: the best-rated live cars are shown.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FeaturedVehiclesInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedVehicles"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: live cars to feature, by make, model or town */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminVehicleChoices"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/hero": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the homepage’s headline and supporting line
+         * @description The original text until an admin saves their own (`saved: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHomeHero"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /** Admin: change the homepage’s headline and supporting line */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HomeHero"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHomeHero"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/featured-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the customer reviews picked for the homepage
+         * @description In order, each saying whether it can show now, with the threshold in settings and how many reviews are published: the section stays hidden until there are enough.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedReviews"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Admin: pick the homepage’s customer reviews
+         * @description Up to six published Guest reviews with words to quote, in order. None: the newest well-rated reviews are shown. One hidden later is left off the homepage.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FeaturedReviewsInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFeaturedReviews"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: published Guest reviews to pick for the homepage, by their words */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminReviewChoices"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/footer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the footer’s links and social accounts
+         * @description The original links until an admin saves their own (`saved: false`).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSiteFooter"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Admin: change the footer’s links and social accounts
+         * @description Links are full https:// addresses or paths on the website, like /help; social accounts are https:// addresses.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SiteFooter"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSiteFooter"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: the legal pages */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminLegalPages"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/legal/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Admin: correct a legal page’s wording
+         * @description The version stays the same; a new version members accept again is published with a release.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LegalPageEdit"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminLegalPageResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: destination landing pages, published or not */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminDestinations"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Admin: add a destination landing page
+         * @description At /rental/{slug}, which can’t change later. Airports must be in the place list. 409 SLUG_TAKEN when another page has the address.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DestinationCreate"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminDestinationResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/destinations/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Admin: edit a destination landing page, or publish or unpublish it
+         * @description Only the fields sent change; empty text removes an optional one. Unpublished, it’s off the homepage, its page answers 404 and the sitemap leaves it out.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DestinationEdit"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminDestinationResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/admin/content/faqs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: FAQs */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFaqs"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Admin: add a FAQ */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FaqInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFaqResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/faqs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Admin: edit a FAQ */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FaqInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminFaqResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Admin: delete a FAQ */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/help-articles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: help articles, published or not */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHelpArticles"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Admin: add a help article */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HelpArticleInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHelpArticleResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/help-articles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Admin: edit a help article */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HelpArticleInput"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminHelpArticleResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Admin: delete a help article */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reports/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: platform figures for a range of NZ days */
+        get: {
+            parameters: {
+                query: {
+                    /** @description First NZ day, 2026-10-01 */
+                    from: string;
+                    /** @description Last NZ day, inclusive */
+                    to: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlatformReportResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reports/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: a report as a CSV file
+         * @description Bookings, payments, refunds, payouts, cancellations, the monthly GST summary, or revenue and fees by day, for a range of NZ days. Every total matches the summary for the same days. UTF-8 with a byte order mark, so Excel shows macrons.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description First NZ day, 2026-10-01 */
+                    from: string;
+                    /** @description Last NZ day, inclusive */
+                    to: string;
+                    type: "bookings" | "payments" | "refunds" | "payouts" | "cancellations" | "gst" | "revenue";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The CSV file */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/csv": string;
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin: the audit log
+         * @description Newest first, 50 a page; `from` and `to` reach entries older than the last page.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    actor?: string;
+                    entity?: string;
+                    entityId?: string;
+                    action?: string;
+                    /** @description Entries on or after this NZ date */
+                    from?: string;
+                    /** @description Entries on or before this NZ date */
+                    to?: string;
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuditLog"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin: background jobs that failed, are waiting or are running */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "FAILED" | "QUEUED" | "RUNNING";
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminJobs"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/jobs/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin: run a failed job again */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminJobRetryResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7146,7 +16307,15 @@ export interface components {
             email: string;
             firstName: string;
             lastName: string;
+            /** @description Their profile photo (PUT /me/photo), which the other party on a booking sees; absent until added */
+            avatarUrl?: string;
+            /** @description YYYY-MM-DD (NZ), from the driver licence details; absent until they are entered */
+            dateOfBirth?: string;
+            /** @description The name must match the ID once the identity check has passed or is being checked: it is then corrected through a privacy request (POST /me/privacy-requests), not PATCH /me */
+            nameLocked: boolean;
             roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
+            /** @description Staff only: what they can do beyond their role (plan §6.2), e.g. REFUNDS for refunds, charges, payments and payouts. The admin has every one. */
+            permissions?: "REFUNDS"[];
             emailVerified: boolean;
             /** @description Verified mobile number, E.164 (+64211234567) */
             phone?: string;
@@ -7197,6 +16366,14 @@ export interface components {
             /** @description false when it is already the verified number */
             sent: boolean;
         };
+        UpdateMeRequest: {
+            firstName?: string;
+            lastName?: string;
+        };
+        ProfilePhotoRequest: {
+            /** @description From POST /uploads/signature (purpose PROFILE_PHOTO), once the photo is sent */
+            key: string;
+        };
         AcceptAgreementsRequest: {
             types: ("TERMS" | "PRIVACY" | "GUEST" | "HOST")[];
         };
@@ -7236,19 +16413,217 @@ export interface components {
             start?: string;
             end?: string;
         };
-        AdminOverview: {
-            metrics: {
-                totalUsers: number;
-                activeHosts: number;
-                staffMembers: number;
-                suspendedUsers: number;
-                activeVehicles: number | null;
-                upcomingBookings: number | null;
-                bookingRevenueCents: number | null;
-                pendingVerifications: number | null;
-            };
+        SavedCars: {
+            /** @description Most recently saved first */
+            cars: components["schemas"]["SavedCar"][];
+            /** @description The last search’s dates, while they are still ahead; null otherwise */
+            search: {
+                place?: string;
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+                days: number;
+            } | null;
+        };
+        /** @description A car saved with the heart. The estimate is for the last searched dates, when it can be booked */
+        SavedCar: {
+            id: string;
+            slug: string;
+            /** @description e.g. "2022 Toyota RAV4" */
+            title: string;
+            make: string;
+            model: string;
+            year: number;
+            variant?: string;
+            photo: {
+                url: string;
+                alt: string;
+            } | null;
+            suburb?: string;
+            city?: string;
+            /** @description From the searched place; null without one */
+            distanceKm: number | null;
+            rating: components["schemas"]["Rating"];
+            tripCount: number;
+            dailyCents: number;
+            /** @description Only when the search has dates */
+            estimate: {
+                days: number;
+                /** @description Every mandatory charge for the dates (rental, service fee, mandatory protection, GST), plus airport delivery for an airport search */
+                totalCents: number;
+                includesAirportDelivery: boolean;
+            } | null;
+            instantBook: boolean;
+            /** @description Delivers to an address */
+            delivery: boolean;
+            airportDelivery: boolean;
+            /** @enum {string} */
+            bodyType: "HATCHBACK" | "SEDAN" | "WAGON" | "SUV" | "UTE" | "VAN" | "PEOPLE_MOVER" | "COUPE" | "CONVERTIBLE";
+            /** @enum {string} */
+            fuelType: "PETROL" | "DIESEL" | "HYBRID" | "PHEV" | "EV";
+            /** @enum {string} */
+            transmission: "AUTOMATIC" | "MANUAL";
+            seats: number;
+            unlimitedKm: boolean;
+            petFriendly: boolean;
+            childSeat: boolean;
+            /** @description Up to three key features */
+            features: string[];
+            /** @description Still live in search; false once the Host takes it down */
+            listed: boolean;
+            /** @description Whether it can be booked for the last searched dates: free, documents current and within its trip rules. Null without dates */
+            availableForDates: boolean | null;
+        };
+        /** @description Average stars and how many reviews; count 0 shows as "New" */
+        Rating: {
+            avg: number;
+            count: number;
+        };
+        SavedCards: {
+            cards: components["schemas"]["SavedCard"][];
+        };
+        SavedCard: {
+            /** @description The Stripe PaymentMethod id (pm_…) */
+            id: string;
+            /** @description e.g. visa, mastercard, amex */
+            brand: string;
+            last4: string;
+            expMonth: number;
+            expYear: number;
+            expired: boolean;
+            /**
+             * @description Saved from Apple Pay or Google Pay
+             * @enum {string}
+             */
+            wallet?: "apple_pay" | "google_pay";
+        };
+        CardSetup: {
+            /** @description For the Payment Element to save one card. Never logged or stored. */
+            clientSecret: string;
+        };
+        PaymentHistory: {
+            /** @description Newest first, up to 100 */
+            payments: components["schemas"]["PaymentHistoryItem"][];
+        };
+        PaymentHistoryItem: {
+            id: string;
+            bookingRef: string;
+            vehicleTitle: string;
+            /** @enum {string} */
+            type: "BOOKING" | "EXTRA_CHARGE";
+            amountCents: number;
+            /**
+             * @description AUTHORISED: held on the card, not charged yet. FAILED is only listed for an extra charge still to pay
+             * @enum {string}
+             */
+            status: "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+            /** @description e.g. "Visa ending 4242" */
+            method?: string;
             /** Format: date-time */
-            generatedAt: string;
+            at: string;
+            refundedCents: number;
+            refunds: {
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED";
+                /** Format: date-time */
+                at: string;
+            }[];
+            /** @description GET /bookings/{id}/receipt has a receipt for it (a paid extra charge is on its booking’s) */
+            hasReceipt: boolean;
+        };
+        AccountClosure: {
+            allowed: boolean;
+            /** @description Why the account can’t be closed yet (plan §8.2): a trip or booking still to come or under way, an open incident, an unpaid charge or a payout still due, Host fees or refunds owed, a failed refund still to return, an open card dispute, or a trip still in its damage-report window or whose extra kilometres aren’t worked out yet */
+            blockers: {
+                /** @enum {string} */
+                code: "UPCOMING_TRIP" | "HOSTED_BOOKING" | "OPEN_INCIDENT" | "UNPAID_CHARGE" | "PAYOUT_DUE" | "FEES_OWED" | "REFUND_PENDING" | "OPEN_DISPUTE" | "RECENT_TRIP";
+                message: string;
+            }[];
+        };
+        PrivacyRequestResponse: {
+            /** @description The support ticket reference, e.g. ST-4HX8PA */
+            ref: string;
+            /** @description The same request was already open, so no new one was made */
+            alreadyOpen: boolean;
+            /** @description With alreadyOpen: the message was added to the open request, which goes back to support (as a reply does) */
+            added: boolean;
+        };
+        PrivacyRequest: {
+            /**
+             * @description ACCESS: a copy of their information. CORRECTION: something to fix (say what). CLOSE_ACCOUNT: close and anonymise the account
+             * @enum {string}
+             */
+            type: "ACCESS" | "CORRECTION" | "CLOSE_ACCOUNT";
+            message?: string;
+        };
+        VerificationQueue: {
+            items: components["schemas"]["VerificationQueueItem"][];
+        };
+        VerificationQueueItem: {
+            userId: string;
+            /** @enum {string} */
+            kind: "IDENTITY" | "LICENCE";
+            firstName: string;
+            lastName: string;
+            email: string;
+            reason: string;
+            /** Format: date-time */
+            since: string;
+            identity: {
+                status: string;
+                documentType?: string;
+                /** @description A driver licence used as the ID: whether its number is the licence’s on the account now. Left out for another document */
+                licenceNumberMatched?: boolean;
+                /** @description Whether the date of birth on the ID matched the account’s when it was checked */
+                dobMatched?: boolean;
+            };
+            licence: {
+                class: string;
+                country: string;
+                numberEnding: string;
+                version?: string;
+                expiry: string;
+                issuedAt?: string;
+                /** @description Overseas licences: false when it isn’t in English, which then needs English proof */
+                inEnglish?: boolean;
+                englishProof?: string;
+                status: string;
+            } | null;
+            dob?: string;
+            riskFlags: string[];
+            waitingBookings: {
+                ref: string;
+                vehicleTitle: string;
+                /** Format: date-time */
+                expiresAt?: string;
+            }[];
+        };
+        LicenceReviewResult: {
+            /** @enum {string} */
+            licenceStatus: "APPROVED" | "REJECTED";
+            /** @description References of the bookings this confirmed */
+            confirmed: string[];
+            /** @description Requests the Host still has to answer */
+            waitingForHost: string[];
+            /** @description Bookings ended, with the card authorisation released */
+            released: string[];
+            /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
+            stillInReview?: string[];
+            /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
+            carSuspended?: string[];
+            /** @description Bookings not confirmed because the Guest’s licence no longer meets the rules for that trip (it expires before the trip ends, say): they keep waiting until the Guest updates it, support cancels them or their time runs out */
+            licenceNotEligible?: string[];
+        };
+        LicenceReviewRequest: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REJECT";
+            note?: string;
+        };
+        LicenceNumber: {
+            /** @description The full licence number, as the person entered it */
+            number: string;
         };
         PlatformSettingsResponse: {
             settings: components["schemas"]["PlatformSettings"];
@@ -7290,6 +16665,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             eligibility: {
                 minAge: number;
@@ -7332,6 +16709,7 @@ export interface components {
                 lateReturnGraceMinutes: number;
                 damageReportWindowHours: number;
                 threadReadOnlyDays: number;
+                extraKmReviewAboveKmPerDay: number;
             };
             search: {
                 maxTripDays: number;
@@ -7428,6 +16806,11 @@ export interface components {
                     status: "PENDING" | "CONFIRMED";
                     note: string;
                 };
+                retentionAndRisk: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
             };
             securityDeposit: {
                 amountCents: number;
@@ -7479,6 +16862,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             eligibility?: {
                 minAge: number;
@@ -7521,6 +16906,7 @@ export interface components {
                 lateReturnGraceMinutes: number;
                 damageReportWindowHours: number;
                 threadReadOnlyDays: number;
+                extraKmReviewAboveKmPerDay: number;
             };
             search?: {
                 maxTripDays: number;
@@ -7617,6 +17003,11 @@ export interface components {
                     status: "PENDING" | "CONFIRMED";
                     note: string;
                 };
+                retentionAndRisk?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
             };
             securityDeposit?: {
                 amountCents: number;
@@ -7683,6 +17074,8 @@ export interface components {
             mfaEnabled: boolean;
             /** Format: date-time */
             lastLoginAt?: string;
+            /** @description What they can do beyond the support role (plan §6.2): REFUNDS for refunds, payments and payouts. The admin has every permission. */
+            permissions: "REFUNDS"[];
         };
         StaffInvite: {
             id: string;
@@ -7793,11 +17186,6 @@ export interface components {
             childSeat: boolean;
             /** @description Up to three key features */
             features: string[];
-        };
-        /** @description Average stars and how many reviews; count 0 shows as "New" */
-        Rating: {
-            avg: number;
-            count: number;
         };
         VehicleMakes: {
             makes: {
@@ -8042,6 +17430,8 @@ export interface components {
         VehicleReview: {
             id: string;
             author: {
+                /** @description Who wrote it, so readers can report a review but not their own */
+                id: string;
                 firstName: string;
                 avatarUrl?: string;
             };
@@ -8142,6 +17532,8 @@ export interface components {
             lng: number;
             /** @description IATA codes of the airports that serve it */
             airports: string[];
+            /** @description A homepage tile */
+            featured: boolean;
         };
         DestinationResponse: {
             destination: components["schemas"]["DestinationDetail"];
@@ -8157,6 +17549,8 @@ export interface components {
             lng: number;
             /** @description IATA codes of the airports that serve it */
             airports: string[];
+            /** @description A homepage tile */
+            featured: boolean;
             intro: string;
         };
         LegalPageResponse: {
@@ -8172,6 +17566,35 @@ export interface components {
             markdown: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        HomeHeroResponse: {
+            hero: components["schemas"]["HomeHero"];
+        };
+        HomeHero: {
+            headline: string;
+            /** @description The supporting line under the headline */
+            subheading: string;
+        };
+        SiteFooterResponse: {
+            footer: components["schemas"]["SiteFooter"];
+        };
+        SiteFooter: {
+            /** @description The footer’s columns of links; a group with no links is left out */
+            groups: components["schemas"]["FooterGroup"][];
+            socialLinks: components["schemas"]["SocialLink"][];
+        };
+        FooterGroup: {
+            title: string;
+            links: components["schemas"]["FooterLink"][];
+        };
+        FooterLink: {
+            label: string;
+            href: string;
+        };
+        /** @description A social media account, e.g. Instagram */
+        SocialLink: {
+            label: string;
+            href: string;
         };
         Faqs: {
             faqs: components["schemas"]["Faq"][];
@@ -8211,6 +17634,8 @@ export interface components {
                 excessCents: number;
                 coverSummary: string;
                 mandatory: boolean;
+                /** @description The plan’s own roadside assistance number; empty or missing means roadsideAssistance.phone */
+                roadsidePhone?: string;
             }[];
             roadsideAssistance: {
                 /** @description The insurance partner's number; empty until it's set */
@@ -8305,6 +17730,109 @@ export interface components {
             subject: string;
             message: string;
             bookingRef?: string | "";
+            /** @description Signed in only: photos and PDFs uploaded first with purpose SUPPORT_FILE */
+            attachments?: components["schemas"]["AttachmentInput"][];
+        };
+        AttachmentInput: {
+            key: string;
+            name?: string;
+            contentType?: string;
+        };
+        SupportTickets: {
+            tickets: components["schemas"]["SupportTicketSummary"][];
+        };
+        SupportTicketSummary: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /**
+             * @description OPEN: with the support team. PENDING: waiting for the user’s reply. RESOLVED: done
+             * @enum {string}
+             */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            bookingRef?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the last message was added
+             */
+            updatedAt: string;
+        };
+        SupportTicketResponse: {
+            ticket: components["schemas"]["SupportTicket"];
+        };
+        /** @description A user’s own ticket, without the staff’s internal notes */
+        SupportTicket: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /**
+             * @description OPEN: with the support team. PENDING: waiting for the user’s reply. RESOLVED: done
+             * @enum {string}
+             */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            bookingRef?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When the last message was added
+             */
+            updatedAt: string;
+            messages: {
+                id: string;
+                /** @enum {string} */
+                from: "YOU" | "SUPPORT";
+                body: string;
+                attachments: components["schemas"]["Attachment"][];
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        Attachment: {
+            url: string;
+            /** @description A message photo’s smaller copy, to show in the conversation; `url` opens the photo */
+            previewUrl?: string;
+            name?: string;
+            contentType?: string;
+        };
+        TicketReply: {
+            body: string;
+            /**
+             * @description Photos and PDFs uploaded first with purpose SUPPORT_FILE
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
+        };
+        HelpArticles: {
+            /** @description In the order admins set */
+            articles: components["schemas"]["HelpArticleSummary"][];
+        };
+        HelpArticleSummary: {
+            slug: string;
+            title: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @description The opening sentence or two, as plain text */
+            summary: string;
+        };
+        HelpArticleResponse: {
+            article: components["schemas"]["HelpArticle"];
+        };
+        HelpArticle: {
+            slug: string;
+            title: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @description Markdown */
+            body: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         HostProfileResponse: {
             host: components["schemas"]["HostProfile"];
@@ -8319,8 +17847,10 @@ export interface components {
             bio?: string;
             gstRegistered: boolean;
             gstNumber?: string;
-            /** @description Payout setup (Stripe Connect) arrives in Phase 3 */
+            /** @description Whether payout setup (Stripe Connect) is finished */
             payoutsEnabled: boolean;
+            /** @description Whether approval waits for a passed identity check (the identityForHosts platform setting) */
+            identityRequired: boolean;
             rating: {
                 avg: number;
                 count: number;
@@ -8350,6 +17880,8 @@ export interface components {
             title: string;
             /** @enum {string} */
             status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description Approved, but out of search until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
             onboardingStep: number;
             photo: string | null;
             missingCount: number;
@@ -8368,6 +17900,8 @@ export interface components {
             title: string;
             /** @enum {string} */
             status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description Approved, but out of search until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
             reviewNotes?: string;
             onboardingStep: number;
             regoPlate?: string;
@@ -8402,6 +17936,15 @@ export interface components {
             wofExpiry?: string;
             /** @description YYYY-MM-DD */
             cofExpiry?: string;
+            /** @description On an approved car: later expiry dates the Host entered, waiting for staff to verify a document of that type showing them. Search and booking use the dates above until then */
+            pendingExpiries?: {
+                /** @description YYYY-MM-DD */
+                regoExpiry?: string;
+                /** @description YYYY-MM-DD */
+                wofExpiry?: string;
+                /** @description YYYY-MM-DD */
+                cofExpiry?: string;
+            };
             rucValidToKm?: number;
             ownerIsHost: boolean;
             pricing?: {
@@ -8636,6 +18179,22 @@ export interface components {
                 toAnswer: boolean;
             };
         };
+        AllCarsCalendar: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            vehicles: components["schemas"]["CalendarCar"][];
+        };
+        CalendarCar: {
+            id: string;
+            title: string;
+            photo: string | null;
+            /** @enum {string} */
+            status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description As on the car’s own calendar */
+            blocks: components["schemas"]["CalendarBlock"][];
+        };
         BlockResponse: {
             block: components["schemas"]["CalendarBlock"];
         };
@@ -8678,16 +18237,66 @@ export interface components {
             fields?: {
                 [key: string]: string;
             };
-            /** @description Attach the file to the car with this once it is sent */
+            /** @description Attach the file to the car, booking or support ticket, or set it as your profile photo, with this once it is sent */
             key: string;
             maxBytes: number;
         };
         UploadRequest: {
-            /** @enum {string} */
-            purpose: "VEHICLE_PHOTO" | "VEHICLE_DOCUMENT";
-            vehicleId: string;
+            /**
+             * @description SUPPORT_FILE: a photo or PDF for one of your support tickets; PROFILE_PHOTO: a photo of you, set with PUT /me/photo. Neither needs a car or booking.
+             * @enum {string}
+             */
+            purpose: "VEHICLE_PHOTO" | "VEHICLE_DOCUMENT" | "MESSAGE_PHOTO" | "INSPECTION_PHOTO" | "INCIDENT_FILE" | "SUPPORT_FILE" | "PROFILE_PHOTO";
+            /** @description For VEHICLE_PHOTO and VEHICLE_DOCUMENT */
+            vehicleId?: string;
+            /** @description For MESSAGE_PHOTO, INSPECTION_PHOTO and INCIDENT_FILE: its id or reference */
+            bookingId?: string;
             contentType: string;
             size: number;
+        };
+        HostTodo: {
+            items: components["schemas"]["TodoItem"][];
+        };
+        TodoItem: {
+            /** @enum {string} */
+            kind: "PAYOUT_SETUP" | "REQUESTS" | "CHECK_IN" | "CONFIRM_HANDOVER" | "DOCUMENT_EXPIRING" | "RUC" | "MAINTENANCE" | "LISTING_CHANGES";
+            title: string;
+            detail?: string;
+            /** @description A website path */
+            link: string;
+            urgent: boolean;
+        };
+        MaintenanceReminders: {
+            reminders: {
+                title: string;
+                /**
+                 * Format: date
+                 * @description A date, 2026-12-01
+                 */
+                dueAt?: string;
+                dueOdometer?: number;
+                notes?: string;
+                id: string;
+                /** Format: date-time */
+                doneAt?: string;
+            }[];
+            /** @description From the car’s last check-in or check-out */
+            latestOdometer: number | null;
+        };
+        MaintenanceRemindersRequest: {
+            reminders: {
+                title: string;
+                /**
+                 * Format: date
+                 * @description A date, 2026-12-01
+                 */
+                dueAt?: string;
+                dueOdometer?: number;
+                notes?: string;
+                id?: string;
+                /** @default false */
+                done: boolean;
+            }[];
         };
         Notifications: {
             notifications: components["schemas"]["NotificationItem"][];
@@ -8739,8 +18348,40 @@ export interface components {
              */
             read: true;
         };
+        NotificationPrefsResponse: {
+            prefs: components["schemas"]["NotificationPrefs"];
+        };
+        NotificationPrefs: {
+            /** @description News and offers by email */
+            marketingEmail: boolean;
+            /** @description News and offers by text */
+            marketingSms: boolean;
+            /** @description A text when a message is unread after 10 minutes */
+            unreadMessageSms: boolean;
+            /** @description An email when a message is unread after 10 minutes (on unless turned off) */
+            unreadMessageEmail: boolean;
+        };
+        NotificationPrefsPatch: {
+            /** @description News and offers by email */
+            marketingEmail?: boolean;
+            /** @description News and offers by text */
+            marketingSms?: boolean;
+            /** @description A text when a message is unread after 10 minutes */
+            unreadMessageSms?: boolean;
+            /** @description An email when a message is unread after 10 minutes (on unless turned off) */
+            unreadMessageEmail?: boolean;
+        };
+        UnsubscribeResponse: {
+            /** @enum {string} */
+            unsubscribedFrom: "MARKETING" | "MESSAGE_EMAILS";
+        };
+        UnsubscribeRequest: {
+            token: string;
+        };
         HostApplications: {
             applications: components["schemas"]["HostApplication"][];
+            total: number;
+            page: number;
         };
         HostApplication: {
             userId: string;
@@ -8750,6 +18391,13 @@ export interface components {
             emailVerified: boolean;
             phone?: string;
             phoneVerified: boolean;
+            /**
+             * @description The Host’s identity check (plan §9, Days 19–20)
+             * @enum {string}
+             */
+            identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Whether approval waits for a passed identity check (the identityForHosts platform setting) */
+            identityRequired: boolean;
             /** @enum {string} */
             status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED";
             /** Format: date-time */
@@ -8789,12 +18437,48 @@ export interface components {
             city?: string;
             pendingPhotos: number;
             pendingDocuments: number;
+            /** @description Key details the Host changed on the live listing, which sent it back for review */
+            keyChanges: ("regoPlate" | "vin" | "chassisNo" | "make" | "model" | "year")[];
             flags: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminVehicles: {
+            vehicles: components["schemas"]["AdminVehicleRow"][];
+            total: number;
+            page: number;
+            /** @description The Host named by hostId, to label the filter */
+            host?: {
+                id: string;
+                name: string;
+            };
+        };
+        AdminVehicleRow: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            regoPlate?: string;
+            city?: string;
+            host: {
+                id: string;
+                name: string;
+                email: string;
+            };
+            /** @description Approved, but hidden until the Host finishes payout setup (plan §8.2) */
+            waitingForPayouts: boolean;
+            /** @description Hidden while its Host’s account is suspended (plan §8.2) */
+            hostSuspended: boolean;
+            tripCount: number;
             /** Format: date-time */
             updatedAt: string;
         };
         AdminVehicle: {
             vehicle: components["schemas"]["HostVehicle"];
+            /** @description What the Host changed among the plate, VIN, chassis number, make, model and year since the listing was live (plan §3). Empty until they change one; cleared when staff approve or reject the listing. */
+            keyChanges: components["schemas"]["KeyChange"][];
+            /** @description While the car is suspended, back for review over its key details, or rejected: its pending, confirmed and current bookings, for staff to keep or cancel (plan §8.2). Rejecting a car back for review leaves them booked */
+            upcomingBookings?: components["schemas"]["AdminBookingRow"][];
             host: {
                 id: string;
                 name: string;
@@ -8803,9 +18487,43 @@ export interface components {
                 phone?: string;
                 /** @enum {string|null} */
                 status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+                /** @description Payout setup is done, so an approved listing goes live at once (plan §8.2) */
+                payoutsEnabled: boolean;
                 emailVerified: boolean;
                 phoneVerified: boolean;
             };
+        };
+        KeyChange: {
+            /** @enum {string} */
+            field: "regoPlate" | "vin" | "chassisNo" | "make" | "model" | "year";
+            /** @description While the listing was live; left out when it had none */
+            before?: string;
+            /** @description Now; left out when the Host removed it */
+            after?: string;
+            /** Format: date-time */
+            changedAt: string;
+        };
+        AdminBookingRow: {
+            id: string;
+            ref: string;
+            /** @enum {string} */
+            status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            vehicleTitle: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            host: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            totalCents: number;
+            /** Format: date-time */
+            createdAt: string;
         };
         PhotoDecision: {
             /** @enum {string} */
@@ -8822,6 +18540,7 @@ export interface components {
             licence: {
                 /** @enum {string} */
                 class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
+                /** @description ISO 3166-1 alpha-2 code of the country that issued it */
                 country: string;
                 /** @description The last 3 characters, to recognise it */
                 numberEnding: string;
@@ -8832,19 +18551,28 @@ export interface components {
                 englishProof?: "IDP" | "APPROVED_TRANSLATION";
             } | null;
             hasDateOfBirth: boolean;
+            /** @description Support staff are checking the licence by hand: a booking made meanwhile becomes a request, confirmed once they approve it (plan §8.2) */
+            licenceInReview: boolean;
             /** @enum {string} */
             identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Stripe is checking the ID and selfie; usually a minute or two */
+            identityProcessing: boolean;
+            /** @description Why the last identity check didn’t pass, so the person can try again */
+            identityError?: string;
             /** @description Anything that stops this person booking; with `end`, checked against that trip end */
             problems: {
                 /** @enum {string} */
-                code: "PHONE_REQUIRED" | "LICENCE_REQUIRED" | "TOO_YOUNG" | "CLASS_NOT_ACCEPTED" | "NOT_LICENSED_LONG_ENOUGH" | "LICENCE_EXPIRES" | "ENGLISH_PROOF_REQUIRED" | "LICENCE_REJECTED" | "IDENTITY_REJECTED";
+                code: "PHONE_REQUIRED" | "LICENCE_REQUIRED" | "TOO_YOUNG" | "CLASS_NOT_ACCEPTED" | "NOT_LICENSED_LONG_ENOUGH" | "LICENCE_EXPIRES" | "ENGLISH_PROOF_REQUIRED" | "LICENCE_REJECTED" | "IDENTITY_REJECTED" | "IDENTITY_REQUIRED" | "IDENTITY_PROCESSING";
                 message: string;
             }[];
         };
         DriverLicenceInput: {
             number: string;
             version?: string;
-            /** @default New Zealand */
+            /**
+             * @description Overseas licences: the ISO 3166-1 alpha-2 code of the country that issued it, e.g. AU (an English name like Australia is read as its code). NZ licences are NZ
+             * @default NZ
+             */
             country: string;
             /** @enum {string} */
             class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
@@ -8860,6 +18588,29 @@ export interface components {
             expiry: string;
             /** @description Date of birth, for the minimum age */
             dob: string;
+        };
+        IdentityCheckLink: {
+            url: string;
+        };
+        IdentityCheckRequest: {
+            returnTo?: string;
+        };
+        IdentityResponse: {
+            identity: components["schemas"]["IdentityStatus"];
+        };
+        IdentityStatus: {
+            /**
+             * @description NONE until it passes; PENDING while support reviews it by hand
+             * @enum {string}
+             */
+            status: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Stripe’s: requires_input, processing, verified or canceled */
+            sessionStatus?: string;
+            /** @description Why the last attempt didn’t pass */
+            lastError?: string;
+            documentType?: string;
+            /** Format: date-time */
+            verifiedAt?: string;
         };
         BookingResponse: {
             booking: components["schemas"]["Booking"];
@@ -8937,12 +18688,105 @@ export interface components {
                     refundPct: number;
                 }[];
             } | null;
+            terms: {
+                /** @enum {string} */
+                fuelPolicy: "SAME_LEVEL" | "FULL";
+                unlimitedKm: boolean;
+                /** @description Left out when kilometres are unlimited */
+                kmAllowancePerDay?: number;
+                /** @description The whole trip’s allowance: the daily allowance times the trip’s days */
+                allowanceKm?: number;
+                /** @description For each kilometre over the allowance */
+                extraKmCents: number;
+                /** @description An electric car: its fuel policy is about battery charge */
+                electric: boolean;
+            };
             lineItems: components["schemas"]["LineItem"][];
             price: components["schemas"]["GuestPrice"];
-            /** @description The Host’s view: what they earn */
+            /** @description The Host’s view: what they earn and when it’s paid */
             payout?: {
                 hostPayoutCents: number;
-                platformFeeCents: number;
+                /** @description The platform’s commission on the rental and delivery, as the trip’s payout was made with it */
+                commissionCents: number;
+                /** @description The GST included in the commission */
+                commissionGstCents: number;
+                /**
+                 * @description The payout below: the trip’s, or a cancelled booking’s share of the kept fee
+                 * @enum {string}
+                 */
+                type?: "TRIP" | "CANCELLATION_FEE" | "EXTRA_CHARGE";
+                /**
+                 * @description Once confirmed: the trip’s payout
+                 * @enum {string}
+                 */
+                status?: "SCHEDULED" | "HELD" | "PAID" | "FAILED" | "CANCELLED";
+                /** @enum {string} */
+                holdReason?: "INCIDENT" | "DISPUTE" | "PAYOUT_SETUP" | "TRIP_NOT_STARTED" | "SUSPENDED" | "MANUAL";
+                /** Format: date-time */
+                scheduledFor?: string;
+                /** Format: date-time */
+                paidAt?: string;
+                /**
+                 * Format: date-time
+                 * @description Once paid: usually in the Host’s bank by then
+                 */
+                expectedInBankBy?: string;
+                /** @description Everything paid out for the booking so far, less any taken back for refunds */
+                paidCents?: number;
+                /** @description Once confirmed (or cancelled): what the booking earned the Host, as its row on the earnings page and statement */
+                earnings?: {
+                    rentalCents: number;
+                    deliveryCents: number;
+                    extraChargesCents: number;
+                    /** @description Cancelled: the Host’s part of the fee kept, before commission */
+                    keptFeeCents: number;
+                    commissionCents: number;
+                    commissionGstCents: number;
+                    hostFundedRefundsCents: number;
+                    /** @description Less any part waived */
+                    hostCancellationFeeCents: number;
+                    netCents: number;
+                };
+                /** @description What this booking’s payouts settled for other bookings (Host cancellation fees, refunds, payouts already sent): part of what it earned, though not paid out */
+                settled?: {
+                    /** @enum {string} */
+                    type: "HOST_CANCELLATION_FEE" | "HOST_FUNDED_REFUND" | "OTHER";
+                    amountCents: number;
+                    bookingRef?: string;
+                    /** @description A payout already sent for that booking, owed back */
+                    payoutSent?: boolean;
+                }[];
+                /** @description What the Host’s other payouts took off for this booking */
+                settledElsewhere?: {
+                    amountCents: number;
+                    /** @description The booking whose payout it came off */
+                    bookingRef: string;
+                    /** @description A payout already sent for this booking, rather than a refund */
+                    payoutSent?: boolean;
+                }[];
+                /** @description Still owed for this booking, to come off the Host’s next payout */
+                owed?: {
+                    refundsCents: number;
+                    /** @description A trip payout sent before the booking was cancelled, less the Host’s share */
+                    payoutSentCents: number;
+                };
+                /** @description Refunds made to the Guest on the booking and its extra charges, oldest first */
+                refunds?: {
+                    amountCents: number;
+                    /** Format: date-time */
+                    at: string;
+                    /**
+                     * @description HOST: it comes off the Host’s payout (plan §8.1, item 15)
+                     * @enum {string}
+                     */
+                    fundedBy: "PLATFORM" | "HOST";
+                    /** @description HOST: what the Host pays back for it, their share; Rento Vroom covers its commission */
+                    hostCents?: number;
+                    /** @description The cancellation’s own refund, settled by the policy rather than the Host’s payout */
+                    cancellation?: boolean;
+                    /** @description A refund of one of the booking’s extra charges */
+                    extraCharge?: boolean;
+                }[];
             };
             /**
              * Format: date-time
@@ -8962,6 +18806,8 @@ export interface components {
             /** @description PENDING: the Host has accepted, and the booking now waits only for the Guest’s verification */
             hostAccepted?: boolean;
             guest: {
+                /** @description For their public profile; missing once an account is gone */
+                id?: string;
                 firstName: string;
                 avatarUrl?: string;
                 /** @description Identity verified */
@@ -8972,6 +18818,8 @@ export interface components {
                 phone?: string;
             };
             host: {
+                /** @description For their public profile; missing once an account is gone */
+                id?: string;
                 firstName: string;
                 avatarUrl?: string;
                 /** @description Identity verified */
@@ -8995,10 +18843,48 @@ export interface components {
                 /** @enum {string} */
                 reason?: "GUEST_CANCELLED" | "HOST_CANCELLED" | "REQUEST_WITHDRAWN" | "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
                 refundCents?: number;
+                /**
+                 * @description Where the refund stands, once one was made: PENDING (on its way), SUCCEEDED, or FAILED (support returns it another way)
+                 * @enum {string}
+                 */
+                refundStatus?: "PENDING" | "SUCCEEDED" | "FAILED";
                 feeCents?: number;
+                /** @description Refunds made before the cancellation, which came off what it could give back (all of the payment, when the refund is 0 and nothing was kept) */
+                earlierRefundCents?: number;
                 hostShareCents?: number;
                 hostFeeCents?: number;
             } | null;
+            /** @description EXPIRED: why, and whether a payment that went through was given back */
+            expiry?: {
+                /** @enum {string} */
+                reason: "PAYMENT_TIMEOUT" | "CHECKOUT_ABANDONED" | "HOST_NO_ANSWER" | "VERIFICATION_EXPIRED" | "VERIFICATION_REJECTED" | "DATES_TAKEN" | "CAR_UNAVAILABLE";
+                /** @description The Guest’s card was charged after the booking ended, so the payment is refunded in full (an authorisation is only released) */
+                paymentReturned: boolean;
+                refundCents?: number;
+                /** @enum {string} */
+                refundStatus?: "PENDING" | "SUCCEEDED" | "FAILED";
+            };
+            /** @description Charges after the trip, such as extra kilometres or from an incident, oldest first */
+            extraCharges?: {
+                id: string;
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                /** @description What it’s for, e.g. "50 km over the 750 km included" */
+                description: string;
+                /** @description Including GST */
+                amountCents: number;
+                /**
+                 * @description PENDING: being charged to the saved card. UNPAID: the saved card didn’t go through, so the Guest has a link to pay it, and it’s tried again. FAILED: it couldn’t be collected. CANCELLED: taken off by support. REFUNDED: paid, and all of it given back
+                 * @enum {string}
+                 */
+                status: "PENDING" | "PAID" | "UNPAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+                /** @description A paid charge’s refunds that didn’t fail; left out when none */
+                refundedCents?: number;
+                /** Format: date-time */
+                addedAt: string;
+                /** @description The Guest’s view of an UNPAID charge: /pay/{paymentId} */
+                payPath?: string;
+            }[];
             actions: {
                 pay: boolean;
                 cancel: boolean;
@@ -9034,6 +18920,8 @@ export interface components {
         };
         Bookings: {
             bookings: components["schemas"]["BookingSummary"][];
+            /** @description Set when there are more bookings */
+            nextPage?: number;
         };
         BookingSummary: {
             id: string;
@@ -9053,6 +18941,12 @@ export interface components {
             otherParty: {
                 firstName: string;
                 avatarUrl?: string;
+                verified?: boolean;
+                rating?: {
+                    avg: number;
+                    count: number;
+                };
+                tripCount?: number;
             };
             /** @description The Guest’s total, or the Host’s payout */
             amountCents: number;
@@ -9088,6 +18982,73 @@ export interface components {
             /** @enum {boolean} */
             acceptGuestAgreement: true;
         };
+        ReceiptResponse: {
+            receipt: components["schemas"]["Receipt"];
+        };
+        /** @description The GST receipt for a paid booking (plan §8.1, item 18): every line, the GST included and the total in NZD */
+        Receipt: {
+            /** @description The booking reference, which is also the receipt number */
+            ref: string;
+            /** Format: date-time */
+            paidAt: string;
+            supplier: {
+                name: string;
+                /** @description Shown once the business is GST-registered */
+                gstNumber?: string;
+                email: string;
+            };
+            customer: {
+                name: string;
+                email: string;
+            };
+            vehicleTitle: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            days: number;
+            lines: {
+                label: string;
+                amountCents: number;
+                gstCents: number;
+            }[];
+            totalCents: number;
+            /** @description The GST included in the total */
+            gstCents: number;
+            gstRatePct: number;
+            /** @description e.g. "Visa ending 4242" or "Apple Pay (Visa ending 4242)" */
+            paidWith: string;
+            refunds: {
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED";
+                /** Format: date-time */
+                at: string;
+            }[];
+            refundedCents: number;
+            /** @description The total less refunds that went through */
+            netPaidCents: number;
+            /** @description Charges after the trip that were paid (plan §8.1, items 6 and 11), each charged on its own; left out when there are none */
+            extraCharges?: {
+                description: string;
+                amountCents: number;
+                /** @description The GST included in the charge */
+                gstCents: number;
+                /** Format: date-time */
+                paidAt: string;
+                paidWith: string;
+                /** @description Refunds made on the charge since; left out when there are none */
+                refunds?: {
+                    amountCents: number;
+                    /** @enum {string} */
+                    status: "PENDING" | "SUCCEEDED" | "FAILED";
+                    /** Format: date-time */
+                    at: string;
+                }[];
+                /** @description Its refunds that went through; set with refunds */
+                refundedCents?: number;
+            }[];
+        };
         CancellationPreview: {
             allowed: boolean;
             /** @enum {string|null} */
@@ -9105,14 +19066,190 @@ export interface components {
         };
         CancelBookingRequest: {
             reason?: string;
+            /** @description The refund the preview showed: when the refund worked out now is less, nothing is cancelled (409 REFUND_CHANGED, with the new preview’s message in fields.expectedRefundCents) */
+            expectedRefundCents?: number;
         };
         DeclineBookingRequest: {
             reason?: string;
         };
         AdminCancelRequest: {
             /** @enum {string} */
-            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "PLATFORM";
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
             note: string;
+        };
+        AdminCancellationPreview: {
+            /** @enum {string} */
+            reason: "GUEST_NO_SHOW" | "HOST_NO_SHOW" | "HOST_CANCELLED" | "PLATFORM";
+            allowed: boolean;
+            /**
+             * @description How the policy engine treats it: a no-show is a Guest or Host cancellation
+             * @enum {string|null}
+             */
+            kind: "GUEST_CANCELLATION" | "HOST_CANCELLATION" | "PLATFORM_CANCELLATION" | null;
+            /** @description Back to the Guest’s card */
+            refundCents: number;
+            /** @description What the Guest paid and doesn’t get back */
+            feeCents: number;
+            /** @description The Host’s share of the kept fee */
+            hostShareCents: number;
+            /** @description A Host cancellation fee, off their next payout */
+            hostFeeCents: number;
+            /** @description A request or a booking waiting for verification: the card authorisation released, as nothing was charged */
+            releasedCents: number;
+            refundPct: number;
+            hoursBeforeStart: number;
+            /** @description A sentence to show before staff confirm */
+            message: string;
+        };
+        AdminBookingDetail: {
+            booking: components["schemas"]["Booking"];
+            guest: {
+                id: string;
+                name: string;
+                email: string;
+                phone?: string;
+            };
+            host: {
+                id: string;
+                name: string;
+                email: string;
+                phone?: string;
+            };
+            statusHistory: {
+                /** @enum {string} */
+                status: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+                /** Format: date-time */
+                at: string;
+                by?: string;
+                reason?: string;
+            }[];
+            extraCharges: {
+                id: string;
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                description: string;
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            }[];
+            payments: components["schemas"]["AdminPayment"][];
+            payouts: components["schemas"]["AdminPayout"][];
+            incidents: {
+                ref: string;
+                /** @enum {string} */
+                type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+                /** @enum {string} */
+                status: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            }[];
+            tickets: {
+                ref: string;
+                subject: string;
+                /** @enum {string} */
+                status: "OPEN" | "PENDING" | "RESOLVED";
+            }[];
+            /** @description What can still be refunded on the booking’s payment */
+            refundableCents: number;
+            /** @description A Host-funded refund of the booking’s payment: how much, and the Host’s share */
+            hostFunding?: {
+                /** @description The most a Host-funded refund can be: the rental and delivery (or the extra charge) left */
+                maxCents: number;
+                /** @description What the Host’s payout was worked out from */
+                baseCents: number;
+                /** @description The Host’s payout from it, before deductions */
+                payoutCents: number;
+                /** @description The Host’s share not refunded yet */
+                hostLeftCents: number;
+            };
+            /** @description The trip’s payout was sent (or is being sent, or the booking ended without one), so a Host-funded refund comes off the Host’s next payout or is taken back from the transfer */
+            tripPayoutSent?: boolean;
+            /** @description Paid extra charges with something left to refund (plan §8.1, item 11) */
+            refundableCharges: {
+                paymentId: string;
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                description: string;
+                refundableCents: number;
+                hostFunding: {
+                    /** @description The most a Host-funded refund can be: the rental and delivery (or the extra charge) left */
+                    maxCents: number;
+                    /** @description What the Host’s payout was worked out from */
+                    baseCents: number;
+                    /** @description The Host’s payout from it, before deductions */
+                    payoutCents: number;
+                    /** @description The Host’s share not refunded yet */
+                    hostLeftCents: number;
+                };
+                /** @description The Host’s share of the charge was paid, so a Host-funded refund is taken back another way */
+                payoutSent: boolean;
+            }[];
+            /** @description After a Host-funded refund: how it’s recovered from the Host (plan §8.1, item 15) */
+            hostRefund?: {
+                /** @enum {string} */
+                recoveredFrom: "THIS_PAYOUT" | "NEXT_PAYOUT" | "REVERSE_TRANSFER";
+                reversedCents?: number;
+                /** @description What comes off the Host’s next payout */
+                owedCents?: number;
+                /** @description Why the transfer wasn’t reversed as asked */
+                note?: string;
+            };
+        };
+        AdminPayment: {
+            id: string;
+            bookingRef: string;
+            guestName: string;
+            /** @enum {string} */
+            type: "BOOKING" | "EXTRA_CHARGE";
+            amountCents: number;
+            /** @enum {string} */
+            status: "PENDING" | "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
+            method?: string;
+            failureReason?: string;
+            refundedCents: number;
+            refunds: {
+                amountCents: number;
+                reason: string;
+                /** @enum {string} */
+                fundedBy: "PLATFORM" | "HOST";
+                /** @description A Host-funded refund: the Host’s share of it, which they pay back (plan §8.1, item 15). Rento Vroom covers the rest, its commission. Older Host-funded refunds have none: the Host paid all of them. */
+                hostCents?: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED";
+                failureReason?: string;
+                /** Format: date-time */
+                at: string;
+            }[];
+            dispute?: {
+                status: string;
+                reason?: string;
+                /** Format: date-time */
+                dueBy?: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminPayout: {
+            id: string;
+            bookingRef: string;
+            host: {
+                id: string;
+                name: string;
+            };
+            /** @enum {string} */
+            type: "TRIP" | "CANCELLATION_FEE" | "EXTRA_CHARGE";
+            /** @enum {string} */
+            status: "SCHEDULED" | "HELD" | "PAID" | "FAILED" | "CANCELLED";
+            /** @enum {string} */
+            holdReason?: "INCIDENT" | "DISPUTE" | "PAYOUT_SETUP" | "TRIP_NOT_STARTED" | "SUSPENDED" | "MANUAL";
+            amountCents: number;
+            deductedCents: number;
+            /** Format: date-time */
+            scheduledFor: string;
+            /** Format: date-time */
+            paidAt?: string;
+            failureReason?: string;
+        };
+        CancelExtraChargeRequest: {
+            reason: string;
         };
         IdentityReviewResponse: {
             /** @enum {string} */
@@ -9123,11 +19260,1636 @@ export interface components {
             waitingForHost: string[];
             /** @description Bookings ended, with the card authorisation released */
             released: string[];
+            /** @description Set when the other part (the identity check or the licence) still waits for support: the bookings that keep waiting for it */
+            stillInReview?: string[];
+            /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
+            carSuspended?: string[];
+            /** @description Bookings not confirmed because the Guest’s licence no longer meets the rules for that trip (it expires before the trip ends, say): they keep waiting until the Guest updates it, support cancels them or their time runs out */
+            licenceNotEligible?: string[];
         };
         IdentityReviewRequest: {
             /** @enum {string} */
             decision: "APPROVE" | "REJECT";
             note?: string;
+        };
+        Threads: {
+            threads: components["schemas"]["ThreadSummary"][];
+            /** @description Unread messages in every conversation, not just on this page */
+            unreadTotal: number;
+            /** @description Pass as `cursor` for the next page. Left out on the last page */
+            nextCursor?: string;
+        };
+        ThreadSummary: {
+            /** @description The booking's reference; one thread per booking */
+            ref: string;
+            /** @enum {string} */
+            bookingStatus: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            /**
+             * @description Your side of the booking
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST" | "STAFF";
+            vehicle: {
+                title: string;
+                photoUrl?: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            otherParty: {
+                id: string;
+                firstName: string;
+                avatarUrl?: string;
+            };
+            lastMessage?: {
+                body: string;
+                /** @enum {string} */
+                from: "ME" | "THEM" | "SYSTEM";
+                hasPhotos: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            unreadCount: number;
+            readOnly: boolean;
+        };
+        UnreadMessages: {
+            count: number;
+        };
+        ThreadResponse: {
+            thread: components["schemas"]["ThreadDetail"];
+        };
+        ThreadDetail: {
+            /** @description The booking's reference; one thread per booking */
+            ref: string;
+            /** @enum {string} */
+            bookingStatus: "PAYMENT_PENDING" | "PENDING" | "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "DECLINED" | "EXPIRED";
+            /**
+             * @description Your side of the booking
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST" | "STAFF";
+            vehicle: {
+                title: string;
+                photoUrl?: string;
+            };
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            otherParty: {
+                id: string;
+                firstName: string;
+                avatarUrl?: string;
+            };
+            lastMessage?: {
+                body: string;
+                /** @enum {string} */
+                from: "ME" | "THEM" | "SYSTEM";
+                hasPhotos: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            unreadCount: number;
+            readOnly: boolean;
+            canSend: boolean;
+            /** @description Why messages can’t be sent, to show */
+            readOnlyReason?: string;
+            /** @description You blocked the other person; unblock to message them */
+            blockedByMe: boolean;
+            /** @description The booking isn’t confirmed, so contact details in messages are hidden */
+            contactsHidden: boolean;
+            /**
+             * Format: date-time
+             * @description When the thread becomes read-only
+             */
+            closesAt: string;
+        };
+        Messages: {
+            /** @description Oldest first */
+            messages: components["schemas"]["Message"][];
+            /** @description Older messages exist; ask with `before` = the first id */
+            hasMore: boolean;
+        };
+        Message: {
+            id: string;
+            /**
+             * @description For support staff: THEM is the Guest and ME the Host, see `sender`
+             * @enum {string}
+             */
+            from: "ME" | "THEM" | "SYSTEM";
+            /** @enum {string} */
+            sender: "GUEST" | "HOST" | "SYSTEM";
+            /** @description Phone numbers, emails and links are hidden until the booking is confirmed */
+            body: string;
+            attachments: components["schemas"]["Attachment"][];
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Your own messages: when the other side read it
+             */
+            readAt?: string;
+            /** @description Removed by support. The Guest and Host get the notice as the body and no photos; support staff still see the original. */
+            removed?: {
+                /** Format: date-time */
+                at: string;
+                /** @description Support staff only: why it was removed */
+                reason?: string;
+            };
+        };
+        MessageResponse: {
+            message: components["schemas"]["Message"];
+        };
+        SendMessageRequest: {
+            /** @default  */
+            body: string;
+            /** @default [] */
+            attachments: components["schemas"]["AttachmentInput"][];
+        };
+        ReportResponse: {
+            id: string;
+            /** @enum {string} */
+            status: "OPEN";
+        };
+        ReportRequest: {
+            /** @enum {string} */
+            targetType: "USER" | "MESSAGE" | "REVIEW" | "VEHICLE";
+            targetId: string;
+            /** @enum {string} */
+            reason: "SPAM" | "SCAM" | "HARASSMENT" | "INAPPROPRIATE" | "CONTACT_DETAILS" | "FAKE" | "SAFETY" | "OTHER";
+            note?: string;
+            /** @description A member reported from a booking’s conversation: that booking, which must be between the two of them, so support can read the conversation (plan §6.2) */
+            bookingRef?: string;
+        };
+        BlockedUsers: {
+            users: {
+                id: string;
+                firstName: string;
+                avatarUrl?: string;
+            }[];
+        };
+        StaffThread: {
+            thread: components["schemas"]["ThreadDetail"];
+            guest: {
+                id: string;
+                firstName: string;
+            };
+            host: {
+                id: string;
+                firstName: string;
+            };
+            messages: components["schemas"]["Message"][];
+        };
+        HandoverResponse: {
+            handover: components["schemas"]["Handover"];
+        };
+        Handover: {
+            ref: string;
+            /** @enum {string} */
+            role: "GUEST" | "HOST" | "STAFF";
+            bookingStatus: string;
+            /**
+             * @description BATTERY for an EV: readings are charge %
+             * @enum {string}
+             */
+            energy: "FUEL" | "BATTERY";
+            /** @enum {string} */
+            fuelPolicy: "SAME_LEVEL" | "FULL";
+            requiredAngles: ("FRONT" | "REAR" | "DRIVER_SIDE" | "PASSENGER_SIDE" | "WHEELS" | "WINDSCREEN" | "INTERIOR" | "DASHBOARD" | "DAMAGE")[];
+            /**
+             * Format: date-time
+             * @description Check-in opens 2 hours before the start
+             */
+            checkInOpensAt: string;
+            /**
+             * Format: date-time
+             * @description The end time: check-in is closed after it (409 CHECK_IN_CLOSED), and support sorts out the booking
+             */
+            checkInClosesAt: string;
+            checkIn: components["schemas"]["ConditionReport"];
+            checkOut: components["schemas"]["ConditionReport"];
+            /**
+             * Format: date-time
+             * @description After check-out: either party can flag new damage until then
+             */
+            damageWindowEndsAt?: string;
+            /** @description The Guest must confirm their email address before check-in (plan §6.1) */
+            emailVerificationNeeded: boolean;
+            /** @description After check-out */
+            kilometres?: {
+                driven: number;
+                /** @description null: unlimited kilometres */
+                allowance: number | null;
+                extra: number;
+                extraChargeCents: number;
+            };
+            /** @description Returned with less fuel or charge than the policy asks */
+            fuelShortfall: boolean;
+            actions: {
+                checkIn: boolean;
+                checkOut: boolean;
+                confirmCheckIn: boolean;
+                confirmCheckOut: boolean;
+                flagDamage: boolean;
+            };
+        };
+        ConditionReport: {
+            /** @enum {string} */
+            stage: "CHECK_IN" | "CHECK_OUT";
+            odometer: number;
+            fuelOrBatteryPct: number;
+            notes?: string;
+            /** @enum {string} */
+            submittedBy: "GUEST" | "HOST" | "STAFF";
+            /** Format: date-time */
+            submittedAt: string;
+            photos: {
+                /** @enum {string} */
+                angle: "FRONT" | "REAR" | "DRIVER_SIDE" | "PASSENGER_SIDE" | "WHEELS" | "WINDSCREEN" | "INTERIOR" | "DASHBOARD" | "DAMAGE";
+                /** @description A private link that works for at least 10 minutes */
+                url: string;
+                /** @enum {string} */
+                takenBy: "GUEST" | "HOST" | "STAFF";
+                /** Format: date-time */
+                takenAt: string;
+                /**
+                 * Format: date-time
+                 * @description When the photo says it was taken: more than an hour from takenAt shows a photo taken earlier
+                 */
+                exifTakenAt?: string;
+                /** Format: date-time */
+                uploadedAt: string;
+                /** @description Staff only: where the device was */
+                lat?: number;
+                /** @description Staff only */
+                lng?: number;
+            }[];
+            damagePins: {
+                id: string;
+                x: number;
+                y: number;
+                note?: string;
+                newDamage: boolean;
+                /** @enum {string} */
+                flaggedBy?: "GUEST" | "HOST" | "STAFF";
+                /** Format: date-time */
+                flaggedAt?: string;
+            }[];
+            /** Format: date-time */
+            confirmedByGuestAt?: string;
+            /** Format: date-time */
+            confirmedByHostAt?: string;
+            completedBySupport: boolean;
+        } | null;
+        InspectionRequest: {
+            /** @enum {string} */
+            stage: "CHECK_IN" | "CHECK_OUT";
+            odometer: number;
+            /** @description Fuel, or battery charge for an EV, 0–100 % */
+            fuelOrBatteryPct: number;
+            notes?: string;
+            photos: components["schemas"]["InspectionPhotoInput"][];
+            /**
+             * @description Check-in: damage already on the car. Check-out: new damage.
+             * @default []
+             */
+            damagePins: components["schemas"]["DamagePinInput"][];
+        };
+        InspectionPhotoInput: {
+            /** @enum {string} */
+            angle: "FRONT" | "REAR" | "DRIVER_SIDE" | "PASSENGER_SIDE" | "WHEELS" | "WINDSCREEN" | "INTERIOR" | "DASHBOARD" | "DAMAGE";
+            /** @description From POST /uploads/signature (INSPECTION_PHOTO) */
+            key: string;
+            /**
+             * Format: date-time
+             * @description The device clock when it was taken
+             */
+            takenAt: string;
+            /**
+             * Format: date-time
+             * @description When the photo says it was taken (EXIF DateTimeOriginal), for a photo chosen from the device rather than taken with the in-app camera
+             */
+            exifTakenAt?: string;
+            /** @description Where the device was, if allowed */
+            lat?: number;
+            lng?: number;
+        };
+        DamagePinInput: {
+            /** @description Across the car diagram, 0–100 % */
+            x: number;
+            /** @description Down the car diagram, 0–100 % */
+            y: number;
+            note?: string;
+        };
+        FlagDamageRequest: {
+            damagePins: components["schemas"]["DamagePinInput"][];
+            /**
+             * @description Photos of the damage, each with angle DAMAGE
+             * @default []
+             */
+            photos: components["schemas"]["InspectionPhotoInput"][];
+            note?: string;
+        };
+        StaffCompletionRequest: {
+            odometer: number;
+            /** @description Fuel, or battery charge for an EV, 0–100 % */
+            fuelOrBatteryPct: number;
+            /** @description Where the readings came from, e.g. "From the Host’s photo, 9 Oct" */
+            notes?: string;
+            /**
+             * @description Check-in: damage already on the car. Check-out: new damage.
+             * @default []
+             */
+            damagePins: components["schemas"]["DamagePinInput"][];
+            /**
+             * @description The Host’s photos, if they sent any (uploaded with purpose INSPECTION_PHOTO)
+             * @default []
+             */
+            photos: components["schemas"]["InspectionPhotoInput"][];
+        };
+        StaffHandoverResponse: {
+            handover: components["schemas"]["Handover"];
+            extraKm?: components["schemas"]["ExtraKmResult"];
+        };
+        ExtraKmResult: {
+            /**
+             * @description CHARGED: a charge (or what more is due) is being collected; UNCHANGED: the charge stands; NONE: nothing to charge; OVERCHARGED: more was paid than is due (refundCents to refund); HELD: above the daily review limit
+             * @enum {string}
+             */
+            outcome: "CHARGED" | "UNCHANGED" | "NONE" | "OVERCHARGED" | "HELD";
+            amountCents?: number;
+            refundCents?: number;
+            message: string;
+        };
+        ReadingCorrectionRequest: {
+            /**
+             * @description Which report: CHECK_IN or CHECK_OUT
+             * @enum {string}
+             */
+            stage: "CHECK_IN" | "CHECK_OUT";
+            odometer?: number;
+            fuelOrBatteryPct?: number;
+            /** @description Why, for the audit log */
+            note: string;
+        };
+        HostPayouts: {
+            account: components["schemas"]["PayoutAccount"];
+            /** @description Payouts still to be sent, soonest first (on the first page only), then paid ones, newest first, a page at a time */
+            payouts: components["schemas"]["HostPayout"][];
+            /** @description Paid payouts in all */
+            paidCount: number;
+            /** @description Set when there are more paid payouts: send it as cursor for the next page */
+            nextCursor?: string;
+        };
+        PayoutAccount: {
+            /** @description The Host has started payout setup with Stripe */
+            connected: boolean;
+            /** @description Stripe can pay the Host: setup is finished */
+            payoutsEnabled: boolean;
+            /** @description What Stripe still needs, in plain words */
+            requirements: string[];
+            /** @description Business days from a transfer to the bank */
+            bankDays?: number;
+            /** @description Host cancellation fees still to come off a payout */
+            feesOwedCents: number;
+            /** @description Host-funded refunds made after a booking’s payout, still to come off a payout */
+            refundsOwedCents: number;
+            /** @description A trip payout sent before its booking was cancelled (a Guest no-show), less the Host’s share of the kept fee: still to come off a payout */
+            payoutsOwedCents: number;
+        };
+        HostPayout: {
+            id: string;
+            /** @enum {string} */
+            type: "TRIP" | "CANCELLATION_FEE" | "EXTRA_CHARGE";
+            /** @enum {string} */
+            status: "SCHEDULED" | "HELD" | "PAID" | "FAILED" | "CANCELLED";
+            /** @enum {string} */
+            holdReason?: "INCIDENT" | "DISPUTE" | "PAYOUT_SETUP" | "TRIP_NOT_STARTED" | "SUSPENDED" | "MANUAL";
+            /** @description Sent (PAID), or due: less any deductions already reserved for it, which are listed */
+            amountCents: number;
+            grossCents?: number;
+            commissionCents?: number;
+            commissionGstCents?: number;
+            /** @description Each line taken off the payout */
+            deductions: {
+                /** @enum {string} */
+                type: "HOST_CANCELLATION_FEE" | "HOST_FUNDED_REFUND" | "OTHER";
+                amountCents: number;
+                /** @description HOST_FUNDED_REFUND: the booking the refund was made on */
+                bookingRef?: string;
+                /** @description HOST_FUNDED_REFUND: not a refund, but a payout already sent for that booking before it was cancelled, owed back */
+                payoutSent?: boolean;
+            }[];
+            /** @description Taken back from the transfer for Host-funded refunds after it was paid */
+            reversedCents?: number;
+            /** Format: date-time */
+            scheduledFor: string;
+            /**
+             * Format: date-time
+             * @description When it was sent to the Host’s Stripe balance
+             */
+            paidAt?: string;
+            /**
+             * Format: date-time
+             * @description Usually in the Host’s bank by then: from the transfer once paid, or from the scheduled date while it’s scheduled
+             */
+            expectedInBankBy?: string;
+            booking: {
+                ref: string;
+                vehicleTitle: string;
+                /** Format: date-time */
+                start: string;
+            };
+        };
+        Earnings: {
+            summary: {
+                todayCents: number;
+                /** @description Monday to Sunday, NZ time */
+                weekCents: number;
+                monthCents: number;
+                previousMonthCents: number;
+                lifetimeCents: number;
+                /** @description What the payouts still to be sent will bring, as they are sent: less the deductions reserved for each, or the Host-funded refunds of its own booking, and the Host cancellation fees and refunds the Host owes */
+                upcomingPayoutsCents: number;
+                platformFeesMonthCents: number;
+                platformFeesLifetimeCents: number;
+            };
+            /** @description The last 12 months, oldest first */
+            months: {
+                /** @description 2026-10 */
+                month: string;
+                netCents: number;
+            }[];
+            /** @description Newest trip first: every trip starting in `month`, or the latest 100 without it */
+            bookings: components["schemas"]["EarningsRow"][];
+            /** @description Every month with a trip (2026-10), newest first, future ones included */
+            tripMonths: string[];
+            gstRegistered: boolean;
+            /** @description GST-registered Hosts: who charges the commission, for their tax invoice, with its GST number once it has one */
+            supplier?: {
+                name: string;
+                gstNumber?: string;
+            };
+        };
+        EarningsRow: {
+            ref: string;
+            vehicleTitle: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            /** @enum {string} */
+            status: "CONFIRMED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "PAYMENT_PENDING" | "PENDING" | "DECLINED" | "EXPIRED";
+            rentalCents: number;
+            rentalGstCents: number;
+            deliveryCents: number;
+            deliveryGstCents: number;
+            extraChargesCents: number;
+            extraChargesGstCents: number;
+            /** @description A cancelled trip: the Host’s part of the fee the Guest didn’t get back */
+            keptFeeCents: number;
+            commissionCents: number;
+            commissionGstCents: number;
+            hostFundedRefundsCents: number;
+            hostCancellationFeeCents: number;
+            netCents: number;
+        };
+        StripeLink: {
+            /** @description Open it straight away: it works once, for a few minutes */
+            url: string;
+        };
+        PayoutAccountResponse: {
+            account: components["schemas"]["PayoutAccount"];
+        };
+        PayLinkResponse: {
+            payment: components["schemas"]["PayLink"];
+        };
+        PayLink: {
+            id: string;
+            bookingRef: string;
+            vehicleTitle: string;
+            description: string;
+            /** @enum {string} */
+            type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+            amountCents: number;
+            /**
+             * @description DUE: still to pay. PAID: paid (refundedCents says how much came back, if any). REFUNDED: paid and all given back. CANCELLED: taken off by support, nothing to pay
+             * @enum {string}
+             */
+            status: "DUE" | "PAID" | "REFUNDED" | "CANCELLED";
+            /** @description Refunds made on the charge that didn’t fail; left out when none */
+            refundedCents?: number;
+            failureReason?: string;
+        };
+        PayLinkSession: {
+            clientSecret: string;
+            amountCents: number;
+            /** @enum {string} */
+            currency: "nzd";
+        };
+        ReviewResponse: {
+            review: components["schemas"]["Review"];
+        };
+        Review: {
+            id: string;
+            bookingRef: string;
+            /** @enum {string} */
+            direction: "GUEST_TO_HOST" | "HOST_TO_GUEST";
+            author: {
+                id: string;
+                firstName: string;
+                avatarUrl?: string;
+            };
+            subject: {
+                id: string;
+                firstName: string;
+            };
+            vehicleTitle: string;
+            overall: number;
+            communication?: number;
+            pickupReturn?: number;
+            cleanliness?: number;
+            care?: number;
+            body?: string;
+            /** @enum {string} */
+            status: "AWAITING_REVEAL" | "PUBLISHED" | "HIDDEN";
+            /**
+             * @description The author’s and staff’s view only
+             * @enum {string}
+             */
+            moderation?: "CLEAR" | "HELD" | "HIDDEN";
+            /**
+             * Format: date-time
+             * @description Waiting: when it’s published at the latest
+             */
+            revealAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ReviewRequest: {
+            bookingRef: string;
+            overall: number;
+            communication: number;
+            pickupReturn: number;
+            /** @description Guest → Host: the car’s cleanliness and condition */
+            cleanliness?: number;
+            /** @description Host → Guest: care of the car and behaviour */
+            care?: number;
+            body?: string;
+        };
+        MyReviews: {
+            toWrite: components["schemas"]["ReviewToWrite"][];
+            written: components["schemas"]["Review"][];
+            /** @description Published reviews about you */
+            received: components["schemas"]["Review"][];
+        };
+        ReviewToWrite: {
+            bookingRef: string;
+            /**
+             * @description You review the other side
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST";
+            otherParty: {
+                firstName: string;
+                avatarUrl?: string;
+            };
+            vehicleTitle: string;
+            /** Format: date-time */
+            end: string;
+            /**
+             * Format: date-time
+             * @description The last moment to write it
+             */
+            closesAt: string;
+        };
+        UserReviews: {
+            profile: components["schemas"]["PublicProfile"];
+            reviews: components["schemas"]["Review"][];
+        };
+        PublicProfile: {
+            id: string;
+            firstName: string;
+            avatarUrl?: string;
+            joinedYear: number;
+            verified: boolean;
+            asGuest: {
+                rating: {
+                    avg: number;
+                    count: number;
+                };
+                tripCount: number;
+            };
+            asHost?: {
+                rating: {
+                    avg: number;
+                    count: number;
+                };
+                tripCount: number;
+                responseRate?: number;
+                bio?: string;
+            };
+        };
+        UserProfileResponse: {
+            profile: components["schemas"]["PublicProfile"];
+        };
+        ModerationReviews: {
+            reviews: components["schemas"]["ModerationReview"][];
+        };
+        ModerationReview: {
+            id: string;
+            bookingRef: string;
+            /** @enum {string} */
+            direction: "GUEST_TO_HOST" | "HOST_TO_GUEST";
+            author: {
+                id: string;
+                firstName: string;
+                avatarUrl?: string;
+            };
+            subject: {
+                id: string;
+                firstName: string;
+            };
+            vehicleTitle: string;
+            overall: number;
+            communication?: number;
+            pickupReturn?: number;
+            cleanliness?: number;
+            care?: number;
+            body?: string;
+            /** @enum {string} */
+            status: "AWAITING_REVEAL" | "PUBLISHED" | "HIDDEN";
+            /**
+             * @description The author’s and staff’s view only
+             * @enum {string}
+             */
+            moderation?: "CLEAR" | "HELD" | "HIDDEN";
+            /**
+             * Format: date-time
+             * @description Waiting: when it’s published at the latest
+             */
+            revealAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Why it was held or hidden, or the moderator’s note when it was cleared */
+            moderationReason: string;
+        };
+        ModerateReviewRequest: {
+            /** @enum {string} */
+            action: "CLEAR" | "HIDE";
+            reason: string;
+        };
+        IncidentResponse: {
+            incident: components["schemas"]["Incident"];
+        };
+        Incident: {
+            caseRef: string;
+            bookingRef: string;
+            vehicleTitle: string;
+            /** @enum {string} */
+            type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+            /** @enum {string} */
+            status: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            /** @enum {string} */
+            reportedBy: "GUEST" | "HOST" | "SUPPORT";
+            /**
+             * @description How the viewer sees the case
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST" | "STAFF";
+            /** @description Guest and Host only: support is waiting for the viewer’s answer (the case awaits a response, and support asked them, not only the other party) */
+            awaitingYou?: boolean;
+            /** @description Staff only: the support member handling it */
+            assignedTo?: string;
+            /** @description Staff only: their user id */
+            assignedToId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            description: string;
+            /** @description Oldest first; only those the viewer may see */
+            events: components["schemas"]["IncidentEvent"][];
+            canReply: boolean;
+            /** @description Guest and Host only: whether the viewer’s next update is shared with the other party. It is when the other party sees the case, unless support’s latest update to the viewer was for them alone (such as a question asked only them): the answer stays between the viewer and support */
+            sharedWithOtherParty?: boolean;
+            /**
+             * @description Staff only: who sees the case now: BOTH parties, only the GUEST or the HOST, or INTERNAL to the team. An update goes to them unless staff choose otherwise
+             * @enum {string}
+             */
+            audience?: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
+            /** @description Staff only: the statuses the case can move to now. A resolved case can be reopened; a closed one is final */
+            nextStatuses?: ("OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED")[];
+            /** @description Staff only: the protection plan the Guest booked, when they took one */
+            protectionPlan?: {
+                name: string;
+                excessCents: number;
+            };
+            /** @description Staff only, on a damage, accident or theft case under a protection plan: how much more the case can charge the Guest, so its charges stay within the plan’s excess (plan §3) */
+            chargeLimitCents?: number;
+            /** @description Charges added to the booking from this case */
+            extraCharges: {
+                /** @enum {string} */
+                type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+                description: string;
+                amountCents: number;
+                /** @enum {string} */
+                status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            }[];
+        };
+        IncidentEvent: {
+            id: string;
+            /** @description OPENED, COMMENT, STATUS, ASSIGNED, UNASSIGNED, CHARGE_ADDED, CHARGE_CANCELLED, CHARGE_REFUNDED */
+            action: string;
+            /** @enum {string} */
+            by: "YOU" | "GUEST" | "HOST" | "SUPPORT";
+            byName: string;
+            note?: string;
+            attachments: components["schemas"]["Attachment"][];
+            /** @enum {string} */
+            visibility: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
+            /** @enum {string} */
+            status?: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            /** @description Staff only, on an ASSIGNED event that handed the case to someone else: who */
+            assignedTo?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NewIncidentRequest: {
+            bookingRef: string;
+            /** @enum {string} */
+            type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+            /** @description Needed unless fromCheckOutDamage is set, when the flagged damage describes it */
+            description?: string;
+            /**
+             * @description Photos and documents, uploaded first with purpose INCIDENT_FILE
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
+            /** @description DAMAGE only: opens the case with the new damage flagged on the check-out record that no other case has yet. Its notes go into the description and its photos into the evidence. 409 NO_NEW_DAMAGE when there is none. */
+            fromCheckOutDamage?: boolean;
+        };
+        Incidents: {
+            incidents: components["schemas"]["IncidentSummary"][];
+        };
+        IncidentSummary: {
+            caseRef: string;
+            bookingRef: string;
+            vehicleTitle: string;
+            /** @enum {string} */
+            type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+            /** @enum {string} */
+            status: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            /** @enum {string} */
+            reportedBy: "GUEST" | "HOST" | "SUPPORT";
+            /**
+             * @description How the viewer sees the case
+             * @enum {string}
+             */
+            role: "GUEST" | "HOST" | "STAFF";
+            /** @description Guest and Host only: support is waiting for the viewer’s answer (the case awaits a response, and support asked them, not only the other party) */
+            awaitingYou?: boolean;
+            /** @description Staff only: the support member handling it */
+            assignedTo?: string;
+            /** @description Staff only: their user id */
+            assignedToId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        IncidentReplyRequest: {
+            /** @default  */
+            note: string;
+            /** @default [] */
+            attachments: components["schemas"]["AttachmentInput"][];
+        };
+        StaffIncidents: {
+            incidents: components["schemas"]["IncidentSummary"][];
+            total: number;
+            page: number;
+        };
+        StaffNewIncidentRequest: {
+            bookingRef: string;
+            /** @enum {string} */
+            type: "DAMAGE" | "ACCIDENT" | "THEFT" | "BREAKDOWN" | "CLEANING" | "FUEL" | "LATE_RETURN" | "NO_SHOW" | "TOLL" | "FINE" | "DISPUTE" | "OTHER";
+            description: string;
+            /**
+             * @description Photos and documents, uploaded first with purpose INCIDENT_FILE
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
+            /**
+             * @description Who sees the case: BOTH parties, only the GUEST or the HOST it’s about, or INTERNAL to support staff until an update is shared with a party
+             * @default BOTH
+             * @enum {string}
+             */
+            visibility: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
+        };
+        IncidentAssignees: {
+            assignees: {
+                id: string;
+                name: string;
+                /** @description The signed-in staff member */
+                you: boolean;
+            }[];
+        };
+        StaffIncidentUpdateRequest: {
+            /** @default  */
+            note: string;
+            /** @default [] */
+            attachments: components["schemas"]["AttachmentInput"][];
+            /**
+             * @description BOTH parties, only the GUEST or HOST, or INTERNAL to support staff. Without it, whoever already sees the case (the case’s `audience`). Taking the case with nothing else (assignToMe alone) is always INTERNAL, and nobody is told
+             * @enum {string}
+             */
+            visibility?: "BOTH" | "GUEST" | "HOST" | "INTERNAL";
+            /** @enum {string} */
+            status?: "OPEN" | "INVESTIGATING" | "AWAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+            assignToMe?: boolean;
+        };
+        IncidentAssigneeRequest: {
+            /** @description An active support member or the admin (from GET /admin/incidents/assignees); null for nobody */
+            userId: string | null;
+        };
+        IncidentChargeRequest: {
+            /** @enum {string} */
+            type: "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+            description: string;
+            /** @description On a damage, accident or theft case under a protection plan, the case’s charges together stay within the plan’s excess (`chargeLimitCents`; 409 OVER_EXCESS above it); on any other case, its DAMAGE charges do */
+            amountCents: number;
+            /** @description A new value (such as a UUID) for each charge the form submits: the same one sent again adds no second charge */
+            idempotencyKey?: string;
+        };
+        AdminDashboard: {
+            from: string;
+            to: string;
+            figures: {
+                totalUsers: number;
+                activeHosts: number;
+                activeVehicles: number;
+                upcomingBookings: number;
+                /** @description Paid for trips starting in the range, extra charges paid and cancellation fees kept in it, less the refunds of that money (the report’s money.bookingRevenueCents) */
+                bookingRevenueCents: number;
+                /** @description Service fees and commission on trips starting in the range, the platform’s share of cancellation fees kept and the commission on extra charges (the report’s fees.totalCents) */
+                platformFeesCents: number;
+                /** @description Paid to Hosts in the range */
+                hostPayoutsCents: number;
+                cancellations: number;
+                /** @description Opened in the range */
+                incidentCases: number;
+                openIncidentCases: number;
+                pendingVerifications: number;
+                suspendedUsers: number;
+                suspendedVehicles: number;
+            };
+            queues: {
+                hostApplications: number;
+                listingReviews: number;
+                verifications: number;
+                incidents: number;
+                supportTickets: number;
+                reports: number;
+                heldReviews: number;
+                riskFlags: number;
+                /** @description Payments that didn’t go through in the last 30 NZ days, today included: GET /admin/payments?view=failed with `from` 29 days before today */
+                failedPayments: number;
+                /** @description Payouts on hold: GET /admin/payouts?status=HELD */
+                heldPayouts: number;
+                /** @description Payouts whose transfer failed: GET /admin/payouts?status=FAILED */
+                failedPayouts: number;
+                failedJobs: number;
+            };
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        AdminUsers: {
+            users: components["schemas"]["AdminUserRow"][];
+            total: number;
+            page: number;
+        };
+        AdminUserRow: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string;
+            roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED";
+            closed: boolean;
+            /** @enum {string} */
+            identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @enum {string|null} */
+            hostStatus: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+            openRiskFlags: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminUserResponse: {
+            user: components["schemas"]["AdminUserDetail"];
+        };
+        AdminUserDetail: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string;
+            roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED";
+            closed: boolean;
+            /** @enum {string} */
+            identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @enum {string|null} */
+            hostStatus: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+            openRiskFlags: number;
+            /** Format: date-time */
+            createdAt: string;
+            suspendedReason?: string;
+            emailVerified: boolean;
+            /** @description Emails to the address bounced, or Resend won't send to it (plan §7). Cleared by the next delivery. */
+            emailProblem?: {
+                /** @enum {string} */
+                kind: "BOUNCED" | "SUPPRESSED";
+                detail?: string;
+                /** Format: date-time */
+                at: string;
+            };
+            phoneVerified: boolean;
+            permissions: string[];
+            /** Format: date-time */
+            lastLoginAt?: string;
+            licence: {
+                class: string;
+                country: string;
+                numberEnding: string;
+                expiry: string;
+                status: string;
+                version?: string;
+                issuedAt?: string;
+                /** @description Overseas: false when it isn’t in English */
+                inEnglish?: boolean;
+                englishProof?: string;
+            } | null;
+            /** @description Their date of birth, to compare with the licence */
+            dob?: string;
+            /** @description The ID used in the identity check: a driver licence’s number compared with the licence on the account now, and the date of birth compared when it was checked */
+            identityDocument?: {
+                /** @description driving_license, passport or id_card */
+                type?: string;
+                licenceNumberMatched?: boolean;
+                dobMatched?: boolean;
+            };
+            host: {
+                /** @enum {string} */
+                status: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                payoutsEnabled: boolean;
+                feesOwedCents: number;
+                tripCount: number;
+                rating: {
+                    avg: number;
+                    count: number;
+                };
+                vehicles: number;
+            } | null;
+            riskFlags: components["schemas"]["RiskFlag"][];
+            /** @description As Guest and as Host, newest first */
+            bookings: components["schemas"]["AdminBookingRow"][];
+            /** @description Confirmed or pending trips still to come: what a suspension affects */
+            upcomingBookings: components["schemas"]["AdminBookingRow"][];
+        };
+        RiskFlag: {
+            id: string;
+            code: string;
+            detail?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            clearedAt?: string;
+        };
+        SuspendRequest: {
+            reason: string;
+        };
+        WaiveFeeRequest: {
+            /** @description Leave out to waive everything owed */
+            amountCents?: number;
+            reason: string;
+        };
+        StaffPermissionsRequest: {
+            refunds: boolean;
+        };
+        RiskQueue: {
+            users: components["schemas"]["RiskUser"][];
+            /** @description People with a flag to review */
+            total: number;
+            page: number;
+            /** @description Set when there are more */
+            nextPage?: number;
+        };
+        RiskUser: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string;
+            roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED";
+            closed: boolean;
+            /** @enum {string} */
+            identityStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+            /** @enum {string|null} */
+            hostStatus: "APPLIED" | "APPROVED" | "REJECTED" | "SUSPENDED" | null;
+            openRiskFlags: number;
+            /** Format: date-time */
+            createdAt: string;
+            flags: components["schemas"]["RiskFlag"][];
+        };
+        AdminUserUpdateRequest: {
+            firstName?: string;
+            lastName?: string;
+            /**
+             * Format: date
+             * @description Their date of birth, an NZ calendar date
+             */
+            dob?: string;
+            /** @description Marked unverified, and a link to confirm it is emailed to the new address */
+            email?: string;
+            /** @description Why, e.g. the privacy request’s reference and what was checked */
+            reason: string;
+        };
+        AdminBookings: {
+            bookings: components["schemas"]["AdminBookingRow"][];
+            total: number;
+            page: number;
+        };
+        AdminStatusEditRequest: {
+            /**
+             * @description ACTIVE: the trip started without a check-in in the app. COMPLETED: mark it completed.
+             * @enum {string}
+             */
+            to: "ACTIVE" | "COMPLETED";
+            reason: string;
+        };
+        AdminRefundRequest: {
+            /** @description One of the booking’s payments to refund, e.g. an extra charge (plan §8.1, item 11). Leave out for the booking’s own payment. */
+            paymentId?: string;
+            amountCents: number;
+            reason: string;
+            /**
+             * @description PLATFORM: a goodwill refund. HOST: rental the Host would otherwise get (plan §8.1, item 15): up to hostFunding.maxCents, and the Host pays back their share of it (the platform covers its commission).
+             * @enum {string}
+             */
+            fundedBy: "PLATFORM" | "HOST";
+            /**
+             * @description A Host-funded refund once the trip’s payout was sent: take it off the Host’s next payout (the default), or reverse the Stripe transfer. If Stripe refuses the reversal, it comes off the next payout.
+             * @enum {string}
+             */
+            recoverFrom?: "NEXT_PAYOUT" | "REVERSE_TRANSFER";
+        };
+        AdminVehicleSuspension: {
+            vehicle: {
+                id: string;
+                title: string;
+                /** @enum {string} */
+                status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            };
+            upcomingBookings: components["schemas"]["AdminBookingRow"][];
+        };
+        AdminPayments: {
+            payments: components["schemas"]["AdminPayment"][];
+            total: number;
+            page: number;
+        };
+        AdminPayouts: {
+            payouts: components["schemas"]["AdminPayout"][];
+            total: number;
+            page: number;
+        };
+        AdminRefunds: {
+            refunds: components["schemas"]["AdminRefundRow"][];
+            total: number;
+            page: number;
+        };
+        AdminRefundRow: {
+            id: string;
+            paymentId: string;
+            /** @enum {string} */
+            paymentType: "BOOKING" | "EXTRA_CHARGE";
+            bookingRef: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            amountCents: number;
+            reason: string;
+            /**
+             * @description A cancellation’s own refund, a payment that arrived after its booking ended, or one staff issued. Older refunds have none.
+             * @enum {string}
+             */
+            kind?: "CANCELLATION" | "LATE_PAYMENT" | "STAFF";
+            /** @enum {string} */
+            fundedBy: "PLATFORM" | "HOST";
+            /** @description A Host-funded refund: the Host’s share of it, which they pay back (plan §8.1, item 15). Rento Vroom covers the rest, its commission. Older Host-funded refunds have none: the Host paid all of them. */
+            hostCents?: number;
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED";
+            failureReason?: string;
+            /** @description Staff refunds */
+            issuedBy?: {
+                id: string;
+                name: string;
+            };
+            /** @description A Host-funded refund: how it has been recovered from the Host (plan §8.1, item 15) */
+            hostRecovery?: {
+                /** @description Taken off the Host’s payouts */
+                deductedCents: number;
+                /** @description Taken back from a paid payout’s Stripe transfer */
+                reversedCents: number;
+                /** @description Still owed: comes off the Host’s next payout */
+                owedCents: number;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminExtraCharges: {
+            charges: components["schemas"]["AdminExtraChargeRow"][];
+            total: number;
+            page: number;
+        };
+        AdminExtraChargeRow: {
+            id: string;
+            bookingRef: string;
+            guest: {
+                id: string;
+                name: string;
+            };
+            /** @enum {string} */
+            type: "EXTRA_KM" | "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
+            description: string;
+            amountCents: number;
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+            /**
+             * @description Its payment, once the saved card has been tried
+             * @enum {string}
+             */
+            paymentStatus?: "PENDING" | "AUTHORISED" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED";
+            /** @description Why the last try failed */
+            failureReason?: string;
+            /** @description Tries on the saved card so far, while their record is kept (30 days) */
+            attempts?: number;
+            /**
+             * Format: date-time
+             * @description When the saved card is tried again
+             */
+            nextTryAt?: string;
+            /** @description The case it was charged from */
+            incidentRef?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminPayoutResponse: {
+            payout: components["schemas"]["AdminPayout"];
+        };
+        HoldPayoutRequest: {
+            reason: string;
+        };
+        StaffTickets: {
+            tickets: components["schemas"]["StaffTicketRow"][];
+            total: number;
+            page: number;
+        };
+        StaffTicketRow: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /** @enum {string} */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            from: {
+                name: string;
+                email: string;
+                userId?: string;
+            };
+            bookingRef?: string;
+            /** @description The name of the staff member handling it */
+            assignedTo?: string;
+            /** @description Their user id */
+            assignedToId?: string;
+            messages: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StaffTicketResponse: {
+            ticket: components["schemas"]["StaffTicket"];
+        };
+        StaffTicket: {
+            ref: string;
+            subject: string;
+            /** @enum {string} */
+            category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "HOSTING" | "SAFETY" | "PRIVACY" | "OTHER";
+            /** @enum {string} */
+            status: "OPEN" | "PENDING" | "RESOLVED";
+            from: {
+                name: string;
+                email: string;
+                userId?: string;
+            };
+            bookingRef?: string;
+            /** @description The name of the staff member handling it */
+            assignedTo?: string;
+            /** @description Their user id */
+            assignedToId?: string;
+            messages: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            thread: {
+                id: string;
+                /** @enum {string} */
+                from: "USER" | "STAFF";
+                authorName: string;
+                body: string;
+                attachments: components["schemas"]["Attachment"][];
+                internal: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        StaffTicketReplyRequest: {
+            body: string;
+            /**
+             * @description A note for the team only
+             * @default false
+             */
+            internal: boolean;
+            /**
+             * @description Defaults to PENDING after a reply
+             * @enum {string}
+             */
+            status?: "OPEN" | "PENDING" | "RESOLVED";
+            /**
+             * @description Photos and PDFs uploaded first with purpose SUPPORT_FILE. A reply has them only when the sender has an account to see them in (400 otherwise); a note always can
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInput"][];
+        };
+        TicketUpdateRequest: {
+            /** @enum {string} */
+            status?: "OPEN" | "PENDING" | "RESOLVED";
+            assignToMe?: boolean;
+            /** @description Hand the ticket to an active support member or the admin (from GET /admin/incidents/assignees), or null for nobody. 409 NOT_STAFF for anyone else, OWN_RECORD for someone the ticket is about */
+            assignTo?: string | null;
+        };
+        AdminReports: {
+            reports: components["schemas"]["AdminReport"][];
+        };
+        AdminReport: {
+            id: string;
+            /** @enum {string} */
+            targetType: "USER" | "MESSAGE" | "REVIEW" | "VEHICLE";
+            targetId: string;
+            reason: string;
+            note?: string;
+            /** @enum {string} */
+            status: "OPEN" | "ACTIONED" | "DISMISSED";
+            reporter: {
+                id: string;
+                name: string;
+            };
+            subject?: {
+                id: string;
+                name: string;
+            };
+            /** @description What was reported: the message, review or listing */
+            preview: string;
+            /** @description A reported message’s booking, or the booking a member was reported from, to open its thread */
+            bookingRef?: string;
+            review?: components["schemas"]["ModerationReview"];
+            /** @description A reported message support removed: when, and why */
+            messageRemoved?: {
+                /** Format: date-time */
+                at: string;
+                reason?: string;
+            };
+            resolution?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminReportResponse: {
+            report: components["schemas"]["AdminReport"];
+        };
+        ResolveReportRequest: {
+            /** @enum {string} */
+            status: "ACTIONED" | "DISMISSED";
+            resolution: string;
+        };
+        RemovedMessageResponse: {
+            id: string;
+            /** @enum {boolean} */
+            removed: true;
+        };
+        RemoveMessageRequest: {
+            reason: string;
+        };
+        AdminFeaturedVehicles: {
+            vehicleIds: string[];
+            vehicles: components["schemas"]["AdminVehicleChoice"][];
+        };
+        AdminVehicleChoice: {
+            id: string;
+            title: string;
+            city?: string;
+            /** @enum {string} */
+            status: "DRAFT" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "REJECTED" | "ACTIVE" | "INACTIVE" | "SUSPENDED";
+            /** @description In search now: a featured car that isn’t is left off the homepage */
+            live: boolean;
+        };
+        FeaturedVehiclesInput: {
+            vehicleIds: string[];
+        };
+        AdminVehicleChoices: {
+            vehicles: components["schemas"]["AdminVehicleChoice"][];
+        };
+        AdminHomeHero: {
+            hero: components["schemas"]["HomeHero"];
+            /** @description False while the homepage shows its original text */
+            saved: boolean;
+        };
+        AdminFeaturedReviews: {
+            reviewIds: string[];
+            reviews: components["schemas"]["AdminReviewChoice"][];
+            /** @description Published reviews needed before the homepage shows any (settings) */
+            homepageThreshold: number;
+            publishedCount: number;
+        };
+        AdminReviewChoice: {
+            id: string;
+            /** @description The Guest’s first name, as the homepage shows it */
+            authorName: string;
+            overall: number;
+            body: string;
+            vehicleTitle: string;
+            city?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Published and not hidden: a picked review that isn’t is left off the homepage */
+            shown: boolean;
+        };
+        FeaturedReviewsInput: {
+            reviewIds: string[];
+        };
+        AdminReviewChoices: {
+            reviews: components["schemas"]["AdminReviewChoice"][];
+        };
+        AdminSiteFooter: {
+            footer: components["schemas"]["SiteFooter"];
+            /** @description False while the footer shows its original links */
+            saved: boolean;
+        };
+        AdminLegalPages: {
+            pages: components["schemas"]["LegalPage"][];
+        };
+        AdminLegalPageResponse: {
+            page: components["schemas"]["LegalPage"];
+        };
+        LegalPageEdit: {
+            title: string;
+            markdown: string;
+        };
+        AdminDestinations: {
+            destinations: components["schemas"]["AdminDestination"][];
+        };
+        AdminDestination: {
+            slug: string;
+            city: string;
+            maoriName?: string;
+            region: string;
+            tagline?: string;
+            intro: string;
+            heroImage?: string;
+            lat: number;
+            lng: number;
+            airports: string[];
+            featured: boolean;
+            order: number;
+            /** @description False: off the homepage, a 404 page and out of the sitemap */
+            published: boolean;
+        };
+        AdminDestinationResponse: {
+            destination: components["schemas"]["AdminDestination"];
+        };
+        DestinationCreate: {
+            /** @description The page’s address, /rental/{slug}. It can’t change later. */
+            slug: string;
+            city: string;
+            /** @description The te reo Māori name; empty removes it */
+            maoriName?: string;
+            /** @enum {string} */
+            region: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+            /** @description Empty removes it */
+            tagline?: string;
+            intro: string;
+            /** @description The picture’s address; empty removes it */
+            heroImage?: string;
+            lat: number;
+            lng: number;
+            /**
+             * @description IATA codes of airports in the place list
+             * @default []
+             */
+            airports: string[];
+            /** @default false */
+            featured: boolean;
+            /** @default 0 */
+            order: number;
+            /** @default true */
+            published: boolean;
+        };
+        DestinationEdit: {
+            city?: string;
+            /** @description The te reo Māori name; empty removes it */
+            maoriName?: string;
+            /** @enum {string} */
+            region?: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
+            /** @description Empty removes it */
+            tagline?: string;
+            intro?: string;
+            /** @description The picture’s address; empty removes it */
+            heroImage?: string;
+            lat?: number;
+            lng?: number;
+            /** @description IATA codes of airports in the place list */
+            airports?: string[];
+            featured?: boolean;
+            order?: number;
+            /** @description False: off the homepage, a 404 page and out of the sitemap */
+            published?: boolean;
+        };
+        AdminFaqs: {
+            faqs: components["schemas"]["AdminFaq"][];
+        };
+        AdminFaq: {
+            id: string;
+            question: string;
+            answer: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            showOnHome: boolean;
+            order: number;
+        };
+        AdminFaqResponse: {
+            faq: components["schemas"]["AdminFaq"];
+        };
+        FaqInput: {
+            question: string;
+            answer: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @default false */
+            showOnHome: boolean;
+            /** @default 0 */
+            order: number;
+        };
+        AdminHelpArticles: {
+            articles: components["schemas"]["AdminHelpArticle"][];
+        };
+        AdminHelpArticle: {
+            id: string;
+            slug: string;
+            title: string;
+            body: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            published: boolean;
+            order: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminHelpArticleResponse: {
+            article: components["schemas"]["AdminHelpArticle"];
+        };
+        HelpArticleInput: {
+            slug: string;
+            title: string;
+            body: string;
+            category: string;
+            /** @enum {string} */
+            audience: "GUEST" | "HOST" | "ALL";
+            /** @default true */
+            published: boolean;
+            /** @default 0 */
+            order: number;
+        };
+        PlatformReportResponse: {
+            report: components["schemas"]["PlatformReport"];
+        };
+        PlatformReport: {
+            from: string;
+            to: string;
+            bookings: {
+                created: number;
+                confirmed: number;
+                completed: number;
+                cancelled: number;
+                byStatus: {
+                    [key: string]: number;
+                };
+            };
+            money: {
+                /** @description Paid for trips starting in the range, GST included */
+                grossBookingsCents: number;
+                /** @description Trips, extra charges and cancellation fees kept, less the refunds of that money (gst.givenBack’s refunds): the overview’s booking revenue */
+                bookingRevenueCents: number;
+                /** @description Sent to Guests in the range */
+                refundsCents: number;
+                /** @description Service fees and commission, the platform’s share of cancellation fees kept and the commission on extra charges (fees.totalCents) */
+                platformFeesCents: number;
+                hostPayoutsPaidCents: number;
+                /** @description Paid in the range, GST included */
+                extraChargesCents: number;
+                cancellationFeesKeptCents: number;
+                /** @description Net of refunds (gst.collectedCents) */
+                gstCollectedCents: number;
+                gstOnPlatformFeesCents: number;
+            };
+            fees: {
+                /** @description On trips starting in the range */
+                serviceFeesCents: number;
+                /** @description On trips starting in the range */
+                hostCommissionCents: number;
+                /** @description The platform’s share of the fees kept from bookings cancelled in the range */
+                cancellationFeesShareCents: number;
+                /** @description On extra charges paid in the range */
+                extraChargeCommissionCents: number;
+                totalCents: number;
+            };
+            gst: {
+                /** @description From settings (plan §5: 15 %, provisional) */
+                ratePct: number;
+                inTripsCents: number;
+                inExtraChargesCents: number;
+                /** @description In the fees kept from bookings cancelled in the range */
+                inCancellationFeesCents: number;
+                /** @description In refunds sent in the range of money counted here. A cancellation’s own refund is already left out of the fee kept. */
+                givenBackCents: number;
+                /** @description Trips, extra charges and fees kept, less refunds */
+                collectedCents: number;
+                onPlatformFeesCents: number;
+            };
+        };
+        AuditLog: {
+            entries: components["schemas"]["AuditEntry"][];
+            total: number;
+            page: number;
+        };
+        AuditEntry: {
+            id: string;
+            actor?: {
+                id: string;
+                name: string;
+            };
+            action: string;
+            entity: string;
+            entityId?: string;
+            before?: unknown;
+            after?: unknown;
+            ip?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminJobs: {
+            jobs: components["schemas"]["AdminJob"][];
+            total: number;
+            page: number;
+        };
+        AdminJob: {
+            id: string;
+            type: string;
+            status: string;
+            attempts: number;
+            maxAttempts: number;
+            lastError?: string;
+            refId?: string;
+            /** Format: date-time */
+            runAt: string;
+            /** Format: date-time */
+            finishedAt?: string;
+        };
+        AdminJobRetryResponse: {
+            job: {
+                id: string;
+                status: string;
+            };
         };
     };
     responses: never;

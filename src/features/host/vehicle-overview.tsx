@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
+import { formatDateValue } from '@/lib/dates';
 import { AngleIllustration } from './angle-illustrations';
 import { setVehicleActiveRequest, storeVehicle } from './host-api';
 import { HostPageHeader } from './host-nav';
@@ -24,7 +25,7 @@ const NEXT = [
   },
   {
     title: 'Set up payouts',
-    text: 'Payout setup is coming soon. Your car goes live once it’s approved and payouts are ready.',
+    text: 'Give our payment partner Stripe your bank details from Earnings. Your car goes live once it’s approved and payouts are ready.',
   },
   {
     title: 'Get your calendar ready',
@@ -65,6 +66,34 @@ function Submitted({ vehicle }: { vehicle: HostVehicle }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+/** The documents that show each expiry date, as the Host names them. */
+const PENDING_DATE_NAMES = { regoExpiry: 'registration', wofExpiry: 'WOF', cofExpiry: 'CoF' } as const;
+
+/**
+ * New expiry dates on an approved car (plan §3): each applies once our team has checked the document that
+ * shows it, and until then guests book within the date checked before.
+ */
+function PendingDates({ vehicle }: { vehicle: HostVehicle }) {
+  const pending = vehicle.pendingExpiries;
+  const dates = (Object.keys(PENDING_DATE_NAMES) as (keyof typeof PENDING_DATE_NAMES)[]).flatMap((key) => {
+    const next = pending?.[key];
+    return next ? [{ name: PENDING_DATE_NAMES[key], next, current: vehicle[key] }] : [];
+  });
+  if (dates.length === 0) return null;
+  return (
+    <Alert title="New expiry dates waiting for our check">
+      <ul className="grid gap-1">
+        {dates.map(({ name, next, current }) => (
+          <li key={name}>
+            {`The ${name} date ${formatDateValue(next)} applies once we’ve checked the new ${name} you upload.`}
+            {current && ` Until then, guests can book up to ${formatDateValue(current)}.`}
+          </li>
+        ))}
+      </ul>
+    </Alert>
   );
 }
 
@@ -119,14 +148,28 @@ function StatusNote({ vehicle }: { vehicle: HostVehicle }) {
     case 'INACTIVE':
       return (
         <div className="grid gap-3">
-          <Alert
-            variant={vehicle.status === 'ACTIVE' ? 'success' : 'info'}
-            title={vehicle.status === 'ACTIVE' ? 'Your car is live' : 'Hidden from search'}
-          >
-            {vehicle.status === 'ACTIVE'
-              ? 'Guests can find and book it. Price, rules and delivery changes apply at once.'
-              : 'Guests can’t find or book it until you show it again. Trips already booked go ahead.'}
-          </Alert>
+          {vehicle.waitingForPayouts && vehicle.status === 'ACTIVE' ? (
+            <Alert
+              title="Approved: set up payouts to go live"
+              action={
+                <Button asChild size="sm">
+                  <Link to="/host/earnings">Set up payouts</Link>
+                </Button>
+              }
+            >
+              Guests can’t find it yet. It goes live as soon as your payout setup is done, so we can pay you
+              after each trip.
+            </Alert>
+          ) : (
+            <Alert
+              variant={vehicle.status === 'ACTIVE' ? 'success' : 'info'}
+              title={vehicle.status === 'ACTIVE' ? 'Your car is live' : 'Hidden from search'}
+            >
+              {vehicle.status === 'ACTIVE'
+                ? 'Guests can find and book it. Price, rules and delivery changes apply at once.'
+                : 'Guests can’t find or book it until you show it again. Trips already booked go ahead.'}
+            </Alert>
+          )}
           {pending && (
             <Alert title="New photos or documents waiting for approval">
               Your listing shows the approved ones until our team has checked them.
@@ -164,9 +207,11 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
   return (
     <div className="grid gap-8">
       <HostPageHeader
-        back={<BackLink to="/host">Hosting</BackLink>}
+        back={<BackLink to="/host/vehicles">My vehicles</BackLink>}
         title={vehicleDisplayTitle(vehicle.title)}
-        titleAside={<VehicleStatusBadge status={vehicle.status} />}
+        titleAside={
+          <VehicleStatusBadge status={vehicle.status} waitingForPayouts={vehicle.waitingForPayouts} />
+        }
         actions={
           <>
             {!locked && (
@@ -204,13 +249,15 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
       ) : (
         <StatusNote vehicle={vehicle} />
       )}
+      <PendingDates vehicle={vehicle} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section aria-labelledby="listing-sections" className="grid content-start gap-3">
+      {/* grid-cols-1 here and below: truncated step summaries would otherwise widen a phone’s page. */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <section aria-labelledby="listing-sections" className="grid grid-cols-1 content-start gap-3">
           <h2 id="listing-sections" className="text-base font-semibold text-ink">
             Your listing
           </h2>
-          <ol className="grid gap-3">
+          <ol className="grid grid-cols-1 gap-3">
             {ONBOARDING_STEPS.map(({ step, title }) => {
               const missing = groups.get(step) ?? [];
               return (
@@ -268,7 +315,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
           )}
         </section>
 
-        <aside className="hidden lg:block" aria-hidden="true">
+        <aside className="hidden xl:block" aria-hidden="true">
           <div className="sticky top-24 aspect-4/3 overflow-hidden rounded-card border border-line bg-canvas shadow-card">
             {cover ? (
               <img src={cover} alt="" className="size-full object-cover" />

@@ -1,7 +1,8 @@
 /**
  * The JavaScript budget (plan §12.5): the gzipped JavaScript a visitor downloads on first load of
  * the homepage, which is the app's entry chunk plus the homepage route and everything they import.
- * Run after `npm run build`; the pipeline fails the build when it's over the limit.
+ * Run after `npm run build`, by hand: since 8 October 2026 it's no longer a step of the deploy pipeline (the
+ * owner's choice), so going over the limit only shows here.
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -26,7 +27,31 @@ const PLAN_BUDGET_KB = 170;
 // Raised from 183.3 on 7 October 2026 (183.05 → 183.31 KB locally, so about 183.46 KB in the pipeline) with
 // no new homepage code: the listing editor's unsaved-changes check uses React Router's useBlocker, whose
 // code joins the router in the entry chunk (about 0.2 KB), and the footer's links now animate the page change.
-const LIMIT_KB = 183.5;
+// Raised from 183.5 later on 7 October 2026 (183.31 → 184.11 KB locally, so about 184.26 KB in the pipeline)
+// with no new homepage code: the Guest dashboard adds eight routes (account, Saved cars, payments, a receipt,
+// help and support, a support request, the help centre and a guide), and each adds its entry to the router
+// with the chunks it preloads (0.7 KB measured with and without them). The same build without those routes
+// measures 183.4 KB.
+// Raised from 184.3 on 8 October 2026 (184.0 → 188.2 KB locally, so about 188.35 KB in the pipeline) with
+// no new homepage code: Phase 3 adds 38 routes (messages, the handover, earnings and the Host profile,
+// reviews, incidents, a pay link and 17 staff portal pages), each with its router entry and the chunks it
+// preloads. The same build with the previous router measures 184.0 KB. Loading the staff portal's routes
+// only on the way into /admin would take back about half of it.
+// Lowered from 188.4 later on 8 October 2026: the staff portal's routes now join the router on the way into
+// /admin (patchAdminRoutes in router.tsx), 188.2 → 186.0 KB locally. Phase 3's polish pass then added 0.5 KB
+// (186.5 KB locally, so about 186.65 KB in the pipeline): pickers inside dialogs open their lists in the dialog
+// (PopoverRootContext, 0.2 KB with the chunks it moved), the header keeps the wordmark on one line on phones,
+// and reviews can be reported (the review card's action slot).
+// Raised from 186.7 on 9 October 2026 (186.5 → 187.3 KB locally, so about 187.45 KB in the pipeline): admins
+// now edit the homepage's headline, footer links and destination tiles (plan §12.6), so the homepage reads them
+// from the API with the original copy as the fallback (0.42 KB, measured with and without those files); and the
+// Host calendar and member profile routes and the account menus' Reviews link add about 0.15 KB to the entry.
+// Raised from 187.5 later on 9 October 2026 (187.3 → 187.6 KB locally, so about 187.75 KB in the pipeline) with
+// no new homepage code: the Host dashboard's own frame on about 14 Host, Inbox and Reviews routes, the new
+// /host/vehicles route, conversations kept page by page (the live connection's message handling lives in the
+// entry) and the support, refunds and help routes' preload lists. The Host frame is kept apart from the Guest
+// navigation and the unread-count hook out of messages-api, which took back about 0.1 KB.
+const LIMIT_KB = 187.8;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

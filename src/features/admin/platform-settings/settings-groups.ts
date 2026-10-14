@@ -1,4 +1,5 @@
 import {
+  Archive,
   Banknote,
   Building2,
   CalendarX2,
@@ -17,6 +18,7 @@ import { formatNzdFromCents } from '@/lib/format';
 import { CancellationSection } from './cancellation-section';
 import { FeesSection, GstSection, SecurityDepositSection } from './money-sections';
 import { ProtectionSection } from './protection-section';
+import { RetentionAndRiskSection } from './retention-section';
 import {
   BookingRulesSection,
   CompanySection,
@@ -125,6 +127,14 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     summary: ({ verificationServices }) =>
       `Licence check ${onOff(verificationServices.nzLicenceCheck)}, plate lookup ${onOff(verificationServices.plateLookup)}`,
     Section: VerificationServicesSection,
+  },
+  {
+    key: 'retentionAndRisk',
+    label: 'Retention and risk',
+    icon: Archive,
+    summary: ({ retention, risk }) =>
+      `Audit log kept ${plural(retention.auditLogYears, 'year')}, trip records ${plural(retention.tripRecordsYears, 'year')}, flagged after ${plural(risk.failedPaymentsPerDay, 'failed payment')} a day`,
+    Section: RetentionAndRiskSection,
   },
 ];
 

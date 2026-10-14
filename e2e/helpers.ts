@@ -1,4 +1,6 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
+
+const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
 
 /** The backend's SEED_DEMO_PASSWORD, for the demo accounts `npm run seed` creates. */
 export function demoPassword(): string {
@@ -31,6 +33,25 @@ export function nzDay(daysFromNow: number, time = '10:00'): string {
 export function tripQuery(): string {
   const offset = 21 + Math.floor(Math.random() * 50);
   return `start=${nzDay(offset)}&end=${nzDay(offset + 3)}`;
+}
+
+/**
+ * Trip dates the car is free for: random ones as `tripQuery` picks them, tried again while the API's quote
+ * says the car is taken then (a booking from an earlier run that stopped halfway, for instance).
+ */
+export async function freeTripQuery(request: APIRequestContext, slug: string): Promise<string> {
+  const { vehicle } = await (await request.get(`${API_URL}/api/v1/vehicles/${slug}`)).json();
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const query = tripQuery();
+    const dates = new URLSearchParams(query);
+    const { quote } = await (
+      await request.post(`${API_URL}/api/v1/vehicles/${vehicle.id}/quote`, {
+        data: { start: dates.get('start'), end: dates.get('end') },
+      })
+    ).json();
+    if (quote?.available) return query;
+  }
+  throw new Error(`No free dates found for ${slug} in 10 tries`);
 }
 
 /** Stripe's card fields live in its own iframe. A saved card from an earlier run needs nothing typed. */

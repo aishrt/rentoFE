@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminVehicle, CalendarBlock, HostCalendar, HostVehicle } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
+import { bookingRow } from '@/features/admin/bookings/test-fixtures';
 import { mockApi, renderWithRouter } from '@/test/utils';
 import { AdminVehicleReviewPage } from './vehicle-review-page';
 
@@ -32,6 +33,7 @@ const vehicle: HostVehicle = {
   slug: '2021-toyota-corolla-auckland',
   title: '2021 Toyota Corolla',
   status: 'UNDER_REVIEW',
+  waitingForPayouts: false,
   onboardingStep: 6,
   regoPlate: 'ABC123',
   vin: 'JTDBR32E720123456',
@@ -121,6 +123,7 @@ const host: AdminVehicle['host'] = {
   name: 'Mere Parata',
   email: 'mere@example.co.nz',
   status: 'APPROVED',
+  payoutsEnabled: true,
   emailVerified: true,
   phoneVerified: false,
 };
@@ -154,9 +157,18 @@ const calendarWith = (blocks: CalendarBlock[]): HostCalendar => ({
   rules: { minNoticeHours: 24, bufferHours: 3 },
 });
 
-const listing = (patch: Partial<HostVehicle> = {}, hostPatch: Partial<AdminVehicle['host']> = {}) => ({
+const listing = (
+  patch: Partial<HostVehicle> = {},
+  hostPatch: Partial<AdminVehicle['host']> = {},
+  extra: Partial<Pick<AdminVehicle, 'keyChanges' | 'upcomingBookings'>> = {},
+) => ({
   status: 200,
-  body: { vehicle: { ...vehicle, ...patch }, host: { ...host, ...hostPatch } } satisfies AdminVehicle,
+  body: {
+    vehicle: { ...vehicle, ...patch },
+    host: { ...host, ...hostPatch },
+    keyChanges: [],
+    ...extra,
+  } satisfies AdminVehicle,
 });
 
 const baseHandlers = {
@@ -185,7 +197,7 @@ describe('AdminVehicleReviewPage: what staff see', () => {
     expect(details.getByText('The Host')).toBeInTheDocument();
 
     const compliance = await section('Registration and WOF');
-    expect(compliance.getByText('31/03/2099')).toBeInTheDocument();
+    expect(compliance.getByText('31 Mar 2099')).toBeInTheDocument();
     expect(compliance.getByText('Expired')).toBeInTheDocument();
 
     const pricing = await section('Pricing and trip rules');
@@ -228,7 +240,7 @@ describe('AdminVehicleReviewPage: what staff see', () => {
 
     const documents = await section('Documents');
     const rego = within(documents.getByRole('listitem', { name: 'Registration' }));
-    expect(rego.getByText('Expires 31/03/2099')).toBeInTheDocument();
+    expect(rego.getByText('Expires 31 Mar 2099')).toBeInTheDocument();
     const open = rego.getByRole('link', { name: 'Open the registration (new tab)' });
     expect(open).toHaveAttribute('href', 'https://files.test/rego?s=1');
     expect(open).toHaveAttribute('target', '_blank');
@@ -251,6 +263,45 @@ describe('AdminVehicleReviewPage: what staff see', () => {
     expect(approve).toBeDisabled();
     expect(approve).toHaveAccessibleDescription(/Approve the Host's application first/);
     expect(bar.getByRole('button', { name: 'Request changes' })).toBeEnabled();
+  });
+
+  it('compares the key details the Host changed on the live listing, from what they were to now', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing(
+        { regoPlate: 'QRS456', model: 'Yaris' },
+        {},
+        {
+          keyChanges: [
+            { field: 'regoPlate', before: 'ABC123', after: 'QRS456', changedAt: '2026-10-07T21:00:00.000Z' },
+            { field: 'model', before: 'Corolla', after: 'Yaris', changedAt: '2026-10-08T21:00:00.000Z' },
+            { field: 'chassisNo', after: 'NZE121-1234567', changedAt: '2026-10-08T21:00:00.000Z' },
+          ],
+        },
+      ),
+    });
+    render();
+
+    const changes = await section('Key details changed');
+    const rows = within(changes.getByRole('table')).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'Number plateABC123QRS456Thu, 8 Oct 2026',
+      'ModelCorollaYarisFri, 9 Oct 2026',
+      'Chassis numberNot givenNZE121-1234567Fri, 9 Oct 2026',
+    ]);
+    expect(
+      within(screen.getByRole('navigation', { name: 'On this page' })).getByRole('link', {
+        name: /Key details changed/,
+      }),
+    ).toHaveAttribute('href', '#key-changes');
+  });
+
+  it('shows no key details section when nothing key changed', async () => {
+    mockApi(baseHandlers);
+    render();
+
+    expect(await screen.findByRole('heading', { level: 1, name: '2021 Toyota Corolla' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Key details changed' })).not.toBeInTheDocument();
   });
 
   it('says when the listing is missing', async () => {
@@ -348,6 +399,68 @@ describe('AdminVehicleReviewPage: photos and documents', () => {
   });
 });
 
+describe('AdminVehicleReviewPage: a car back for review', () => {
+  const reReview = (extra: Partial<HostVehicle> = {}) =>
+    listing(
+      { regoPlate: 'QRS456', ...extra },
+      {},
+      {
+        keyChanges: [
+          { field: 'regoPlate', before: 'ABC123', after: 'QRS456', changedAt: '2026-10-07T21:00:00.000Z' },
+        ],
+        upcomingBookings: [
+          bookingRow({ id: 'bk9', ref: 'RV-9P4L2C', guest: { id: 'u7', name: 'Sam Rewi' } }),
+          bookingRow({ id: 'bk8', ref: 'RV-8K3M1D', guest: { id: 'u8', name: 'Mere Tane' } }),
+        ],
+      },
+    );
+
+  it('lists its bookings, and warns that rejecting it leaves them booked', async () => {
+    mockApi({ ...baseHandlers, 'GET /admin/vehicles/v1': reReview() });
+    render();
+
+    const bookings = await section('Upcoming bookings');
+    expect(bookings.getByText(/Rejecting the listing doesn’t cancel them/)).toBeInTheDocument();
+    expect(bookings.getByRole('link', { name: 'RV-9P4L2C' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-9P4L2C',
+    );
+
+    await userEvent.click((await decisionBar()).getByRole('button', { name: 'Reject' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Reject this listing?' }));
+    expect(
+      dialog.getByText(/These 2 bookings stay booked: cancel them for the Host from each booking/),
+    ).toBeInTheDocument();
+  });
+
+  it('says what verifying a new registration does to the car’s date', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': reReview({
+        regoExpiry: '2026-12-31',
+        pendingExpiries: { regoExpiry: '2027-12-31' },
+        documents: [
+          {
+            id: 'd1',
+            type: 'REGO',
+            status: 'PENDING',
+            expiry: '2027-12-31',
+            link: 'https://files.test/rego?s=1',
+          },
+        ],
+      }),
+    });
+    render();
+
+    const documents = await section('Documents');
+    expect(
+      within(documents.getByRole('listitem', { name: 'Registration' })).getByText(
+        /The Host entered .* as the new date\. Verifying moves the car’s date to .*2027 \(now .*2026\)/,
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('AdminVehicleReviewPage: the decision', () => {
   it("shows why a listing can't be approved when the Host isn't approved after all", async () => {
     const fetchMock = mockApi({
@@ -395,6 +508,26 @@ describe('AdminVehicleReviewPage: the decision', () => {
     const bar = await decisionBar();
     expect(bar.getByRole('button', { name: 'Request changes' })).toBeDisabled();
     expect(bar.getByText(/A live listing can't be sent back/)).toBeInTheDocument();
+  });
+
+  it("says an approved listing waits for the Host's payout setup", async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing({}, { payoutsEnabled: false }),
+      'POST /admin/vehicles/v1/approve': {
+        status: 200,
+        body: { vehicle: { ...vehicle, status: 'ACTIVE', waitingForPayouts: true } },
+      },
+    });
+    render();
+
+    await userEvent.click((await decisionBar()).getByRole('button', { name: 'Approve listing' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve this listing?' }));
+    expect(dialog.getByText(/goes live in search once the Host has set up payouts/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve listing' }));
+
+    expect(await screen.findByText(/It goes live once the Host has set up payouts/)).toBeInTheDocument();
+    expect(screen.getAllByText('Waiting for payout setup').length).toBeGreaterThan(0);
   });
 
   it('needs a note to request changes, then shows the listing as sent back', async () => {
@@ -567,5 +700,155 @@ describe('AdminVehicleReviewPage: calendar override', () => {
       'Some of those dates are booked or held for a guest.',
     );
     expect(sent).toEqual({ start: '2026-10-05T10:00', end: '2026-10-05T16:00' });
+  });
+});
+
+describe('AdminVehicleReviewPage: suspension', () => {
+  it('suspends a live car with a reason, then lists its upcoming bookings', async () => {
+    let sent: unknown;
+    let suspended = false;
+    const upcoming = bookingRow({ id: 'bk9', ref: 'RV-9P4L2C', guest: { id: 'u7', name: 'Sam Rewi' } });
+    const fetchMock = mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': () =>
+        listing(
+          {
+            status: suspended ? 'SUSPENDED' : 'ACTIVE',
+            reviewNotes: suspended ? 'Hail damage to the windscreen.' : undefined,
+          },
+          {},
+          suspended ? { upcomingBookings: [upcoming] } : {},
+        ),
+      'POST /admin/vehicles/v1/suspend': (init) => {
+        sent = JSON.parse(String(init?.body));
+        suspended = true;
+        return {
+          status: 200,
+          body: {
+            vehicle: { id: 'v1', title: '2021 Toyota Corolla', status: 'SUSPENDED' },
+            upcomingBookings: [upcoming],
+          },
+        };
+      },
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspend car' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Suspend this car?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Suspend car' }));
+    expect(await dialog.findByText('Add a short reason')).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await userEvent.type(dialog.getByLabelText('Why it’s suspended'), 'Hail damage to the windscreen.');
+    await userEvent.click(dialog.getByRole('button', { name: 'Suspend car' }));
+
+    expect(await screen.findByText('Car suspended')).toBeInTheDocument();
+    expect(sent).toEqual({ reason: 'Hail damage to the windscreen.' });
+    const bookings = await section('Upcoming bookings');
+    expect(
+      bookings.getByText(/Keep each one, or open it and cancel it as a platform cancellation/),
+    ).toBeInTheDocument();
+    expect(bookings.getByRole('link', { name: 'RV-9P4L2C' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-9P4L2C',
+    );
+    expect(bookings.getByText('Sam Rewi')).toBeInTheDocument();
+
+    // The listing reloads with its new status and the note the Host was sent, and the bookings stay.
+    expect(await screen.findByText('Hail damage to the windscreen.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Lift suspension' })).toBeInTheDocument();
+    const listingLoads = fetchMock.mock.calls.filter(([input]) =>
+      (input as Request).url.endsWith('/admin/vehicles/v1'),
+    );
+    expect(listingLoads.length).toBeGreaterThanOrEqual(2);
+    expect((await section('Upcoming bookings')).getByRole('link', { name: 'RV-9P4L2C' })).toBeInTheDocument();
+  });
+
+  it('lists a suspended car’s upcoming bookings whenever its page is opened', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing(
+        { status: 'SUSPENDED' },
+        {},
+        {
+          upcomingBookings: [
+            bookingRow({
+              id: 'bk1',
+              ref: 'RV-1A2B3C',
+              status: 'PENDING',
+              guest: { id: 'u7', name: 'Sam Rewi' },
+            }),
+            bookingRow({ id: 'bk2', ref: 'RV-4D5E6F', guest: { id: 'u8', name: 'Tama Hohaia' } }),
+          ],
+        },
+      ),
+    });
+    render();
+
+    const bookings = await section('Upcoming bookings');
+    expect(bookings.getAllByRole('link').map((link) => link.textContent)).toEqual(['RV-1A2B3C', 'RV-4D5E6F']);
+    expect(bookings.getByText('Requested')).toBeInTheDocument();
+    expect(bookings.getByText('Tama Hohaia')).toBeInTheDocument();
+    expect(bookings.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+  });
+
+  it("shows the API's reason when the car can't be suspended", async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': listing({ status: 'INACTIVE' }),
+      'POST /admin/vehicles/v1/suspend': {
+        status: 409,
+        body: {
+          error: { code: 'NOT_SUSPENDABLE', message: 'Only a live or deactivated car can be suspended.' },
+        },
+      },
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspend car' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Suspend this car?' }));
+    await userEvent.type(dialog.getByLabelText('Why it’s suspended'), 'Reported unsafe');
+    await userEvent.click(dialog.getByRole('button', { name: 'Suspend car' }));
+    expect(await dialog.findByRole('alert')).toHaveTextContent(
+      'Only a live or deactivated car can be suspended.',
+    );
+  });
+
+  it('lifts a suspension', async () => {
+    let lifted = false;
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': () =>
+        listing({ status: lifted ? 'ACTIVE' : 'SUSPENDED' }, {}, lifted ? {} : { upcomingBookings: [] }),
+      'POST /admin/vehicles/v1/unsuspend': () => {
+        lifted = true;
+        return {
+          status: 200,
+          body: {
+            vehicle: { id: 'v1', title: '2021 Toyota Corolla', status: 'ACTIVE' },
+            upcomingBookings: [],
+          },
+        };
+      },
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Lift suspension' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Lift the suspension?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Lift suspension' }));
+
+    expect(await screen.findByText('Suspension lifted')).toBeInTheDocument();
+    expect(screen.getByText('It’s back in search.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Suspend car' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Upcoming bookings' })).not.toBeInTheDocument();
+  });
+
+  it('offers no suspension for a listing still under review', async () => {
+    mockApi(baseHandlers);
+    render();
+
+    expect(await screen.findByRole('heading', { level: 1, name: '2021 Toyota Corolla' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suspend car' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Lift suspension' })).not.toBeInTheDocument();
   });
 });

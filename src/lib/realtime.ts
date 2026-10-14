@@ -7,6 +7,8 @@ const RETRY_AFTER_MS = 10_000;
 interface RealtimeOptions {
   /** Called when the connection comes back after a drop, so data that changed meanwhile is refetched. */
   onReconnect: () => void;
+  /** What to do with each live event the API sends, e.g. `message` or `notification`. */
+  events?: Record<string, (payload: unknown) => void>;
 }
 
 /**
@@ -14,7 +16,7 @@ interface RealtimeOptions {
  * socket.io-client is downloaded only here, once someone is signed in, so public pages never load
  * it (plan §12.5).
  */
-export function openRealtime({ onReconnect }: RealtimeOptions): () => void {
+export function openRealtime({ onReconnect, events = {} }: RealtimeOptions): () => void {
   let socket: Socket | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
@@ -28,6 +30,7 @@ export function openRealtime({ onReconnect }: RealtimeOptions): () => void {
         transports: ['websocket', 'polling'],
       });
       socket = connection;
+      for (const [event, handle] of Object.entries(events)) connection.on(event, handle);
 
       let connectedBefore = false;
       let renewed = false;
@@ -35,6 +38,13 @@ export function openRealtime({ onReconnect }: RealtimeOptions): () => void {
         if (connectedBefore) onReconnect();
         connectedBefore = true;
         renewed = false;
+      });
+
+      // The server closes a connection once its access token has expired, or its session has ended
+      // (signed out elsewhere, password changed). Socket.IO doesn't reconnect by itself after that:
+      // connecting again renews the cookie below, or stops there if the session has ended.
+      connection.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect' && !closed) connection.connect();
       });
 
       connection.on('connect_error', (error) => {

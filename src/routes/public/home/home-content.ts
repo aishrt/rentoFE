@@ -44,7 +44,10 @@ export interface Destination {
   tone: string;
 }
 
-/** The five launch destinations (MILESTONES.md, Phase 4). */
+/**
+ * The five launch destinations (MILESTONES.md, Phase 4): the homepage tiles while the ones admins chose load
+ * (destinations-section.tsx), and each launch city's tile colour.
+ */
 export const destinations: Destination[] = [
   {
     slug: 'queenstown',

@@ -3,11 +3,20 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { HostApplication } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmailAddress } from '@/features/admin/ops/email-address';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 import { applicantName, formatDateNz, waitingFor } from './listing-format';
 import { HostStatusBadge } from './review-badge';
 import { VerifiedMark } from './verified-mark';
+
+/** The Host's identity check (plan §9, Days 19–20), in words for the queue. */
+const IDENTITY_WORDS: Record<HostApplication['identityStatus'], string> = {
+  NONE: 'Not checked yet',
+  PENDING: 'In review',
+  APPROVED: 'Verified',
+  REJECTED: 'Didn’t pass',
+};
 
 function Detail({ term, children, className }: { term: string; children: ReactNode; className?: string }) {
   return (
@@ -78,16 +87,15 @@ export function HostApplicationCard({
         </div>
 
         <dl className="mt-5 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+          {/* In the text's flow, so a long address wraps before its "@" and the tick follows its last line. */}
           <Detail term="Email">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <a
-                href={`mailto:${application.email}`}
-                className="min-w-0 rounded-inner text-primary wrap-anywhere hover:underline"
-              >
-                {application.email}
-              </a>
-              <VerifiedMark verified={application.emailVerified} />
-            </span>
+            <a
+              href={`mailto:${application.email}`}
+              className="rounded-inner text-primary wrap-anywhere hover:underline"
+            >
+              <EmailAddress email={application.email} />
+            </a>{' '}
+            <VerifiedMark verified={application.emailVerified} />
           </Detail>
           <Detail term="Mobile">
             {application.phone ? (
@@ -99,6 +107,15 @@ export function HostApplicationCard({
               </span>
             ) : (
               <span className="text-muted">Not added</span>
+            )}
+          </Detail>
+          <Detail term="Identity">
+            <span className="flex items-center gap-1.5">
+              {IDENTITY_WORDS[application.identityStatus]}
+              {application.identityStatus === 'APPROVED' && <VerifiedMark verified />}
+            </span>
+            {application.identityRequired && application.identityStatus !== 'APPROVED' && (
+              <span className="mt-0.5 block text-xs text-muted">Needed before approval</span>
             )}
           </Detail>
           <Detail term="GST">

@@ -58,7 +58,23 @@ const vehicleTones: Record<VehicleStatus, Tone> = {
   SUSPENDED: 'refused',
 };
 
-export function VehicleStatusBadge({ status, className }: { status: VehicleStatus; className?: string }) {
+/** An approved car waiting for its Host's payout setup isn't live yet (plan §8.2), so it says so. */
+export function VehicleStatusBadge({
+  status,
+  waitingForPayouts = false,
+  className,
+}: {
+  status: VehicleStatus;
+  waitingForPayouts?: boolean;
+  className?: string;
+}) {
+  if (waitingForPayouts && status === 'ACTIVE') {
+    return (
+      <StatusBadge tone="waiting" className={className}>
+        Waiting for payout setup
+      </StatusBadge>
+    );
+  }
   return (
     <StatusBadge tone={vehicleTones[status]} className={className}>
       {VEHICLE_STATUS_LABELS[status]}

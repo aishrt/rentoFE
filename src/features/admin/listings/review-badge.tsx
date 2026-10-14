@@ -59,7 +59,17 @@ const vehicleTones: Record<VehicleStatus, ReviewTone> = {
   SUSPENDED: 'refused',
 };
 
-export function VehicleStatusBadge({ status }: { status: VehicleStatus }) {
+/** An approved listing out of search until its Host sets up payouts (plan §8.2) says so. */
+export function VehicleStatusBadge({
+  status,
+  waitingForPayouts = false,
+}: {
+  status: VehicleStatus;
+  waitingForPayouts?: boolean;
+}) {
+  if (waitingForPayouts && status === 'ACTIVE') {
+    return <ReviewBadge tone="waiting">Waiting for payout setup</ReviewBadge>;
+  }
   return <ReviewBadge tone={vehicleTones[status]}>{VEHICLE_STATUS_LABELS[status]}</ReviewBadge>;
 }
 

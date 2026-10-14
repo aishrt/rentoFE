@@ -12,9 +12,11 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
-import { useBookings, type BookingGroup } from '@/features/booking/booking-api';
+import { useBookingPages } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
+import { CurrentTrips } from '@/features/handover/current-trips';
 
 const TABS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -37,14 +39,16 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
   },
   cancelled: {
     title: 'Nothing cancelled',
-    description: 'Cancelled, declined and expired bookings would show here, with any refund.',
+    description: 'Cancelled, declined and expired bookings would show here. Open one to see any refund.',
   },
 };
 
 const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.value === value);
 
+/** One tab's trips, a page at a time, so a long history is all there. */
 function TripList({ group }: { group: Tab }) {
-  const trips = useBookings('guest', group as BookingGroup);
+  const trips = useBookingPages('guest', group);
+  const list = trips.data?.pages.flatMap((page) => page.bookings);
 
   if (trips.isError) {
     return (
@@ -62,8 +66,8 @@ function TripList({ group }: { group: Tab }) {
       </Alert>
     );
   }
-  if (!trips.data) return <BookingListSkeleton />;
-  if (trips.data.length === 0) {
+  if (!list) return <BookingListSkeleton />;
+  if (list.length === 0) {
     const empty = EMPTY[group];
     return (
       <EmptyState
@@ -87,13 +91,26 @@ function TripList({ group }: { group: Tab }) {
     );
   }
   return (
-    <ul className="grid gap-4">
-      {trips.data.map((trip, index) => (
-        <li key={trip.id} className="stagger-in" style={staggerIndex(index)}>
-          <BookingCard booking={trip} viewer="GUEST" to={`/trips/${trip.ref}`} />
-        </li>
-      ))}
-    </ul>
+    <div className="grid gap-6">
+      <ul className="grid gap-4">
+        {list.map((trip, index) => (
+          <li key={trip.id} className="stagger-in" style={staggerIndex(index % 100)}>
+            <BookingCard booking={trip} viewer="GUEST" to={`/trips/${trip.ref}`} />
+          </li>
+        ))}
+      </ul>
+      {trips.hasNextPage && (
+        <div>
+          <Button
+            variant="secondary"
+            loading={trips.isFetchingNextPage}
+            onClick={() => void trips.fetchNextPage()}
+          >
+            Show more
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -109,6 +126,8 @@ function Trips() {
         <h1 className="headline mt-2 text-title-3 font-medium">Trips</h1>
         <p className="mt-2 text-muted">Your bookings and requests, with receipts, times and where to meet.</p>
       </div>
+      {/* From check-in to check-out, the trip sits at the top (plan §12.6); the Current tab lists it already. */}
+      {tab !== 'current' && <CurrentTrips role="guest" />}
       <SegmentedTabs
         idPrefix="trips"
         label="Trips"
@@ -134,13 +153,20 @@ function TripsSkeleton() {
   );
 }
 
-/** The Guest's trips (spec §8): Upcoming, Current, Completed and Cancelled, grouped by the API (plan §8.2). */
+/**
+ * The Guest's trips (spec §8): any trip under way at the top, then Upcoming, Current, Completed and Cancelled,
+ * grouped by the API (plan §8.2).
+ */
 export function TripsPage() {
   return (
-    <Container className="max-w-4xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
       <PageMeta title="Trips" noindex />
-      <RequireSignedIn fallback={<TripsSkeleton />}>{() => <Trips />}</RequireSignedIn>
+      <AccountShell>
+        <div className="max-w-4xl">
+          <RequireSignedIn fallback={<TripsSkeleton />}>{() => <Trips />}</RequireSignedIn>
+        </div>
+      </AccountShell>
     </Container>
   );
 }

@@ -27,11 +27,17 @@ export const documentsSchema = z.object({
 
 export type DocumentsValues = z.infer<typeof documentsSchema>;
 
+/**
+ * The form starts with the dates the Host last entered: on an approved car a later one waits for our team to
+ * check its document (`pendingExpiries`), and the form shows it rather than the date still in use.
+ */
 export function documentsDefaults(vehicle: HostVehicle): DocumentsValues {
+  const pending = vehicle.pendingExpiries;
+  const cof = pending?.cofExpiry ?? vehicle.cofExpiry;
   return {
-    regoExpiry: vehicle.regoExpiry ?? '',
-    needsCof: Boolean(vehicle.cofExpiry),
-    inspectionExpiry: vehicle.cofExpiry ?? vehicle.wofExpiry ?? '',
+    regoExpiry: pending?.regoExpiry ?? vehicle.regoExpiry ?? '',
+    needsCof: Boolean(cof),
+    inspectionExpiry: cof ?? pending?.wofExpiry ?? vehicle.wofExpiry ?? '',
     rucValidToKm: vehicle.rucValidToKm === undefined ? '' : String(vehicle.rucValidToKm),
     ownerIsHost: vehicle.ownerIsHost,
   };

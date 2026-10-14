@@ -70,7 +70,7 @@ describe('Settings menu', () => {
     expect(nav.getByRole('button', { name: /^Platform settings/ })).toHaveAttribute('aria-expanded', 'true');
     // The count of decisions waiting arrives with the settings.
     expect(
-      await nav.findByRole('button', { name: 'Platform settings, 10 waiting for the client' }),
+      await nav.findByRole('button', { name: 'Platform settings, 11 waiting for the client' }),
     ).toBeInTheDocument();
     const groups = [
       'Overview',
@@ -84,6 +84,7 @@ describe('Settings menu', () => {
       'Company and brand',
       'Other booking rules',
       'Licence and plate checks',
+      'Retention and risk',
     ];
     for (const name of groups) {
       expect(nav.getByRole('link', { name: new RegExp(`^${name}`) })).toBeInTheDocument();
@@ -96,11 +97,11 @@ describe('Settings menu', () => {
     const { router } = render('/admin/settings');
 
     await openGroup(/^Overview/);
-    expect(await screen.findByText('10 of 10 decisions are still placeholders')).toBeInTheDocument();
+    expect(await screen.findByText('11 of 11 decisions are still placeholders')).toBeInTheDocument();
     expect(router.state.location.search).toBe('?tab=platform');
     expect(screen.queryByRole('region', { name: 'Two-factor sign-in' })).not.toBeInTheDocument();
     const overview = within(screen.getByRole('list', { name: 'Settings groups' }));
-    expect(overview.getAllByRole('listitem')).toHaveLength(10);
+    expect(overview.getAllByRole('listitem')).toHaveLength(11);
     expect(overview.getByRole('link', { name: 'Fees' })).toHaveAccessibleDescription(
       'Placeholder 10% Guest service fee, 20% Host commission',
     );
@@ -110,7 +111,7 @@ describe('Settings menu', () => {
     expect((await card('GST')).getByLabelText('GST rate')).toHaveValue('15');
     expect(router.state.location.search).toBe('?tab=platform&section=gst');
     // The overview stays mounted, hidden, like the groups.
-    expect(screen.getByText('10 of 10 decisions are still placeholders')).not.toBeVisible();
+    expect(screen.getByText('11 of 11 decisions are still placeholders')).not.toBeVisible();
 
     await openGroup(/^Fees/);
     expect((await card('Fees')).getByLabelText('Guest service fee')).toHaveValue('10');
@@ -200,11 +201,11 @@ describe('Platform settings', () => {
     const nav = await menu();
     expect(nav.getByRole('link', { name: 'GST, confirmed' })).toBeInTheDocument();
     expect(
-      nav.getByRole('button', { name: 'Platform settings, 9 waiting for the client' }),
+      nav.getByRole('button', { name: 'Platform settings, 10 waiting for the client' }),
     ).toBeInTheDocument();
 
     await openGroup(/^Overview/);
-    expect(await screen.findByText('9 of 10 decisions are still placeholders')).toBeInTheDocument();
+    expect(await screen.findByText('10 of 11 decisions are still placeholders')).toBeInTheDocument();
     expect(screen.getByText(/Last saved by Aroha Admin on/)).toBeInTheDocument();
   });
 
@@ -246,6 +247,42 @@ describe('Platform settings', () => {
     expect(sent).toEqual([]);
   });
 
+  it('changes the quiet hours for texts, checking each is a 24-hour time', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=reviewsAndTrips');
+
+    const section = await card('Reviews and trips');
+    const start = section.getByLabelText('Quiet hours for texts start at');
+    const end = section.getByLabelText('Quiet hours end at');
+    expect(start).toHaveValue('21:00');
+    expect(end).toHaveValue('07:00');
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '25:00');
+    await userEvent.clear(end);
+    await userEvent.type(end, '25:00');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+    expect(await section.findAllByText('Enter a 24-hour time, like 21:00')).toHaveLength(2);
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '7:00');
+    await userEvent.clear(end);
+    await userEvent.type(end, '07:00');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+    expect(await section.findByText('Choose an end time different from the start')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(start);
+    await userEvent.type(start, '22:30');
+    await userEvent.clear(end);
+    await userEvent.type(end, '6:45');
+    await userEvent.click(section.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Reviews and trips saved')).toBeInTheDocument();
+    expect(sent[0]?.sms).toEqual({ quietHoursStart: '22:30', quietHoursEnd: '06:45' });
+    expect(sent[0]?.reviews).toEqual(settingsFixture.reviews);
+  });
+
   it('saves the roadside assistance number with the protection plans', async () => {
     const { sent } = mockSettingsApi();
     render('/admin/settings?tab=platform&section=protection');
@@ -259,6 +296,80 @@ describe('Platform settings', () => {
       roadsideAssistance: { phone: '0800 123 456' },
       protectionPlans: settingsFixture.protectionPlans,
     });
+  });
+
+  it('gives a protection plan its own roadside number, and leaves the others on the main one', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=protection');
+
+    const protection = await card('Protection plans and roadside assistance');
+    const planNumbers = protection.getAllByLabelText('Roadside assistance number (optional)');
+    expect(planNumbers).toHaveLength(settingsFixture.protectionPlans.length);
+    await userEvent.type(planNumbers[1]!, 'roadside');
+    await userEvent.click(protection.getByRole('button', { name: 'Save changes' }));
+    expect(await protection.findByText('Enter a phone number, like 0800 123 456')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(planNumbers[1]!);
+    await userEvent.type(planNumbers[1]!, '0800 765 432');
+    await userEvent.click(protection.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Protection plans and roadside assistance saved')).toBeInTheDocument();
+    expect(sent[0]?.protectionPlans?.map((plan) => plan.roadsidePhone)).toEqual([
+      undefined,
+      '0800 765 432',
+      undefined,
+    ]);
+  });
+
+  it('keeps the retention periods above their floors, and saves them with the risk thresholds', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=retentionAndRisk');
+
+    const retention = await card('Retention and risk');
+    const auditLog = retention.getByLabelText('Audit log');
+    expect(auditLog).toHaveValue('7');
+    await userEvent.clear(auditLog);
+    await userEvent.type(auditLog, '0');
+    const flags = retention.getByLabelText('Bookings started in 24 hours');
+    await userEvent.clear(flags);
+    await userEvent.type(flags, '0');
+    await userEvent.click(retention.getByRole('button', { name: 'Save changes' }));
+    expect(await retention.findByText('Enter 7–50 years')).toBeInTheDocument();
+    expect(retention.getByText('Enter 1–100')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(auditLog);
+    await userEvent.type(auditLog, '10');
+    await userEvent.clear(flags);
+    await userEvent.type(flags, '8');
+    await userEvent.click(retention.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Retention and risk saved')).toBeInTheDocument();
+    expect(sent).toEqual([
+      {
+        retention: { ...settingsFixture.retention, auditLogYears: 10 },
+        risk: { ...settingsFixture.risk, bookingsPerDay: 8 },
+        decisions: { retentionAndRisk: { status: 'PENDING', note: '' } },
+      },
+    ]);
+  });
+
+  it('changes how long messages stay open after a trip, keeping the other trip settings', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=reviewsAndTrips');
+
+    const trips = await card('Reviews and trips');
+    expect(trips.getByLabelText('Time to leave a review')).toHaveAccessibleDescription(
+      'From when the trip is completed: at check-out, or when our team completes it.',
+    );
+    const field = trips.getByLabelText('Messages stay open for');
+    expect(field).toHaveValue('30');
+    await userEvent.clear(field);
+    await userEvent.type(field, '60');
+    await userEvent.click(trips.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Reviews and trips saved')).toBeInTheDocument();
+    expect(sent[0]?.trips).toEqual({ ...settingsFixture.trips, threadReadOnlyDays: 60 });
   });
 
   it("shows the API's reason when it refuses the change", async () => {

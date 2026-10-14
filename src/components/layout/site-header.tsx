@@ -48,11 +48,12 @@ export function SiteHeader() {
     <header
       className={cn(
         // Named for view transitions, so the header holds still while the page below it cross-fades.
-        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 [view-transition-name:site-header]',
+        'sticky top-0 z-40 border-b transition-[background-color,border-color] duration-200 [view-transition-name:site-header] print:hidden',
         scrolled ? 'glass border-line/70' : 'border-transparent bg-canvas',
       )}
     >
-      <Container className="flex h-16 items-center justify-between gap-6 lg:h-[4.5rem]">
+      {/* A tighter gap on phones keeps the wordmark on one line beside a signed-in member's bell and menu. */}
+      <Container className="flex h-16 items-center justify-between gap-3 sm:gap-6 lg:h-[4.5rem]">
         <Link to="/" viewTransition aria-label="Rento Vroom home" className="rounded-control">
           <Logo />
         </Link>

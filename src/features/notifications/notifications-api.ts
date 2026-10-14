@@ -7,12 +7,15 @@ import {
 } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
 import type { NotificationItem, Notifications } from '@/api/types';
+import { notificationsQueryKey } from './notification-keys';
 
-/** Every notification query starts with this, so one invalidation refreshes the bell and the page alike. */
-export const notificationsQueryKey = ['notifications'] as const;
+export { notificationsQueryKey };
 
-/** How often the bell checks for news (plan §7, build order: every minute until Socket.IO arrives). */
-export const NOTIFICATIONS_POLL_MS = 60_000;
+/**
+ * How often the bell checks for news. New notifications arrive live over Socket.IO (plan §7, build
+ * order); this only catches any missed while the connection was down.
+ */
+export const NOTIFICATIONS_POLL_MS = 5 * 60_000;
 /** The bell shows the newest few; "Show all" opens the Notifications page for the rest. */
 export const BELL_SIZE = 3;
 /** Notifications per page on the Notifications page; "Load more" adds the next. */
@@ -23,7 +26,7 @@ export type NotificationFilter = 'all' | 'unread';
 /** Where opening a notification goes: a path inside the website, never a link that leaves it. */
 export const internalLink = (item: NotificationItem) => (item.link?.startsWith('/') ? item.link : undefined);
 
-/** The newest three in-app notifications, the unread count and the total, refreshed every minute. */
+/** The newest three in-app notifications, the unread count and the total, updated live. */
 export function useNotifications() {
   return useQuery({
     queryKey: [...notificationsQueryKey, 'latest'],

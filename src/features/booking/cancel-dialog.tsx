@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ApiError } from '@/api/client';
 import type { Booking } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -50,10 +51,15 @@ interface CancelDialogProps {
   onDone: () => void;
 }
 
+/** The refund went down after the preview was shown (the cut-off passed while the dialog was open). */
+const refundChanged = (error: unknown) => error instanceof ApiError && error.code === 'REFUND_CHANGED';
+
 /**
  * Cancelling, withdrawing a request or releasing unpaid dates, always with the refund preview first (plan §9,
  * Days 13–14): what comes back, what's kept under the booking's tier, and for a Host the Guest's full refund
- * and any Host cancellation fee. Render inside a <Dialog>; the preview is asked for fresh when it opens.
+ * and any Host cancellation fee. Render inside a <Dialog>; the preview is asked for fresh when it opens and
+ * every 45 seconds while it's open. Confirming sends the refund shown: if it's lower by then, nothing is
+ * cancelled, and the new figure is shown to confirm again.
  */
 export function CancelDialogContent({ booking, kind, onDone }: CancelDialogProps) {
   const preview = useCancellationPreview(booking.ref, true);
@@ -63,18 +69,28 @@ export function CancelDialogContent({ booking, kind, onDone }: CancelDialogProps
   const host = booking.role === 'HOST';
 
   const confirm = () =>
-    cancel.mutate(reason.trim() || undefined, {
-      onSuccess: () => {
-        toast(copy.done, {
-          description: host
-            ? `${booking.guest.firstName} gets a full refund and has been told.`
-            : kind === 'cancel'
-              ? `${booking.host.firstName} has been told.`
-              : 'Nothing was charged.',
-        });
-        onDone();
+    cancel.mutate(
+      {
+        reason: reason.trim() || undefined,
+        ...(preview.data?.allowed && { expectedRefundCents: preview.data.refundCents }),
       },
-    });
+      {
+        onSuccess: () => {
+          toast(copy.done, {
+            description: host
+              ? `${booking.guest.firstName} gets a full refund and has been told.`
+              : kind === 'cancel'
+                ? `${booking.host.firstName} has been told.`
+                : 'Nothing was charged.',
+          });
+          onDone();
+        },
+        // The refund changed: the preview is fetched again to show the new figure.
+        onError: (error) => {
+          if (refundChanged(error)) void preview.refetch();
+        },
+      },
+    );
 
   let body;
   if (preview.isError) {
@@ -134,11 +150,16 @@ export function CancelDialogContent({ booking, kind, onDone }: CancelDialogProps
             />
           </Field>
         )}
-        {cancel.isError && (
-          <Alert variant="danger" role="alert">
-            {cancel.error.message}
-          </Alert>
-        )}
+        {cancel.isError &&
+          (refundChanged(cancel.error) ? (
+            <Alert role="alert" title="The refund has changed">
+              {cancel.error.message}
+            </Alert>
+          ) : (
+            <Alert variant="danger" role="alert">
+              {cancel.error.message}
+            </Alert>
+          ))}
       </div>
     );
   }

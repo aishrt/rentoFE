@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { IdCard } from 'lucide-react';
+import { Globe, IdCard } from 'lucide-react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import type { DriverLicenceInput } from '@/api/types';
@@ -10,6 +10,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { applyFieldErrors, formErrorMessage } from '@/features/account/form-errors';
+import { overseasCountryOptions } from '@/lib/countries';
 import { useSaveLicence } from './booking-api';
 import { LICENCE_CLASS_LABELS, nzWallClockParts, type LicenceClass } from './booking-format';
 import { DatePartsField } from './date-parts-field';
@@ -18,6 +19,9 @@ const CLASS_OPTIONS = (Object.keys(LICENCE_CLASS_LABELS) as LicenceClass[]).map(
   value,
   label: LICENCE_CLASS_LABELS[value],
 }));
+
+/** Kept as the ISO code the API compares with a card's country. */
+const COUNTRY_OPTIONS = overseasCountryOptions();
 
 const PROOF_OPTIONS = [
   { value: 'IDP', label: 'International Driving Permit' },
@@ -57,7 +61,7 @@ const licenceSchema = z
     if (value.class === 'OVERSEAS') {
       if (!/^[A-Z0-9-]{4,20}$/.test(number))
         issue('number', 'Enter the licence number as it appears on the card');
-      if (value.country.length < 2) issue('country', 'Enter the country that issued your licence');
+      if (!value.country) issue('country', 'Choose the country that issued your licence');
       if (value.notInEnglish && !value.englishProof)
         issue('englishProof', 'Choose what you’ll bring with it');
     } else {
@@ -68,8 +72,9 @@ const licenceSchema = z
     if (!isRealDate(value.issuedAt)) issue('issuedAt', 'Enter the date your licence was first issued');
     else if (value.issuedAt > today) issue('issuedAt', 'The issue date can’t be in the future');
     else if (isRealDate(value.dob) && value.dob > value.issuedAt) issue('issuedAt', 'Check the issue date');
+    // Still valid on its expiry day.
     if (!isRealDate(value.expiry)) issue('expiry', 'Enter the expiry date');
-    else if (value.expiry <= today) issue('expiry', 'This licence has expired');
+    else if (value.expiry < today) issue('expiry', 'This licence has expired');
   });
 
 type LicenceValues = z.infer<typeof licenceSchema>;
@@ -122,7 +127,7 @@ export function LicenceForm({ onSaved, hasLicence }: { onSaved: () => void; hasL
     const input: DriverLicenceInput = {
       class: values.class,
       number: values.number.toUpperCase().replace(/\s+/g, ''),
-      country: overseas ? values.country : 'New Zealand',
+      country: overseas ? values.country : 'NZ',
       notInEnglish: overseas && values.notInEnglish,
       issuedAt: values.issuedAt,
       expiry: values.expiry,
@@ -167,7 +172,22 @@ export function LicenceForm({ onSaved, hasLicence }: { onSaved: () => void; hasL
           </Field>
           {overseas && (
             <Field label="Issued in" error={errors.country?.message}>
-              <Input autoComplete="country-name" placeholder="Australia" {...register('country')} />
+              <Controller
+                control={control}
+                name="country"
+                render={({ field }) => (
+                  <Select
+                    ref={field.ref}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    options={COUNTRY_OPTIONS}
+                    icon={<Globe />}
+                    placeholder="Choose a country"
+                    listLabel="Countries"
+                  />
+                )}
+              />
             </Field>
           )}
         </div>

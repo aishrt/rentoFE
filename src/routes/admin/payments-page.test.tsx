@@ -3,6 +3,9 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AdminPayment, AdminPayout } from '@/api/types';
+import type { AdminExtraChargeRow } from '@/features/admin/finance/finance-api';
+import { Toaster } from '@/components/ui/toast';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminPaymentsPage } from './payments-page';
 
@@ -60,8 +63,22 @@ const paidWithApplePay = {
   webhookReceived: true,
 };
 
-const render = () =>
-  renderWithRouter([{ path: '/admin/payments', element: <AdminPaymentsPage /> }], '/admin/payments');
+// The Stripe test payment has its own tab.
+const render = (path = '/admin/payments?tab=test') =>
+  renderWithRouter(
+    [
+      {
+        path: '/admin/payments',
+        element: (
+          <>
+            <AdminPaymentsPage />
+            <Toaster />
+          </>
+        ),
+      },
+    ],
+    path,
+  );
 
 const section = async () => within(await screen.findByRole('region', { name: 'Test payment' }));
 
@@ -166,5 +183,455 @@ describe('AdminPaymentsPage: test payment', () => {
     expect(
       await (await section()).findByText('Only administrators can run a test payment.'),
     ).toBeInTheDocument();
+  });
+});
+
+const supportUser = { ...adminUser, id: 'u3', firstName: 'Sam', roles: ['SUPPORT'] };
+
+const refunded: AdminPayment = {
+  id: 'pay1',
+  bookingRef: 'RV-7K2Q9M',
+  guestName: 'Kiri Tane',
+  type: 'BOOKING',
+  amountCents: 50650,
+  status: 'PARTIALLY_REFUNDED',
+  method: 'Visa •••• 4242',
+  refundedCents: 10000,
+  refunds: [
+    {
+      amountCents: 10000,
+      reason: 'The car was an hour late at pick-up',
+      fundedBy: 'HOST',
+      status: 'SUCCEEDED',
+      at: '2026-10-02T01:00:00.000Z',
+    },
+    {
+      amountCents: 5000,
+      reason: 'Goodwill credit',
+      fundedBy: 'PLATFORM',
+      status: 'FAILED',
+      failureReason: 'The card has expired.',
+      at: '2026-10-03T01:00:00.000Z',
+    },
+  ],
+  createdAt: '2026-09-28T21:30:00.000Z',
+};
+
+const disputed: AdminPayment = {
+  id: 'pay2',
+  bookingRef: 'RV-3H8D2L',
+  guestName: 'Mere Paki',
+  type: 'EXTRA_CHARGE',
+  amountCents: 8000,
+  status: 'SUCCEEDED',
+  refundedCents: 0,
+  refunds: [],
+  // 11 pm on Thursday 15 October in New Zealand.
+  dispute: { status: 'needs_response', reason: 'product_not_received', dueBy: '2026-10-15T10:00:00.000Z' },
+  createdAt: '2026-10-01T02:00:00.000Z',
+};
+
+const scheduled: AdminPayout = {
+  id: 'po1',
+  bookingRef: 'RV-7K2Q9M',
+  host: { id: 'h1', name: 'Aroha Ngata' },
+  type: 'TRIP',
+  status: 'SCHEDULED',
+  amountCents: 42000,
+  deductedCents: 0,
+  scheduledFor: '2026-10-09T20:00:00.000Z',
+};
+
+const held: AdminPayout = {
+  id: 'po2',
+  bookingRef: 'RV-3H8D2L',
+  host: { id: 'h2', name: 'Rangi Walker' },
+  type: 'TRIP',
+  status: 'HELD',
+  holdReason: 'INCIDENT',
+  amountCents: 30000,
+  deductedCents: 2500,
+  scheduledFor: '2026-10-05T20:00:00.000Z',
+};
+
+const failed: AdminPayout = {
+  ...scheduled,
+  id: 'po3',
+  bookingRef: 'RV-9P4X7Q',
+  status: 'FAILED',
+  failureReason: 'The bank account was closed.',
+};
+
+/** The query string of each request to this path, in order. */
+const queries = (fetchMock: ReturnType<typeof mockApi>, path: string) =>
+  fetchMock.mock.calls
+    .map(([input]) => new URL((input as Request).url))
+    .filter((url) => url.pathname.endsWith(path))
+    .map((url) => url.searchParams);
+
+const row = async (name: RegExp) => within(await screen.findByRole('row', { name }));
+
+describe('AdminPaymentsPage: payments', () => {
+  it('lists payments with their refunds, failures and disputes', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [refunded, disputed], total: 2, page: 1 } },
+    });
+    render('/admin/payments');
+
+    const first = await row(/RV-7K2Q9M/);
+    expect(first.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2Q9M',
+    );
+    expect(first.getByText('Kiri Tane')).toBeInTheDocument();
+    expect(first.getByText('$506.50')).toBeInTheDocument();
+    expect(first.getByText('$100')).toBeInTheDocument();
+    expect(first.getByText('Part refunded')).toBeInTheDocument();
+    expect(first.getByText('Visa •••• 4242')).toBeInTheDocument();
+
+    // The refund lines open below the payment.
+    const toggle = first.getByRole('button', { name: '2 refunds (1 failed)' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('list', { name: 'Refunds on RV-7K2Q9M' })).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const refunds = within(screen.getByRole('list', { name: 'Refunds on RV-7K2Q9M' }));
+    expect(refunds.getByText('The car was an hour late at pick-up')).toBeInTheDocument();
+    expect(refunds.getByText('Paid by the Host')).toBeInTheDocument();
+    expect(refunds.getByText('The card has expired.')).toBeInTheDocument();
+
+    const second = await row(/RV-3H8D2L/);
+    expect(second.getByText('Extra charge')).toBeInTheDocument();
+    expect(second.getByText('Dispute: Needs response')).toBeInTheDocument();
+    expect(second.getByText('Product not received')).toBeInTheDocument();
+    expect(second.getByText('Respond by Thu, 15 Oct')).toBeInTheDocument();
+    expect(screen.getByText('1–2 of 2 payments')).toBeInTheDocument();
+  });
+
+  it('shows failed, disputed or failed-refund payments, with the view in the address', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [disputed], total: 1, page: 1 } },
+    });
+    const { router } = render('/admin/payments');
+
+    await row(/RV-3H8D2L/);
+    expect(queries(fetchMock, '/admin/payments')[0]?.get('view')).toBe('all');
+    await userEvent.click(screen.getByRole('tab', { name: 'Disputed' }));
+
+    await vi.waitFor(() =>
+      expect(queries(fetchMock, '/admin/payments').at(-1)?.get('view')).toBe('disputed'),
+    );
+    expect(router.state.location.search).toBe('?view=disputed');
+    expect(screen.getByRole('tab', { name: 'Disputed' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('opens on the failed payments from the overview’s link', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [], total: 0, page: 1 } },
+    });
+    render('/admin/payments?view=failed');
+
+    expect(await screen.findByText('No failed payments')).toBeInTheDocument();
+    expect(
+      screen.getByText('Payments that didn’t go through show here, including cards declined at checkout.'),
+    ).toBeInTheDocument();
+    expect(queries(fetchMock, '/admin/payments')[0]?.get('view')).toBe('failed');
+  });
+
+  it('shows the last 30 days’ failures the overview counts, a declined card with how it ended, and every date', async () => {
+    const declined: AdminPayment = {
+      ...refunded,
+      id: 'pay3',
+      status: 'CANCELLED',
+      failureReason: 'Your card was declined.',
+      refundedCents: 0,
+      refunds: [],
+    };
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [declined], total: 1, page: 1 } },
+    });
+    const { router } = render('/admin/payments?view=failed&from=2026-09-13');
+
+    const payment = await row(/RV-7K2Q9M/);
+    expect(payment.getByText('Cancelled')).toBeInTheDocument();
+    expect(payment.getByText('Your card was declined.')).toBeInTheDocument();
+    expect(queries(fetchMock, '/admin/payments')[0]?.get('from')).toBe('2026-09-13');
+    expect(screen.getByText(/Made on or after Sun, 13 Sep/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show every date' }));
+    await vi.waitFor(() => expect(queries(fetchMock, '/admin/payments').at(-1)?.get('from')).toBeNull());
+    expect(router.state.location.search).toBe('?view=failed');
+  });
+
+  it('asks support staff without the refunds permission to ask the admin, calmly', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: supportUser } },
+      'GET /admin/payments': {
+        status: 403,
+        body: { error: { code: 'FORBIDDEN', message: "Your account can't do this." } },
+      },
+    });
+    render('/admin/payments');
+
+    expect(
+      await screen.findByText('Ask the admin for the refunds permission to see payments.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // The Stripe test is the admin's.
+    expect(screen.getByRole('tab', { name: 'Payouts' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Stripe test' })).not.toBeInTheDocument();
+  });
+});
+
+const fuel: AdminExtraChargeRow = {
+  id: 'c1',
+  bookingRef: 'RV-7K2Q9M',
+  guest: { id: 'u20', name: 'Kiri Tane' },
+  type: 'FUEL',
+  description: 'Returned with a quarter tank',
+  amountCents: 6550,
+  status: 'PENDING',
+  paymentStatus: 'FAILED',
+  failureReason: 'Your card was declined.',
+  attempts: 2,
+  // 9 am on Saturday 10 October in New Zealand.
+  nextTryAt: '2026-10-09T20:00:00.000Z',
+  incidentRef: 'IN-FUEL01',
+  createdAt: '2026-10-06T21:00:00.000Z',
+};
+
+const cleaning: AdminExtraChargeRow = {
+  id: 'c2',
+  bookingRef: 'RV-3H8D2L',
+  guest: { id: 'u21', name: 'Mere Paki' },
+  type: 'CLEANING',
+  description: 'Dog hair through the back seat',
+  amountCents: 8000,
+  status: 'FAILED',
+  createdAt: '2026-10-05T21:00:00.000Z',
+};
+
+describe('AdminPaymentsPage: unpaid extra charges', () => {
+  it('lists extra charges still to be paid, with the last try and the case, from their own view', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [], total: 0, page: 1 } },
+      'GET /admin/extra-charges': { status: 200, body: { charges: [fuel, cleaning], total: 2, page: 1 } },
+    });
+    const { router } = render('/admin/payments');
+
+    await screen.findByText('No payments');
+    await userEvent.click(screen.getByRole('tab', { name: 'Unpaid extra charges' }));
+    expect(router.state.location.search).toBe('?view=unpaid-charges');
+
+    const first = await row(/RV-7K2Q9M/);
+    expect(first.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-7K2Q9M',
+    );
+    expect(first.getByRole('link', { name: 'Kiri Tane' })).toHaveAttribute('href', '/admin/users/u20');
+    expect(first.getByText('Fuel or charge')).toBeInTheDocument();
+    expect(first.getByText('Returned with a quarter tank')).toBeInTheDocument();
+    expect(first.getByText('$65.50')).toBeInTheDocument();
+    expect(first.getByText('Waiting for payment')).toBeInTheDocument();
+    expect(first.getByText('Your card was declined.')).toBeInTheDocument();
+    expect(first.getByText('Tried 2 times on the saved card')).toBeInTheDocument();
+    expect(first.getByText('Next try Sat, 10 Oct')).toBeInTheDocument();
+    expect(first.getByRole('link', { name: 'IN-FUEL01' })).toHaveAttribute(
+      'href',
+      '/admin/incidents/IN-FUEL01',
+    );
+
+    const second = await row(/RV-3H8D2L/);
+    expect(second.getByText('Failed')).toBeInTheDocument();
+    expect(second.getByText('Not tried yet')).toBeInTheDocument();
+    expect(screen.getByText('1–2 of 2 unpaid extra charges')).toBeInTheDocument();
+    // The payment filters don't apply to charges.
+    expect(screen.queryByRole('button', { name: /Type/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Status/ }));
+    await userEvent.click(screen.getByRole('option', { name: 'Failed' }));
+    await vi.waitFor(() =>
+      expect(queries(fetchMock, '/admin/extra-charges').at(-1)?.get('status')).toBe('FAILED'),
+    );
+    expect(router.state.location.search).toBe('?view=unpaid-charges&status=FAILED');
+    // Only the first view asked for payments.
+    expect(queries(fetchMock, '/admin/payments')).toHaveLength(1);
+  });
+
+  it('says when nothing is unpaid, and asks for the refunds permission like payments', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/extra-charges': { status: 200, body: { charges: [], total: 0, page: 1 } },
+    });
+    const first = render('/admin/payments?view=unpaid-charges');
+    expect(await screen.findByText('No unpaid extra charges')).toBeInTheDocument();
+    first.unmount();
+
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: supportUser } },
+      'GET /admin/extra-charges': {
+        status: 403,
+        body: { error: { code: 'FORBIDDEN', message: "Your account can't do this." } },
+      },
+    });
+    render('/admin/payments?view=unpaid-charges');
+    expect(
+      await screen.findByText('Ask the admin for the refunds permission to see payments.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('AdminPaymentsPage: payouts', () => {
+  it('opens from the Payouts tab', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payments': { status: 200, body: { payments: [], total: 0, page: 1 } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [scheduled], total: 1, page: 1 } },
+    });
+    const { router } = render('/admin/payments');
+
+    await screen.findByText('No payments');
+    await userEvent.click(screen.getByRole('tab', { name: 'Payouts' }));
+
+    const payout = await row(/RV-7K2Q9M/);
+    expect(payout.getByRole('link', { name: 'Aroha Ngata' })).toHaveAttribute('href', '/admin/users/h1');
+    expect(payout.getByText('$420')).toBeInTheDocument();
+    expect(payout.getByText('Scheduled')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?tab=payouts');
+    expect(queries(fetchMock, '/admin/payouts')).toHaveLength(1);
+  });
+
+  it('holds a payout with a reason, and updates its row', async () => {
+    let sent: unknown;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [scheduled, held], total: 2, page: 1 } },
+      'POST /admin/payouts/po1/hold': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { payout: { ...scheduled, status: 'HELD', holdReason: 'MANUAL' } } };
+      },
+    });
+    render('/admin/payments?tab=payouts');
+
+    expect((await row(/RV-3H8D2L/)).getByText('An incident is open')).toBeInTheDocument();
+    await userEvent.click(
+      (await row(/RV-7K2Q9M/)).getByRole('button', { name: 'Hold payout for RV-7K2Q9M' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Hold Aroha Ngata’s payout?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Hold payout' }));
+    expect(await dialog.findByText('Say why you’re holding it')).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await userEvent.type(dialog.getByLabelText('Why you’re holding it'), 'Checking the damage photos first');
+    await userEvent.click(dialog.getByRole('button', { name: 'Hold payout' }));
+
+    expect(await screen.findByText('Aroha Ngata’s payout is on hold')).toBeInTheDocument();
+    expect(sent).toEqual({ reason: 'Checking the damage photos first' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const updated = await row(/RV-7K2Q9M/);
+    expect(updated.getByText('Held by staff')).toBeInTheDocument();
+    expect(updated.getByRole('button', { name: 'Release payout for RV-7K2Q9M' })).toBeInTheDocument();
+  });
+
+  it('explains when a released payout goes straight back on hold', async () => {
+    let released = false;
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [held], total: 1, page: 1 } },
+      'POST /admin/payouts/po2/release': () => {
+        released = true;
+        return { status: 200, body: { payout: held } };
+      },
+    });
+    render('/admin/payments?tab=payouts');
+
+    await userEvent.click(
+      (await row(/RV-3H8D2L/)).getByRole('button', { name: 'Release payout for RV-3H8D2L' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Release Rangi Walker’s payout?' }));
+    expect(
+      dialog.getByText(/if one still applies, such as an open incident or card dispute/),
+    ).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Release payout' }));
+
+    expect(await screen.findByText('Rangi Walker’s payout is still on hold')).toBeInTheDocument();
+    expect(screen.getByText('An incident is open. It’s released once that’s sorted.')).toBeInTheDocument();
+    expect(released).toBe(true);
+  });
+
+  it('sends a failed payout again', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [failed], total: 1, page: 1 } },
+      'POST /admin/payouts/po3/retry': { status: 200, body: { payout: { ...failed, status: 'SCHEDULED' } } },
+    });
+    render('/admin/payments?tab=payouts');
+
+    const payout = await row(/RV-9P4X7Q/);
+    expect(
+      payout.getByText('The transfer didn’t go through. Retry it, or check the Host’s payout setup.'),
+    ).toBeInTheDocument();
+    expect(payout.getByText('The bank account was closed.')).toBeInTheDocument();
+    await userEvent.click(payout.getByRole('button', { name: 'Retry payout for RV-9P4X7Q' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Send Aroha Ngata’s payout again?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Send again' }));
+
+    expect(await screen.findByText('Aroha Ngata’s payout is queued again')).toBeInTheDocument();
+    expect((await row(/RV-9P4X7Q/)).getByText('Scheduled')).toBeInTheDocument();
+  });
+
+  it('shows the API’s reason when the payout changed meanwhile', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [held], total: 1, page: 1 } },
+      'POST /admin/payouts/po2/release': {
+        status: 409,
+        body: { error: { code: 'NOT_HELD', message: 'This payout isn’t on hold.' } },
+      },
+    });
+    render('/admin/payments?tab=payouts');
+
+    await userEvent.click(
+      (await row(/RV-3H8D2L/)).getByRole('button', { name: 'Release payout for RV-3H8D2L' }),
+    );
+    const dialog = within(await screen.findByRole('dialog'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Release payout' }));
+    expect(await dialog.findByRole('alert')).toHaveTextContent('This payout isn’t on hold.');
+  });
+
+  it('lets support staff see payouts by status, without the admin’s actions', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': { status: 200, body: { user: supportUser } },
+      'GET /admin/payouts': { status: 200, body: { payouts: [held], total: 1, page: 1 } },
+    });
+    render('/admin/payments?tab=payouts&status=HELD');
+
+    const payout = await row(/RV-3H8D2L/);
+    expect(payout.getByText('$25')).toBeInTheDocument();
+    expect(queries(fetchMock, '/admin/payouts')[0]?.get('status')).toBe('HELD');
+    expect(screen.getByRole('button', { name: /^Status/ })).toHaveTextContent('Held');
+    expect(payout.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('asks support staff without the refunds permission to ask the admin', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: supportUser } },
+      'GET /admin/payouts': {
+        status: 403,
+        body: { error: { code: 'FORBIDDEN', message: "Your account can't do this." } },
+      },
+    });
+    render('/admin/payments?tab=payouts');
+
+    expect(
+      await screen.findByText('Ask the admin for the refunds permission to see payouts.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

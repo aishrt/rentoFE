@@ -1,6 +1,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { PopoverRootContext } from './popover';
 
 export const Dialog = RadixDialog.Root;
 export const DialogTrigger = RadixDialog.Trigger;
@@ -27,10 +28,13 @@ export function DialogContent({
   dismissible = true,
 }: DialogContentProps) {
   const block = dismissible ? undefined : (event: Event) => event.preventDefault();
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className="fixed inset-0 z-50 bg-ink/45 data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in" />
       <RadixDialog.Content
+        // Pickers inside open their lists in here (Popover), where the modal lets them be clicked and focused.
+        ref={setRoot}
         onEscapeKeyDown={block}
         onPointerDownOutside={block}
         onInteractOutside={block}
@@ -48,7 +52,9 @@ export function DialogContent({
         ) : (
           <RadixDialog.Description className="sr-only">{title}</RadixDialog.Description>
         )}
-        <div className="mt-5">{children}</div>
+        <div className="mt-5">
+          <PopoverRootContext value={root}>{children}</PopoverRootContext>
+        </div>
       </RadixDialog.Content>
     </RadixDialog.Portal>
   );

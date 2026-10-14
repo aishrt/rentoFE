@@ -10,7 +10,8 @@ import { usePolicies } from '@/features/content/content-api';
 import { eligibilityPoints } from '@/features/content/policies';
 import { PhoneVerification } from '@/features/host/phone-verification';
 import { readinessQueryKey } from './booking-api';
-import { LICENCE_CLASS_LABELS } from './booking-format';
+import { LICENCE_CLASS_LABELS, formatCalendarDate } from './booking-format';
+import { IdentityCheck } from './identity-check';
 import { LicenceForm } from './licence-form';
 
 type Problem = CheckoutReadiness['problems'][number];
@@ -35,15 +36,17 @@ function Done({ children }: { children: ReactNode }) {
 interface VerificationSectionProps {
   user: SessionUser;
   readiness: UseQueryResult<CheckoutReadiness>;
+  /** At checkout the problems are about the trip on screen; on the account page, about booking at all. */
+  context?: 'checkout' | 'account';
 }
 
 /**
- * Step 5 (spec §7, step 7): the mobile number by texted code, then the driver licence and date of birth,
- * with anything that stops this person driving explained in plain words (plan §3: age, licence class, years
+ * Step 5 (spec §7, step 7): the mobile number by texted code, the identity check, then the driver licence and
+ * date of birth, with anything that stops this person driving explained in plain words (plan §3: age, licence class, years
  * licensed, a licence valid until the trip ends, English proof). The rules come from the API, so they
  * always match settings. Once nothing is missing, checkout moves on to payment by itself.
  */
-export function VerificationSection({ user, readiness }: VerificationSectionProps) {
+export function VerificationSection({ user, readiness, context = 'checkout' }: VerificationSectionProps) {
   const queryClient = useQueryClient();
   const policies = usePolicies();
   const [editing, setEditing] = useState(false);
@@ -79,9 +82,24 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
     );
   }
 
-  const { problems, licence } = readiness.data;
+  const { problems, licence, identityStatus } = readiness.data;
   const phoneNeeded = problems.some((problem) => problem.code === 'PHONE_REQUIRED');
-  const licenceProblems = problems.filter((problem) => problem.code !== 'PHONE_REQUIRED');
+  // Settings ask for the check before the first booking, and it hasn't passed yet.
+  const identityNeeded = problems.some(
+    (problem) => problem.code === 'IDENTITY_REQUIRED' || problem.code === 'IDENTITY_PROCESSING',
+  );
+  // At checkout, shown when settings ask for it or once there's a check to report on. On the account page
+  // always, so the person can verify whenever they like (spec §8), and a turned-down check is said there once.
+  const showIdentity =
+    context === 'account' || identityNeeded || identityStatus === 'APPROVED' || identityStatus === 'PENDING';
+  // The identity check has its own part of the step, below the mobile number.
+  const licenceProblems = problems.filter(
+    (problem) =>
+      problem.code !== 'PHONE_REQUIRED' &&
+      problem.code !== 'IDENTITY_REQUIRED' &&
+      problem.code !== 'IDENTITY_PROCESSING' &&
+      !(problem.code === 'IDENTITY_REJECTED' && context === 'account'),
+  );
   const needsForm = licenceProblems.some((problem) => problem.code !== 'IDENTITY_REJECTED') || editing;
   const firstTime = licenceProblems.some((problem) => problem.code === 'LICENCE_REQUIRED');
   const points = policies.data ? eligibilityPoints(policies.data.eligibility) : [];
@@ -107,6 +125,31 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
         )}
       </section>
 
+      {showIdentity && (
+        <section aria-labelledby="checkout-identity" className="grid gap-3">
+          <h3 id="checkout-identity" className="font-semibold text-ink">
+            Your identity
+          </h3>
+          {context === 'account' && identityStatus === 'REJECTED' && (
+            <p className="text-sm text-ink/85">
+              We couldn’t verify your identity.{' '}
+              <Link to="/contact?category=ACCOUNT" className="link-underline font-medium text-primary">
+                Contact support
+              </Link>{' '}
+              and we’ll help.
+            </p>
+          )}
+          {context === 'account' && identityStatus === 'NONE' && !readiness.data.identityProcessing && (
+            <p className="text-sm text-ink/85">
+              {identityNeeded
+                ? 'Not checked yet. You’ll need it before your first booking.'
+                : 'Not checked yet, and optional for now. With your driver licence as the ID, the check confirms your licence too, so a booking doesn’t wait for our team to check it.'}
+            </p>
+          )}
+          <IdentityCheck readiness={readiness.data} />
+        </section>
+      )}
+
       <section aria-labelledby="checkout-licence" className="grid gap-4">
         <h3 id="checkout-licence" className="font-semibold text-ink">
           Your driver licence
@@ -114,11 +157,16 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
         {licence && !firstTime && (
           <p className="text-sm text-ink/85">
             {LICENCE_CLASS_LABELS[licence.class]}
-            {licence.numberEnding && <> ending {licence.numberEnding}</>}, expires {licence.expiry}.
+            {licence.numberEnding && <> ending {licence.numberEnding}</>}, expires{' '}
+            {formatCalendarDate(licence.expiry)}.
           </p>
         )}
         {licenceProblems.length > 0 && !firstTime && (
-          <Alert variant="danger" role="alert" title="Before you can book this trip">
+          <Alert
+            variant="danger"
+            role="alert"
+            title={context === 'checkout' ? 'Before you can book this trip' : 'Before you can book'}
+          >
             <ul className="grid gap-1.5">
               {licenceProblems.map((problem) => (
                 <li key={problem.code}>
@@ -153,7 +201,15 @@ export function VerificationSection({ user, readiness }: VerificationSectionProp
           <LicenceForm hasLicence={Boolean(licence)} onSaved={() => setEditing(false)} />
         ) : (
           <div className="grid gap-3">
-            <Done>Your licence details are saved.</Done>
+            {readiness.data.licenceInReview ? (
+              // Nothing has confirmed the licence yet, so support checks it by hand (plan §8.2).
+              <Alert title="Our team is checking your licence">
+                It usually takes a few hours. You can still book: your card is authorised, not charged, and
+                the booking is confirmed once your licence is approved.
+              </Alert>
+            ) : (
+              <Done>Your licence details are saved.</Done>
+            )}
             <div>
               <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-primary">
                 Update licence details
