@@ -39,7 +39,7 @@ export function Photo({ placeholder, src, onLoad, ...props }: PhotoProps) {
         <span
           aria-hidden="true"
           data-loaded={loadedSrc === src || undefined}
-          className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-lg transition-[opacity,visibility] duration-300 ease-out data-loaded:invisible data-loaded:opacity-0"
+          className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center blur-lg transition-[opacity,visibility] duration-320 ease-out data-loaded:invisible data-loaded:opacity-0"
           style={{ backgroundImage: `url("${placeholder}")` }}
         />
       )}

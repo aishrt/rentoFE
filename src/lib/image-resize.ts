@@ -42,7 +42,7 @@ export const browserImageTools: ImageTools<ImageBitmap> = {
   },
   toJpeg(image, width, height, quality) {
     // JPEG has no see-through parts: a screenshot's show white, not black.
-    const { canvas } = drawn(image, width, height, '#ffffff');
+    const { canvas } = drawn(image, width, height, 'white');
     return new Promise((resolve, reject) =>
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error('Could not encode the photo'))),
