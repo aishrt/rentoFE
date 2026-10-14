@@ -612,6 +612,8 @@ describe('AdminBookingPage: handover', () => {
             damagePins: [{ id: 'p2', x: 50, y: 95, note: 'Dent', newDamage: true, flaggedBy: 'GUEST' }],
           }),
           kilometres: { driven: 800, allowance: 750, extra: 50, extraChargeCents: 1_750 },
+          // Far off, so the real clock never finds the window closed.
+          damageWindowEndsAt: '2036-10-16T21:00:00.000Z',
           fuelShortfall: true,
           actions: NO_ACTIONS,
         }),
@@ -621,7 +623,12 @@ describe('AdminBookingPage: handover', () => {
 
     const card = await section('Handover');
     expect(await card.findByText('800 km driven of 750 km included')).toBeInTheDocument();
-    expect(card.getByText('50 extra km: $17.50 charged to the Guest.')).toBeInTheDocument();
+    // Only the Guest confirmed the check-out, so the extra kilometres wait for the Host or the window's end.
+    expect(
+      card.getByText(
+        /^50 extra km: \$17\.50, not charged yet\. It’s charged once the other party confirms the check-out, or when the damage-report window closes/,
+      ),
+    ).toBeInTheDocument();
     expect(card.getByText('Returned with less fuel than the policy asks.')).toBeInTheDocument();
 
     const checkIn = within(card.getByRole('region', { name: 'Check-in' }));

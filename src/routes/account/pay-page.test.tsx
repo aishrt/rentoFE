@@ -17,9 +17,12 @@ vi.mock('@stripe/react-stripe-js', () => ({
   }: {
     onReady: (event: StripeExpressCheckoutElementReadyEvent) => void;
   }) => {
+    // Like Stripe's element, it reports once, when it has loaded. The form passes a new onReady on every
+    // render, and onReady sets state, so reporting again on each one never stops.
     useEffect(() => {
       onReady({ elementType: 'expressCheckout', availablePaymentMethods: undefined });
-    }, [onReady]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     return null;
   },
   PaymentElement: () => <div>Card number</div>,
