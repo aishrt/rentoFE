@@ -4,10 +4,10 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { BODY_TYPE_LABELS, FUEL_LABELS, TRANSMISSION_LABELS } from '@/features/vehicles/vehicle-format';
+import { FUEL_LABELS, TRANSMISSION_LABELS } from '@/features/vehicles/vehicle-format';
 import { cn } from '@/lib/cn';
 import { formatNzdFromCents } from '@/lib/format';
-import { BODY_TYPES, FUEL_TYPES, PRICE_RANGE, type SearchFilters } from './search-params';
+import { FUEL_TYPES, PRICE_RANGE, type SearchFilters } from './search-params';
 import { usePolicies } from '@/features/content/content-api';
 import { useVehicleMakes } from './search-queries';
 
@@ -45,7 +45,7 @@ function FilterSection({
   );
 }
 
-/** Several can be on at once, e.g. SUV and wagon. Each chip is a toggle button. */
+/** Several can be on at once, e.g. petrol and hybrid. Each chip is a toggle button. */
 function ToggleChips<Value extends string>({
   labelledBy,
   options,
@@ -298,7 +298,6 @@ function YearFilter({ filters, onChange }: Pick<FilterPanelProps, 'filters' | 'o
   );
 }
 
-const bodyTypeOptions = BODY_TYPES.map((value) => ({ value, label: BODY_TYPE_LABELS[value] }));
 const fuelOptions = FUEL_TYPES.map((value) => ({ value, label: FUEL_LABELS[value] }));
 const transmissionOptions = [
   { value: undefined, label: 'Any' },
@@ -323,28 +322,16 @@ interface FilterPanelProps {
 }
 
 /**
- * Every search filter in spec §5: price range, location and radius, vehicle type, make and model, year,
- * automatic or manual, seats, fuel type, hybrid or EV, airport delivery, delivery, Instant Book, minimum
- * rating, unlimited kilometres, pet friendly and child seat. Each change applies straight away (the results
- * update behind the panel); sliders apply once they're let go.
+ * Every search filter in spec §5 but vehicle type (VehicleTypePicker, above the results): price range,
+ * location and radius, make and model, year, automatic or manual, seats, fuel type, hybrid or EV, airport
+ * delivery, delivery, Instant Book, minimum rating, unlimited kilometres, pet friendly and child seat. Each
+ * change applies straight away (the results update behind the panel); sliders apply once they're let go.
  */
 export function FilterPanel({ filters, onChange, placeLabel, className }: FilterPanelProps) {
   return (
     <div className={className}>
       <PriceFilter filters={filters} onChange={onChange} />
       <RadiusFilter filters={filters} onChange={onChange} placeLabel={placeLabel} />
-
-      <FilterSection title="Vehicle type">
-        {(headingId) => (
-          <ToggleChips
-            labelledBy={headingId}
-            options={bodyTypeOptions}
-            selected={filters.types}
-            onChange={(types) => onChange({ types })}
-          />
-        )}
-      </FilterSection>
-
       <MakeModelFilter filters={filters} onChange={onChange} />
       <YearFilter filters={filters} onChange={onChange} />
 

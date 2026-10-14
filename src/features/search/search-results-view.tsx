@@ -43,6 +43,7 @@ import {
 import { useSearchResults } from './search-queries';
 import { fromDateTimeParam } from './search-validation';
 import { formatTripDates, formatTripRange } from './trip-format';
+import { VehicleTypePicker } from './vehicle-type-picker';
 
 const RADIUS_STEPS = [25, 50, 100, 200, 300];
 const URL_UPDATE = { replace: true, preventScrollReset: true } as const;
@@ -206,7 +207,8 @@ function NoResults({
  * cars that are taken left out and an estimated total on each card) share this page (plan §12.6).
  *
  * Phones get a sticky summary bar ("Auckland · 12–15 Oct · Filters (3)") that opens the search and the filters
- * in bottom sheets; desktops get the search across the top and a 280 px filter sidebar. Everything lives in
+ * in bottom sheets; desktops get the search across the top and a 280 px filter sidebar. Vehicle type sits
+ * outside the filters, as a row of cartoon cars above the results on every screen. Everything lives in
  * the URL, and the results re-order smoothly when it changes. A signed-in guest's dated search is saved, so
  * Saved cars can show totals for it.
  */
@@ -394,6 +396,12 @@ export function SearchResultsView({ mode }: { mode: 'browse' | 'search' }) {
             So these are cars from all over New Zealand. Try a city, suburb or airport instead.
           </Alert>
         )}
+
+        <VehicleTypePicker
+          className="mt-6 lg:mt-8"
+          selected={filters.types}
+          onChange={(types) => updateFilters({ types })}
+        />
 
         <div className="mt-6 lg:mt-10 lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:gap-10">
           <aside aria-labelledby="filters-heading" className="hidden lg:block">
