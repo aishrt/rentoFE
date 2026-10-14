@@ -79,7 +79,6 @@
   --animate-progress: progress 2.4s var(--ease-out) both;
   --animate-hero-drift: hero-drift 28s var(--ease-in-out) infinite alternate;
   --animate-shake: shake 320ms var(--ease-out);
-  --animate-breathe: breathe 1.2s var(--ease-in-out) infinite alternate;
   --animate-bar-in: bar-in 320ms var(--ease-out);
 
   /*
@@ -215,16 +214,6 @@
     }
     80% {
       translate: 2px 0;
-    }
-  }
-  @keyframes breathe {
-    from {
-      opacity: 1;
-      scale: 1;
-    }
-    to {
-      opacity: 0.55;
-      scale: 0.94;
     }
   }
   @keyframes bar-in {

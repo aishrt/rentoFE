@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="9" fill="#0254C2"/>
-  <path d="M5 22.5 11.5 12l4.2 6.3 3.1-4.3L27 22.5" stroke="#EEEEEE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M9 27c4.5-2.7 9.5-2.7 14 0" stroke="#C1D9FE" stroke-width="2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- The Rento Vroom mark redrawn on a 16 px grid, so its edges stay sharp at tab size. -->
+  <style>path{fill:#0254c2}@media (prefers-color-scheme:dark){path{fill:#c1d9fe}}</style>
+  <path fill-rule="evenodd" d="M0 1H9.4Q11.1 1 12 2.8L13.6 6H15A1 1 0 0 1 16 7V7.4A.6 .6 0 0 1 15.4 8H14.8Q15.1 9.4 14.7 11H14V13A2 2 0 0 1 10 13V11H2V15H0Z M2 3H8.9Q9.6 3 9.9 3.6L11.1 6H2Z M2 8H9.1A.5 .5 0 0 1 9.1 9H2Z M11 9A1 1 0 0 0 13 9A1 1 0 0 0 11 9Z M11 11V13A1 1 0 0 0 13 13V11Z"/>
 </svg>

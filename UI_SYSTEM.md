@@ -366,7 +366,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | `sheen`                                                                           | One band of light across on hover (accent button)                                                                         |
 | `parallax` / `parallax-exit`                                                      | Desktop scroll parallax on CSS scroll timelines, with no JavaScript. `parallax-exit` is for heroes at the top of the page |
 | `skeleton`, `glass`, `headline`, `eyebrow`                                        | Loading shimmer, sticky-bar blur, display font, small labels                                                              |
-| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-breathe`, `-bar-in`, …      | Keyframe animations                                                                                                       |
+| `animate-fade-up`, `-fade-in`, `-pop-in`, `-shake`, `-bar-in`, …                  | Keyframe animations                                                                                                       |
 | `spotlight` / `spotlight-on-dark`                                                 | A light that follows the mouse (driven by `trackSpotlight`; Cards use the `spotlight` prop)                               |
 | `shiny-text`                                                                      | A glint crosses accent text every few seconds. Short labels on dark backgrounds only; keep `text-accent` on the element   |
 | `gradient-text`                                                                   | Slow blue-to-ink fill for one large figure; keep a text colour on the element                                             |
@@ -391,7 +391,7 @@ const timeline = heroTimeline(words.length);     // eyebrow → words → body �
 | Dashboards         | Figures roll in like an odometer, with a spotlight on hover; tab indicator slides                                                                                                                                                                                       |
 | Log-in pages       | Form fades up; the side panel's headline comes into focus word by word                                                                                                                                                                                                  |
 | 404                | A night drive: the car drives in, then cruises with turning wheels, a gentle suspension bob and puffs of exhaust; lane markings and marker posts stream past; two ranges of hills pan at their own speeds under a glowing 404; stars twinkle. Still with reduced motion |
-| Loading            | Skeleton shimmer; brand mark breathes on first load; the account menu fades in over its placeholder                                                                                                                                                                     |
+| Loading            | Skeleton shimmer; boot splash on first load (index.html: the logo's car drives on the spot, then pulls away); the account menu fades in over its placeholder                                                                                                            |
 
 ### From React Bits
 

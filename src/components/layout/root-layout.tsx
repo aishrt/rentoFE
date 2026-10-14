@@ -1,5 +1,4 @@
 import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
-import { LogoMark } from '@/components/brand/logo';
 import { Toaster } from '@/components/ui/toast';
 
 /** A thin blue bar while the next page's code loads. */
@@ -37,12 +36,10 @@ export function SkipLink() {
   );
 }
 
-/** Shown while the app first loads: the brand mark breathing softly instead of a spinner. */
+/**
+ * Shown while the app first loads. index.html's boot splash (the logo's car driving on the spot) covers it
+ * until the router is ready, so this only holds the page's background.
+ */
 export function FullPageLoader() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-canvas" aria-busy="true">
-      <LogoMark className="size-12 animate-breathe" />
-      <span className="sr-only">Loading Rento Vroom</span>
-    </div>
-  );
+  return <div className="min-h-dvh bg-canvas" aria-busy="true" />;
 }
