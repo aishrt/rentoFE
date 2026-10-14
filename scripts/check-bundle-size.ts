@@ -51,7 +51,9 @@ const PLAN_BUDGET_KB = 170;
 // /host/vehicles route, conversations kept page by page (the live connection's message handling lives in the
 // entry) and the support, refunds and help routes' preload lists. The Host frame is kept apart from the Guest
 // navigation and the unread-count hook out of messages-api, which took back about 0.1 KB.
-const LIMIT_KB = 187.8;
+// Raised from 187.8 to 250 on 14 October 2026 at the project owner's request, for now: the homepage measured
+// 188.4 KB locally after the logo updates, and 188.7 KB once search went by NZ time on any device.
+const LIMIT_KB = 250;
 const HOME_ROUTE = 'src/routes/public/home/home-page.tsx';
 
 interface ManifestChunk {

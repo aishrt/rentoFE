@@ -1,5 +1,5 @@
 import type { Booking, BookingSummary, CancellationTier, DriverLicenceInput } from '@/api/types';
-import { formatDateValue, formatTimeValue } from '@/lib/dates';
+import { formatDateValue, formatTimeValue, nzWallClockParts } from '@/lib/dates';
 import { NZ_TIME_ZONE } from '@/lib/format';
 
 /*
@@ -44,16 +44,6 @@ const nzDateTimeWithYear = new Intl.DateTimeFormat('en-NZ', {
   minute: '2-digit',
   timeZone: NZ_TIME_ZONE,
 });
-// en-CA writes dates as 2026-10-12, the format the API and the date pickers use.
-const nzWallClock = new Intl.DateTimeFormat('en-CA', {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-  timeZone: NZ_TIME_ZONE,
-});
 
 /** "Mon, 12 Oct, 10:00 am" in NZ time. */
 export const formatNzDateTime = (iso: string) => nzDateTime.format(new Date(iso));
@@ -91,12 +81,6 @@ export function formatTripSpan(startIso: string, endIso: string, now = new Date(
       : `${startDay}–${endDay} ${endMonth}${suffix}`;
   }
   return `${startDay} ${startMonth} – ${endDay} ${endMonth}${suffix}`;
-}
-
-/** An instant as NZ wall-clock parts: "2026-10-12" and "10:00". */
-export function nzWallClockParts(instant: Date): { date: string; time: string } {
-  const parts = Object.fromEntries(nzWallClock.formatToParts(instant).map((part) => [part.type, part.value]));
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
 
 /** "Mon, 12 Oct, 10:00 am" for a "2026-10-12T10:00" NZ wall-clock value, as the checkout's URL holds them. */

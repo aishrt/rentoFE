@@ -1,9 +1,33 @@
+// The same zone as format.ts's NZ_TIME_ZONE, written out so the homepage's search form doesn't load the
+// number and date formatters with it (plan §12.5 speed budget).
+const NZ_TIME_ZONE = 'Pacific/Auckland';
+
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /** "2026-10-12" in the device's local time, the format of <input type="date">. */
 export function toDateInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
+
+// en-CA writes dates as 2026-10-12, the format the API and the date pickers use.
+const nzWallClock = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: NZ_TIME_ZONE,
+});
+
+/** An instant as NZ wall-clock parts: "2026-10-12" and "10:00". */
+export function nzWallClockParts(instant: Date): { date: string; time: string } {
+  const parts = Object.fromEntries(nzWallClock.formatToParts(instant).map((part) => [part.type, part.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+/** Today in NZ, "2026-10-12", whatever the device's time zone: trips and documents run on NZ dates. */
+export const nzToday = (now = new Date()) => nzWallClockParts(now).date;
 
 export function addDays(date: Date, days: number): Date {
   const next = new Date(date);

@@ -5081,7 +5081,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a photo */
+        /**
+         * Remove a photo
+         * @description 409 LAST_APPROVED_PHOTO for an approved car's only approved photo of an angle it needs: a new one replaces it once approved.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -5131,6 +5134,15 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
         options?: never;
@@ -5147,7 +5159,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add an uploaded document */
+        /**
+         * Add an uploaded document
+         * @description An insurance document needs its `expiry`: 400 with that field without it.
+         */
         post: {
             parameters: {
                 query?: never;

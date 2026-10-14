@@ -7,6 +7,7 @@ import {
   clampDateValue,
   formatFullDate,
   formatMonthYear,
+  nzToday,
   parseDateValue,
   toDateInputValue,
   weekdayIndex,
@@ -66,7 +67,7 @@ export function Calendar({
   className,
 }: CalendarProps) {
   const headingId = useId();
-  const [today] = useState(() => toDateInputValue(new Date()));
+  const [today] = useState(() => nzToday());
   const [focused, setFocused] = useState(() =>
     clampDateValue(parseDateValue(value) ? value : today, min, max),
   );

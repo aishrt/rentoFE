@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicle } from '@/api/types';
@@ -63,6 +63,28 @@ describe('VehicleEditorPage', () => {
         /Your new date applies once our team has checked the new registration\. Until then, guests can book up to .*31 Dec/,
       ),
     ).toBeInTheDocument();
+  });
+
+  it('asks for the insurance expiry date before uploading the policy', async () => {
+    let signed = false;
+    api(sampleVehicle(), {
+      'POST /uploads/signature': () => {
+        signed = true;
+        return { status: 500, body: {} };
+      },
+    });
+    render('/host/vehicles/v1/2');
+    const button = await screen.findByRole('button', { name: 'Upload Insurance' });
+    await userEvent.upload(
+      button.nextElementSibling as HTMLInputElement,
+      new File(['%PDF'], 'policy.pdf', { type: 'application/pdf' }),
+    );
+
+    expect(
+      await screen.findByText('Choose the date your insurance expires, then upload it'),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Insurance expires/ })).toHaveFocus());
+    expect(signed).toBe(false);
   });
 
   it('saves step 1 with PATCH, including the furthest step, then moves on to documents', async () => {

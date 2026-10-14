@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { applyFieldErrors, formErrorMessage } from '@/features/account/form-errors';
 import { overseasCountryOptions } from '@/lib/countries';
+import { nzWallClockParts } from '@/lib/dates';
 import { useSaveLicence } from './booking-api';
-import { LICENCE_CLASS_LABELS, nzWallClockParts, type LicenceClass } from './booking-format';
+import { LICENCE_CLASS_LABELS, type LicenceClass } from './booking-format';
 import { DatePartsField } from './date-parts-field';
 
 const CLASS_OPTIONS = (Object.keys(LICENCE_CLASS_LABELS) as LicenceClass[]).map((value) => ({
