@@ -33,6 +33,7 @@ import { MessageList } from '@/features/messages/message-list';
 import { useBlock, useMessages, useReadThread, useThread } from '@/features/messages/messages-api';
 import { PersonAvatar } from '@/features/messages/person-avatar';
 import { ReportDialogContent } from '@/features/messages/report-dialog';
+import { scrollBehavior } from '@/lib/scroll';
 
 type ReportTarget = { type: 'USER'; id: string } | { type: 'MESSAGE'; id: string };
 
@@ -137,7 +138,7 @@ function useStickToBottom(count: number) {
     if (!marker || count === 0) return;
     const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 320;
     if (first.current || nearBottom)
-      marker.scrollIntoView({ block: 'end', behavior: first.current ? 'auto' : 'smooth' });
+      marker.scrollIntoView({ block: 'end', behavior: first.current ? 'auto' : scrollBehavior() });
     first.current = false;
   }, [count]);
   return end;

@@ -131,6 +131,7 @@ describe('TripPage', () => {
     render();
 
     expect(await screen.findByText('Waiting for Liam', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText(/Liam has until .* \(NZ time\) to answer\./)).toBeInTheDocument();
     expect(screen.getByText(/charged only if they\s+accept/)).toBeInTheDocument();
     expect(
       screen.getByText(/The exact address and any instructions show here once your booking is confirmed/),
@@ -225,6 +226,40 @@ describe('TripPage', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/didn’t answer/)).not.toBeInTheDocument();
+  });
+
+  it('says a request expired because the host didn’t answer in time', async () => {
+    mockTrip(
+      bookingFixture({
+        status: 'EXPIRED',
+        instantBook: false,
+        holdExpiresAt: undefined,
+        payment: { status: 'CANCELLED' },
+        expiry: { reason: 'HOST_NO_ANSWER', paymentReturned: false },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+
+    expect(
+      await screen.findByText(/Liam didn’t answer in time, so your card authorisation was released\./),
+    ).toBeInTheDocument();
+  });
+
+  it('says the host has only until the start to answer a request for a trip starting soon', async () => {
+    const start = new Date(Date.now() + 5 * 3_600_000).toISOString();
+    const unpaid = bookingFixture({ instantBook: false, start });
+    mockTrip(unpaid, (request) =>
+      request.path === `/bookings/${REF}/payment/sync`
+        ? { status: 200, body: { booking: unpaid } }
+        : undefined,
+    );
+    render();
+
+    expect(
+      await screen.findByText(/^Liam has until .* \(NZ time\) to answer once you send the request\.$/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Liam has 24 hours to answer/)).not.toBeInTheDocument();
   });
 
   it('says a payment that went through after the booking ended is refunded in full', async () => {

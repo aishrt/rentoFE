@@ -1,11 +1,14 @@
 import { ApiError, client, refreshSession, unwrap } from '@/api/client';
 import type { UploadRequest, UploadTarget } from '@/api/types';
+import { browserImageTools, shrinkPhoto, type ImageTools, type ShrinkOptions } from '@/lib/image-resize';
+import { JPEG_QUALITY, MAX_PHOTO_EDGE } from './photo-checks';
 
 /*
- * Photos and documents go straight from the browser to storage (plan §3, "Public and private files"): the
- * API signs a target for one file, the browser sends it there with progress, then the car's photos or
- * documents endpoint attaches the target's key. Development stores files on the API itself (the `local`
- * driver, which needs the session cookie); production sends them to the S3 bucket (no cookies).
+ * Photos and documents go straight from the browser to storage (plan §3, "Public and private files"): a
+ * photo is made smaller first (plan §12.5), the API signs a target for one file, the browser sends it there
+ * with progress, then the car's photos or documents endpoint attaches the target's key. Development stores
+ * files on the API itself (the `local` driver, which needs the session cookie); production sends them to the
+ * S3 bucket (no cookies).
  */
 
 export type UploadPurpose = UploadRequest['purpose'];
@@ -58,6 +61,41 @@ export function uploadProblem(file: Blob & { name?: string }, purpose: UploadPur
   if (file.size > MAX_UPLOAD_BYTES) return 'Files can be up to 15 MB.';
   if (file.size === 0) return 'This file is empty.';
   return null;
+}
+
+/**
+ * Photos of documents, damage and the like go up at most this size: small print stays readable (the API
+ * keeps up to 4000 px), at a fraction of what a phone takes.
+ */
+const DOCUMENT_PHOTO: ShrinkOptions = { maxEdge: 3000, quality: 0.85 };
+
+/**
+ * How each purpose's photos are made smaller before they go up, so uploads are quick on mobile data (plan
+ * §12.5). Listing photos are already resized as they're checked (photo-checks); a profile photo is only
+ * ever shown small.
+ */
+const SHRINK: Record<UploadPurpose, ShrinkOptions | null> = {
+  VEHICLE_PHOTO: null,
+  PROFILE_PHOTO: { maxEdge: MAX_PHOTO_EDGE, quality: JPEG_QUALITY },
+  VEHICLE_DOCUMENT: DOCUMENT_PHOTO,
+  MESSAGE_PHOTO: DOCUMENT_PHOTO,
+  INSPECTION_PHOTO: DOCUMENT_PHOTO,
+  INCIDENT_FILE: DOCUMENT_PHOTO,
+  SUPPORT_FILE: DOCUMENT_PHOTO,
+};
+
+/**
+ * The file as it goes up for `purpose`: a photo made smaller, anything else (a PDF) as it is. The browser's
+ * image tools are passed in, so tests can do without a canvas.
+ */
+export function prepareUpload<Image>(
+  file: Blob,
+  purpose: UploadPurpose,
+  contentType: string,
+  tools: ImageTools<Image>,
+): Promise<{ file: Blob; contentType: string }> {
+  const shrink = SHRINK[purpose];
+  return shrink ? shrinkPhoto(file, contentType, shrink, tools) : Promise.resolve({ file, contentType });
 }
 
 const NETWORK_MESSAGE = "The upload didn't finish. Check your connection and try again.";
@@ -160,7 +198,10 @@ interface UploadInput extends SendOptions {
   contentType?: string;
 }
 
-/** Asks for a target, then sends the file there. Resolves with the reference to attach to the car or booking. */
+/**
+ * Makes a photo smaller for its purpose (prepareUpload), asks for a target, then sends the file there.
+ * Resolves with the reference to attach to the car or booking.
+ */
 export async function uploadFile({
   purpose,
   vehicleId,
@@ -169,14 +210,16 @@ export async function uploadFile({
   contentType,
   ...options
 }: UploadInput): Promise<string> {
-  const type = contentType ?? contentTypeOf(file);
+  const prepared = await prepareUpload(file, purpose, contentType ?? contentTypeOf(file), browserImageTools);
   const target = await requestUploadTarget({
     purpose,
     ...(vehicleId && { vehicleId }),
     ...(bookingId && { bookingId }),
-    contentType: type,
-    size: file.size,
+    contentType: prepared.contentType,
+    size: prepared.file.size,
   });
-  if (file.size > target.maxBytes) throw new ApiError(400, 'FILE_TOO_LARGE', 'Files can be up to 15 MB.');
-  return sendFile(target, file, options);
+  if (prepared.file.size > target.maxBytes) {
+    throw new ApiError(400, 'FILE_TOO_LARGE', 'Files can be up to 15 MB.');
+  }
+  return sendFile(target, prepared.file, options);
 }

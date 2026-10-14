@@ -70,7 +70,7 @@ function DocumentFile({ vehicleId, document }: { vehicleId: string; document: Ve
           href={document.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-10 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-primary transition-colors duration-120 hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-primary"
+          className="inline-flex h-10 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-primary transition-colors duration-120 pointer-coarse:h-11 hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-primary"
         >
           Open
           <ExternalLink aria-hidden="true" className="size-4" />

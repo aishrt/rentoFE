@@ -7,7 +7,6 @@ import type {
   AdminFeaturedVehicles,
   AdminHelpArticle,
   AdminHomeHero,
-  AdminSiteFooter,
   DestinationCreate,
   DestinationEdit,
   FaqInput,
@@ -15,14 +14,12 @@ import type {
   HomeHero,
   LegalPage,
   LegalPageEdit,
-  SiteFooter,
 } from '@/api/types';
 import { formErrorMessage } from '@/features/account/form-errors';
 
 /*
  * The website's content in the staff portal (plan §9, Days 19–23; §12.6), admin only: the homepage's
- * headline, featured cars and customer reviews, the footer's links, the legal pages, destination pages, FAQs
- * and help articles. The API clears the public pages' one-minute cache when something is saved, so a change
+ * headline, featured cars and customer reviews, the legal pages, destination pages, FAQs and help articles. The API clears the public pages' one-minute cache when something is saved, so a change
  * shows on the website within a minute.
  */
 
@@ -35,7 +32,6 @@ export const destinationsQueryKey = ['admin', 'content', 'destinations'] as cons
 export const faqsQueryKey = ['admin', 'content', 'faqs'] as const;
 export const helpArticlesQueryKey = ['admin', 'content', 'help-articles'] as const;
 export const heroQueryKey = ['admin', 'content', 'hero'] as const;
-export const footerQueryKey = ['admin', 'content', 'footer'] as const;
 export const featuredReviewsQueryKey = ['admin', 'content', 'featured-reviews'] as const;
 export const reviewChoicesQueryKey = (q: string) => ['admin', 'content', 'reviews', q] as const;
 
@@ -124,7 +120,7 @@ export async function editDestinationRequest(input: {
   return response.destination;
 }
 
-// Homepage headline, customer reviews and footer links (plan §12.6) ---------------------------------------------
+// Homepage headline and customer reviews (plan §12.6) --------------------------------------------------------
 
 /** The homepage's headline and supporting line; `saved: false` while the original text shows. */
 export function useHeroText() {
@@ -136,18 +132,6 @@ export function useHeroText() {
 
 export async function saveHeroTextRequest(hero: HomeHero): Promise<AdminHomeHero> {
   return unwrap(client.PUT('/admin/content/hero', { body: hero }));
-}
-
-/** The footer's groups of links and social accounts; `saved: false` while the original links show. */
-export function useFooterLinks() {
-  return useQuery({
-    queryKey: footerQueryKey,
-    queryFn: ({ signal }) => unwrap(client.GET('/admin/content/footer', { signal })),
-  });
-}
-
-export async function saveFooterLinksRequest(footer: SiteFooter): Promise<AdminSiteFooter> {
-  return unwrap(client.PUT('/admin/content/footer', { body: footer }));
 }
 
 /** The reviews picked for the homepage, in order, with the threshold that shows the section. */
@@ -184,9 +168,6 @@ const isHttps = (value: string) => {
     return false;
   }
 };
-
-/** A full https:// address, as the API takes for social accounts. */
-export const isHttpsAddress = (value: string) => isHttps(value.trim());
 
 /**
  * A full https:// address, or a path on this website such as /help, as the API takes for links and

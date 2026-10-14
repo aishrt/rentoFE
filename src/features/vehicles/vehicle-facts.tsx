@@ -31,7 +31,20 @@ function powertrainLine(vehicle: VehicleDetail): string | undefined {
     powertrain.engineCc ? `${(powertrain.engineCc / 1000).toFixed(1)} litre` : undefined,
     powertrain.cylinders ? `${powertrain.cylinders} cylinders` : undefined,
   ].filter(Boolean);
-  return engine.length > 0 ? engine.join(', ') : electric.join(' · ') || undefined;
+  if (engine.length > 0) return engine.join(', ');
+  // A plug-in hybrid's battery has a tile of its own.
+  return vehicle.fuelType === 'PHEV' ? undefined : electric.join(' · ') || undefined;
+}
+
+/** A plug-in hybrid's battery, beside its engine: "13.8 kWh · 84 km electric range". */
+function phevBatteryLine(vehicle: VehicleDetail): string | undefined {
+  if (vehicle.fuelType !== 'PHEV' || !vehicle.powertrain) return undefined;
+  const { batteryKwh, evRangeKm } = vehicle.powertrain;
+  const parts = [
+    batteryKwh ? `${batteryKwh} kWh` : undefined,
+    evRangeKm ? `${evRangeKm} km electric range` : undefined,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 interface Spec {
@@ -40,9 +53,14 @@ interface Spec {
   value: string;
 }
 
-/** Transmission, fuel, engine or powertrain, seats and doors (spec §6), then the car's features. */
+/**
+ * Transmission, fuel, engine or powertrain (a plug-in hybrid's battery too), seats and doors (spec §6), then
+ * the car's features and any existing damage its host noted.
+ */
 export function SpecsSection({ vehicle }: { vehicle: VehicleDetail }) {
   const engine = powertrainLine(vehicle);
+  const battery = phevBatteryLine(vehicle);
+  const damagePhotos = vehicle.photos.some((photo) => photo.type === 'DAMAGE');
   const specs: Spec[] = [
     { icon: Cog, label: 'Transmission', value: TRANSMISSION_LABELS[vehicle.transmission] },
     {
@@ -53,6 +71,7 @@ export function SpecsSection({ vehicle }: { vehicle: VehicleDetail }) {
     ...(engine
       ? [{ icon: Gauge, label: vehicle.fuelType === 'EV' ? 'Powertrain' : 'Engine', value: engine }]
       : []),
+    ...(battery ? [{ icon: BatteryCharging, label: 'Battery', value: battery }] : []),
     { icon: Users, label: 'Seats', value: String(vehicle.seats) },
     { icon: DoorOpen, label: 'Doors', value: String(vehicle.doors) },
     { icon: CarFront, label: 'Body', value: BODY_TYPE_LABELS[vehicle.bodyType] },
@@ -95,6 +114,17 @@ export function SpecsSection({ vehicle }: { vehicle: VehicleDetail }) {
               </li>
             ))}
           </ul>
+        </ListingSection>
+      )}
+
+      {/* The host's own words, as plain text with their line breaks. */}
+      {vehicle.damageNotes && (
+        <ListingSection
+          id="damage"
+          title="Known marks and damage"
+          description={`Noted by the host${damagePhotos ? ', with photos in the gallery above' : ''}.`}
+        >
+          <p className="max-w-2xl break-words whitespace-pre-line text-ink/85">{vehicle.damageNotes}</p>
         </ListingSection>
       )}
     </>

@@ -10,6 +10,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
+import { Photo } from '@/components/ui/photo';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
 import { useSavedCars } from '@/features/account/dashboard-api';
@@ -58,10 +59,11 @@ function UnlistedCar({ car }: { car: SavedCars['cars'][number] }) {
   const name = vehicleName(car);
   return (
     <article className="relative flex flex-col rounded-card border border-line/80 bg-surface shadow-card">
-      <div className="aspect-4/3 overflow-hidden rounded-t-card bg-ink/6 opacity-60 grayscale">
+      <div className="relative aspect-4/3 overflow-hidden rounded-t-card bg-ink/6 opacity-60 grayscale">
         {car.photo ? (
-          <img
+          <Photo
             src={smallPhoto(car.photo.url)}
+            placeholder={car.photo.placeholder}
             alt={car.photo.alt}
             loading="lazy"
             decoding="async"

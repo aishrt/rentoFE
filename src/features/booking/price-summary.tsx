@@ -10,6 +10,7 @@ import { CurrencyPicker } from '@/features/currency/currency-picker';
 import { useDisplayCurrency } from '@/features/currency/use-display-currency';
 import { useExchangeRates } from '@/features/currency/use-exchange-rates';
 import { cn } from '@/lib/cn';
+import { smallPhoto } from '@/lib/photos';
 import {
   formatNzDateTime,
   formatNzd,
@@ -170,8 +171,9 @@ export function CheckoutSummary(props: SummaryProps) {
       <div className="flex items-start gap-4">
         {photo && (
           <img
-            src={photo.url}
+            src={smallPhoto(photo.url)}
             alt=""
+            decoding="async"
             width={96}
             height={72}
             className="aspect-4/3 w-24 shrink-0 rounded-control bg-canvas object-cover"

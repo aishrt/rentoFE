@@ -43,6 +43,7 @@ import {
   formatTripSpan,
   hostAnswers,
   refundSentence,
+  requestAnswerWindow,
   statusLabel,
 } from '@/features/booking/booking-format';
 import {
@@ -68,6 +69,7 @@ import { ActiveTripPanel } from '@/features/handover/active-trip';
 import { ReportIncidentLink } from '@/features/incidents/report-incident-link';
 import { HandoverCard } from '@/features/handover/handover-card';
 import { cn } from '@/lib/cn';
+import { smallPhoto } from '@/lib/photos';
 
 type Tone = 'info' | 'success' | 'danger';
 
@@ -160,9 +162,9 @@ type ExpiryReason = NonNullable<Booking['expiry']>['reason'];
 const EXPIRED_WHY: Record<ExpiryReason, (host: string) => string> = {
   PAYMENT_TIMEOUT: () => 'The payment wasn’t finished within 30 minutes, so the dates were released.',
   CHECKOUT_ABANDONED: () => 'You left the checkout before paying, so the dates were released.',
-  HOST_NO_ANSWER: (host) => `${host} didn’t answer within 24 hours, so your card authorisation was released.`,
+  HOST_NO_ANSWER: (host) => `${host} didn’t answer in time, so your card authorisation was released.`,
   VERIFICATION_EXPIRED: () =>
-    'We couldn’t finish checking your ID and licence within 24 hours, so your card authorisation was released.',
+    'We couldn’t finish checking your ID and licence in time, so your card authorisation was released.',
   VERIFICATION_REJECTED: () =>
     'We weren’t able to verify your identity or driver licence, so your card authorisation was released.',
   DATES_TAKEN: () =>
@@ -220,7 +222,7 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
               <p className="mt-1 text-sm text-muted">
                 {booking.instantBook
                   ? 'Your booking is confirmed as soon as you pay.'
-                  : `${host} has 24 hours to answer once you send the request.`}
+                  : `${host} has ${requestAnswerWindow({ start: booking.start }, now)} to answer once you send the request.`}
               </p>
             </div>
             {booking.payment?.failureReason && (
@@ -268,11 +270,8 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
       return (
         <Banner tone="info" icon={Hourglass} title={`Waiting for ${host}`}>
           <p>
-            {booking.requestExpiresAt
-              ? `${host} has until ${formatNzDateTime(booking.requestExpiresAt)} (NZ time) to answer.`
-              : `${host} has 24 hours to answer.`}{' '}
-            Your card is authorised for NZ{formatNzd(booking.price.totalCents)} and charged only if they
-            accept.
+            {host} has {requestAnswerWindow(booking, now)} to answer. Your card is authorised for NZ
+            {formatNzd(booking.price.totalCents)} and charged only if they accept.
           </p>
         </Banner>
       );
@@ -415,7 +414,7 @@ function Trip({ tripRef }: { tripRef: string }) {
       description: held
         ? 'We’re finishing the check of your details. You’re only charged once it’s approved.'
         : updated.status === 'PENDING'
-          ? `${booking.host.firstName} has 24 hours to answer.`
+          ? `${booking.host.firstName} has ${requestAnswerWindow({ requestExpiresAt: updated.requestExpiresAt, start: booking.start })} to answer.`
           : `Your trip in the ${booking.vehicle.title} is confirmed.`,
     });
   };
@@ -436,8 +435,9 @@ function Trip({ tripRef }: { tripRef: string }) {
           </div>
           {booking.vehicle.photoUrl && (
             <img
-              src={booking.vehicle.photoUrl}
+              src={smallPhoto(booking.vehicle.photoUrl)}
               alt=""
+              decoding="async"
               width={160}
               height={120}
               className="aspect-4/3 w-40 shrink-0 rounded-card bg-canvas object-cover max-sm:hidden"

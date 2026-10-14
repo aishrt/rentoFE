@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, type FormEventHandler, type ReactNode } from 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { scrollBehavior } from '@/lib/scroll';
 import type { SaveProblem, StepTarget } from './use-step-save';
 import { STEP_COUNT } from './vehicle-labels';
 
@@ -66,7 +67,7 @@ export function StepFrame({
   useEffect(() => {
     // A problem without a field to focus is scrolled into view instead.
     if (problem && problem.items.length > 0)
-      problemRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      problemRef.current?.scrollIntoView({ block: 'center', behavior: scrollBehavior() });
   }, [problem]);
 
   return (

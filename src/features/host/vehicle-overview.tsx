@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
 import { formatDateValue } from '@/lib/dates';
+import { smallPhoto } from '@/lib/photos';
 import { AngleIllustration } from './angle-illustrations';
 import { setVehicleActiveRequest, storeVehicle } from './host-api';
 import { HostPageHeader } from './host-nav';
@@ -318,7 +319,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
         <aside className="hidden xl:block" aria-hidden="true">
           <div className="sticky top-24 aspect-4/3 overflow-hidden rounded-card border border-line bg-canvas shadow-card">
             {cover ? (
-              <img src={cover} alt="" className="size-full object-cover" />
+              <img src={smallPhoto(cover)} alt="" decoding="async" className="size-full object-cover" />
             ) : (
               <div className="flex size-full items-center justify-center">
                 <AngleIllustration angle="FRONT" className="w-1/2 text-primary/60" />

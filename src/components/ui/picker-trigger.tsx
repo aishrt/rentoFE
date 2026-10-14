@@ -56,7 +56,7 @@ export function PickerTrigger({
       >
         {icon}
       </span>
-      <span id={valueId} className={cn('min-w-0 flex-1 truncate', !display && 'text-muted/75')}>
+      <span id={valueId} className={cn('min-w-0 flex-1 truncate', !display && 'text-muted')}>
         {display || placeholder}
       </span>
       {chevron && (

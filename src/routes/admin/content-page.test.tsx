@@ -420,7 +420,7 @@ describe('AdminContentPage: destinations', () => {
   });
 });
 
-// Homepage headline, customer reviews and footer links ------------------------------------------------------
+// Homepage headline and customer reviews ---------------------------------------------------------------------
 
 const ORIGINAL_HERO = {
   headline: 'Rent a car from local owners across New Zealand.',
@@ -528,71 +528,6 @@ describe('AdminContentPage: customer reviews', () => {
   });
 });
 
-const ORIGINAL_FOOTER = {
-  groups: [
-    { title: 'Rent', links: [{ label: 'Browse cars', href: '/cars' }] },
-    { title: 'Support', links: [{ label: 'Help centre', href: '/help' }] },
-  ],
-  socialLinks: [],
-};
-
-describe('AdminContentPage: footer links', () => {
-  it('adds links and a social account, accepting only https:// addresses and paths on the website', async () => {
-    let sent: unknown;
-    mockApi({
-      'GET /admin/content/footer': { status: 200, body: { footer: ORIGINAL_FOOTER, saved: false } },
-      'PUT /admin/content/footer': (init) => {
-        sent = json(init);
-        return { status: 200, body: { footer: sent, saved: true } };
-      },
-    });
-    render('/admin/content?tab=footer');
-
-    expect(await screen.findByText('The original links')).toBeInTheDocument();
-    const support = within(screen.getByRole('group', { name: 'Group 2' }));
-    expect(support.getByLabelText('Heading')).toHaveValue('Support');
-    await userEvent.click(support.getByRole('button', { name: 'Add a link' }));
-    await userEvent.type(support.getByLabelText('Link 2 name'), 'Roadside help');
-    await userEvent.type(support.getByLabelText('Link 2 address'), 'javascript:alert(1)');
-
-    const social = within(screen.getByRole('group', { name: 'Social media' }));
-    await userEvent.click(social.getByRole('button', { name: 'Add an account' }));
-    await userEvent.type(social.getByLabelText('Account 1 name'), 'Instagram');
-    await userEvent.type(social.getByLabelText('Account 1 address'), '/instagram');
-    await userEvent.click(screen.getByRole('button', { name: 'Save footer links' }));
-
-    expect(
-      await support.findByText(
-        'Use a full address starting with https://, or a path on this website starting with /',
-      ),
-    ).toBeInTheDocument();
-    expect(social.getByText('Use a full address starting with https://')).toBeInTheDocument();
-
-    await userEvent.clear(support.getByLabelText('Link 2 address'));
-    await userEvent.type(support.getByLabelText('Link 2 address'), 'https://aa.co.nz/roadservice');
-    await userEvent.click(support.getByRole('button', { name: 'Move link 2 up' }));
-    await userEvent.clear(social.getByLabelText('Account 1 address'));
-    await userEvent.type(social.getByLabelText('Account 1 address'), 'https://instagram.com/rentovroom');
-    await userEvent.click(screen.getByRole('button', { name: 'Save footer links' }));
-
-    expect(await screen.findByText('Footer links saved')).toBeInTheDocument();
-    expect(sent).toEqual({
-      groups: [
-        { title: 'Rent', links: [{ label: 'Browse cars', href: '/cars' }] },
-        {
-          title: 'Support',
-          links: [
-            { label: 'Roadside help', href: 'https://aa.co.nz/roadservice' },
-            { label: 'Help centre', href: '/help' },
-          ],
-        },
-      ],
-      socialLinks: [{ label: 'Instagram', href: 'https://instagram.com/rentovroom' }],
-    });
-    expect(screen.queryByText('The original links')).not.toBeInTheDocument();
-  });
-});
-
 describe('AdminContentPage: tabs', () => {
   it('keeps the tab in the address', async () => {
     mockApi({
@@ -611,7 +546,6 @@ describe('AdminContentPage: tabs', () => {
       'Customer reviews',
       'Legal pages',
       'Destinations',
-      'Footer links',
     ]);
     await userEvent.click(screen.getByRole('tab', { name: 'Destinations' }));
 

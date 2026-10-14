@@ -28,7 +28,7 @@ import {
   useCreateBooking,
   useTripQuote,
 } from '@/features/booking/booking-api';
-import { formatNzd, formatWallClock } from '@/features/booking/booking-format';
+import { formatNzd, formatWallClock, requestAnswerWindow } from '@/features/booking/booking-format';
 import { CheckoutSection, type SectionState } from '@/features/booking/checkout-section';
 import {
   addressLine,
@@ -395,7 +395,7 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
       });
     } else if (booking.status === 'PENDING') {
       toast('Request sent', {
-        description: `${vehicle.host.firstName} has 24 hours to answer. You’re only charged if they accept.`,
+        description: `${vehicle.host.firstName} has ${requestAnswerWindow({ requestExpiresAt: booking.requestExpiresAt, start: holdBooking?.start })} to answer. You’re only charged if they accept.`,
       });
     } else {
       toast('Payment received', { description: 'We’re confirming your booking.', tone: 'neutral' });
@@ -445,7 +445,8 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
         </h1>
         <p className="mt-2 text-muted">
           The {vehicle.title}, hosted by {vehicle.host.firstName}.
-          {!instant && ' Your host answers within 24 hours, and you’re only charged if they accept.'}
+          {!instant &&
+            ` Your host has ${requestAnswerWindow({ start: priced?.start })} to answer, and you’re only charged if they accept.`}
         </p>
       </div>
 

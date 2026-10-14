@@ -29,7 +29,7 @@ const MIN_CONTENTS_ENTRIES = 3;
 
 const asideHeadingClasses = 'eyebrow text-muted';
 const asideLinkClasses =
-  'flex min-h-10 items-center border-l border-transparent -ml-px pl-4 text-sm transition-colors duration-120 hover:border-primary hover:text-ink';
+  'flex min-h-10 pointer-coarse:min-h-11 items-center border-l border-transparent -ml-px pl-4 text-sm transition-colors duration-120 hover:border-primary hover:text-ink';
 
 /**
  * The live cancellation tiers (GET /policies), shown with the Cancellation Policy's legal text so the page

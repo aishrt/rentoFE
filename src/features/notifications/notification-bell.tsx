@@ -85,7 +85,7 @@ export function NotificationBell({ allPath = '/notifications' }: { allPath?: str
                 event.preventDefault();
                 markRead.mutate(undefined, { onError: failed });
               }}
-              className="min-h-9 text-primary [&_svg]:text-primary"
+              className="min-h-9 text-primary pointer-coarse:min-h-11 [&_svg]:text-primary"
             >
               <CheckCheck aria-hidden="true" />
               Mark all as read

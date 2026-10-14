@@ -310,7 +310,7 @@ function expiredWords(booking: Booking, guest: string): { title: string; text: s
     case 'HOST_NO_ANSWER':
       return {
         title: 'This request expired',
-        text: `It wasn’t answered within 24 hours, so ${guest}’s card authorisation was released.`,
+        text: `It wasn’t answered in time, so ${guest}’s card authorisation was released.`,
       };
     case 'VERIFICATION_EXPIRED':
     case 'VERIFICATION_REJECTED':

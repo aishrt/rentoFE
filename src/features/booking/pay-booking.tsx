@@ -16,7 +16,8 @@ import { ChargeNote } from './price-summary';
 /** How long the tick shows before moving on to the trip, in ms: long enough to see it drawn. */
 export const TICK_PAUSE_MS = 900;
 
-export type PaidBooking = Pick<Booking, 'ref' | 'status' | 'verificationReview'>;
+/** A request sent has `requestExpiresAt`: when its Host must answer by. */
+export type PaidBooking = Pick<Booking, 'ref' | 'status' | 'verificationReview' | 'requestExpiresAt'>;
 
 interface PayBookingProps {
   booking: Booking;
