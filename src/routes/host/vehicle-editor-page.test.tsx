@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HostVehicle } from '@/api/types';
@@ -83,7 +83,7 @@ describe('VehicleEditorPage', () => {
     expect(
       await screen.findByText('Choose the date your insurance expires, then upload it'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Insurance expires/ })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Insurance expires/ })).toHaveFocus());
     expect(signed).toBe(false);
   });
 

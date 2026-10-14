@@ -118,7 +118,8 @@ function DocumentRow({
     }
     if (insurance && !insuranceExpiry) {
       setInsuranceError('Choose the date your insurance expires, then upload it');
-      insuranceRef.current?.focus();
+      // Once the file chooser has handed focus back, so it lands on the date.
+      setTimeout(() => insuranceRef.current?.focus());
       return;
     }
     // The dates from this step go with the file, so our team can check they match.
