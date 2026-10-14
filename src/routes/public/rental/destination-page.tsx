@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, KeyRound, Plane } from 'lucide-react';
+import { ArrowRight, KeyRound, MapPin, Plane } from 'lucide-react';
 import { m } from 'motion/react';
 import { Link, useParams } from 'react-router';
 import { ApiError, client, unwrap } from '@/api/client';
@@ -267,20 +267,18 @@ export function DestinationPage() {
   if (destination.isError) {
     if (destination.error instanceof ApiError && destination.error.status === 404) return <NotFoundPage />;
     return (
-      <Container className="py-16">
+      <Container className="flex justify-center py-16 sm:py-24">
         <PageMeta title="Car rental" noindex />
-        <Alert
-          variant="danger"
-          role="alert"
-          title="We couldn't load this page"
-          action={
-            <Button variant="secondary" size="sm" onClick={() => void destination.refetch()}>
-              Try again
-            </Button>
+        <EmptyState
+          visual={
+            <IconBadge size="xl">
+              <MapPin />
+            </IconBadge>
           }
-        >
-          {destination.error.message}
-        </Alert>
+          title="We couldn't load this page"
+          description={destination.error.message}
+          actions={<Button onClick={() => void destination.refetch()}>Try again</Button>}
+        />
       </Container>
     );
   }

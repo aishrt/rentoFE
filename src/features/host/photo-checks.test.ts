@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { fitWithin, type ImageTools } from '@/lib/image-resize';
 import {
   ANALYSIS_EDGE,
+  JPEG_QUALITY,
   MAX_PHOTO_EDGE,
   analysePixels,
-  fitWithin,
   isLowResolution,
   photoQualityFlag,
   preparePhoto,
-  type ImageTools,
 } from './photo-checks';
 
 const limits = { minWidthPx: 1200, minHeightPx: 800 };
@@ -88,8 +88,8 @@ describe('preparePhoto', () => {
         calls.push(`pixels ${width}x${height}`);
         return image(width, height, (x, y) => ((Math.floor(x / 4) + Math.floor(y / 4)) % 2 ? 230 : 40));
       },
-      toJpeg: async (_image, width, height) => {
-        calls.push(`jpeg ${width}x${height}`);
+      toJpeg: async (_image, width, height, quality) => {
+        calls.push(`jpeg ${width}x${height} at ${quality}`);
         return new Blob(['resized'], { type: 'image/jpeg' });
       },
     };
@@ -103,7 +103,7 @@ describe('preparePhoto', () => {
       qualityFlag: 'OK',
     });
     expect(prepared.checked).toBe(true);
-    expect(calls).toEqual([`pixels ${ANALYSIS_EDGE}x384`, 'jpeg 2000x1500', 'release']);
+    expect(calls).toEqual([`pixels ${ANALYSIS_EDGE}x384`, `jpeg 2000x1500 at ${JPEG_QUALITY}`, 'release']);
   });
 
   it('uploads a HEIC photo the browser cannot read as it is, unchecked', async () => {

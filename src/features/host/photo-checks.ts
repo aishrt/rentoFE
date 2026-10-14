@@ -1,3 +1,5 @@
+import { fitWithin, type ImageTools } from '@/lib/image-resize';
+
 /*
  * Phone photos are resized in the browser before upload, so uploads are quick on mobile data (plan §12.5),
  * and checked for the problems support staff look for: too small, too dark or blurry (plan §9, Days 8–11).
@@ -12,7 +14,7 @@ export interface PhotoLimits {
   minHeightPx: number;
 }
 
-/** Uploads are at most this many pixels on the long side, as JPEG. */
+/** Listing photos (and profile photos) go up at most this many pixels on the long side, as JPEG. */
 export const MAX_PHOTO_EDGE = 2000;
 /** JPEG quality for resized photos: visually lossless for listing photos, a fraction of the size. */
 export const JPEG_QUALITY = 0.86;
@@ -25,12 +27,6 @@ export const DARK_BELOW = 55;
  * ANALYSIS_EDGE copy. In focus, a car's edges, badges and reflections score in the hundreds.
  */
 export const BLURRY_BELOW = 50;
-
-/** The size that fits within `maxEdge` on the long side, keeping the shape. Never enlarges. */
-export function fitWithin(width: number, height: number, maxEdge: number): { width: number; height: number } {
-  const scale = Math.min(1, maxEdge / Math.max(width, height));
-  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
-}
 
 /** Too small for the listing, whichever way round it was taken. */
 export function isLowResolution(width: number, height: number, limits: PhotoLimits): boolean {
@@ -111,46 +107,6 @@ export function analysePixels(rgba: ArrayLike<number>, width: number, height: nu
   return { brightness: meanBrightness(grey), sharpness: laplacianVariance(grey, width, height) };
 }
 
-/** What the browser does with pixels, kept apart so the logic can be tested without a canvas. */
-export interface ImageTools<Image> {
-  /** Reads the file, turned upright from its EXIF orientation. Rejects when the browser can't (often HEIC). */
-  decode(file: Blob): Promise<{ image: Image; width: number; height: number; release: () => void }>;
-  toJpeg(image: Image, width: number, height: number): Promise<Blob>;
-  /** RGBA pixels of the image drawn at this size. */
-  pixels(image: Image, width: number, height: number): ArrayLike<number>;
-}
-
-function drawn(image: CanvasImageSource, width: number, height: number) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Canvas is not available');
-  context.imageSmoothingQuality = 'high';
-  context.drawImage(image, 0, 0, width, height);
-  return { canvas, context };
-}
-
-export const browserImageTools: ImageTools<ImageBitmap> = {
-  async decode(file) {
-    const image = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    return { image, width: image.width, height: image.height, release: () => image.close() };
-  },
-  toJpeg(image, width, height) {
-    const { canvas } = drawn(image, width, height);
-    return new Promise((resolve, reject) =>
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('Could not encode the photo'))),
-        'image/jpeg',
-        JPEG_QUALITY,
-      ),
-    );
-  },
-  pixels(image, width, height) {
-    return drawn(image, width, height).context.getImageData(0, 0, width, height).data;
-  },
-};
-
 export interface PreparedPhoto {
   /** What to upload: a resized JPEG, or the original when the browser couldn't read it. */
   file: Blob;
@@ -191,7 +147,7 @@ export async function preparePhoto<Image>(
       { width: decoded.width, height: decoded.height, brightness, sharpness },
       limits,
     );
-    const resized = await tools.toJpeg(decoded.image, target.width, target.height);
+    const resized = await tools.toJpeg(decoded.image, target.width, target.height, JPEG_QUALITY);
     return { file: resized, contentType: 'image/jpeg', ...target, qualityFlag, checked: true };
   } catch {
     // A browser that can read the photo but not draw it (rare) still uploads it as it is.

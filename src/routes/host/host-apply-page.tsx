@@ -18,6 +18,7 @@ import { HostPageHeader } from '@/features/host/host-nav';
 import { HostShell } from '@/features/host/host-shell';
 import { PhoneVerification } from '@/features/host/phone-verification';
 import { cn } from '@/lib/cn';
+import { scrollBehavior } from '@/lib/scroll';
 
 const NEXT_STEPS = [
   {
@@ -97,7 +98,7 @@ function HostApplication({ user }: { user: SessionUser }) {
 
   const onPhoneRequired = () => {
     setPhoneMissing(true);
-    phoneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    phoneRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     phoneRef.current?.focus({ preventScroll: true });
   };
 

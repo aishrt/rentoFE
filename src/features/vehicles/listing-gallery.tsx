@@ -26,6 +26,7 @@ export function ListingGallery({ vehicle, frameRef }: ListingGalleryProps) {
     url: photo.url,
     alt: photo.alt,
     label: PHOTO_LABELS[photo.type],
+    placeholder: photo.placeholder,
   }));
 
   return (

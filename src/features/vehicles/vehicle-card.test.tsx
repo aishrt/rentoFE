@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { guestUser, renderWithProviders } from '@/test/utils';
@@ -34,6 +34,29 @@ describe('VehicleCard', () => {
     expect(screen.getByRole('img', { name: '2020 Mazda CX-5: front' })).toHaveStyle({
       viewTransitionName: 'vehicle-photo-car-cx5',
     });
+  });
+
+  it('loads the 800 px copy of the photo, blurred from its tiny copy until it does', () => {
+    signedOut();
+    const placeholder = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAQAcJaQAA3AA/v3AgAA=';
+    renderWithProviders(
+      <VehicleCard
+        vehicle={carCard({
+          photo: {
+            url: 'https://media.test/vehicles/car-cx5/photos/0f8e-1600.webp',
+            placeholder,
+            alt: '2020 Mazda CX-5: front',
+          },
+        })}
+      />,
+    );
+    const photo = screen.getByRole('img', { name: '2020 Mazda CX-5: front' });
+
+    expect(photo).toHaveAttribute('src', 'https://media.test/vehicles/car-cx5/photos/0f8e-800.webp');
+    const blur = photo.nextElementSibling as HTMLElement;
+    expect(blur.style.backgroundImage).toContain(placeholder);
+    fireEvent.load(photo);
+    expect(blur).toHaveAttribute('data-loaded');
   });
 
   it('shows the daily price without dates, and the estimated total with them', () => {

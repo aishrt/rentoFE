@@ -4,7 +4,13 @@ import { Link } from 'react-router';
 import type { CancellationTier, PublicHost, VehicleDetail } from '@/api/types';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { refundWindows } from '@/features/content/policies';
-import { formatNzDateTime, formatNzd, freeCancellationUntil, ratingText } from './booking-format';
+import {
+  formatNzDateTime,
+  formatNzd,
+  freeCancellationUntil,
+  ratingText,
+  requestAnswerWindow,
+} from './booking-format';
 
 type Tier = Pick<CancellationTier, 'name' | 'summary' | 'refunds'>;
 
@@ -124,8 +130,8 @@ export function TripTerms({ vehicle, start, tier }: { vehicle: VehicleDetail; st
       </PolicyRow>
       {rules.instantBook ? null : (
         <PolicyRow icon={BadgeCheck} title="Request to book">
-          Your host has 24 hours to accept. Your card is authorised now and charged only if they accept; if
-          they don’t, the authorisation is released.
+          Your host has {requestAnswerWindow({ start })} to accept. Your card is authorised now and charged
+          only if they accept; if they don’t, the authorisation is released.
         </PolicyRow>
       )}
     </ul>

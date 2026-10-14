@@ -25,6 +25,8 @@ function mockDestination(cars = [carCard()]) {
         status: 404,
         body: { error: { code: 'NOT_FOUND', message: "We couldn't find that destination." } },
       };
+    if (path === '/destinations/wellington')
+      return { status: 500, body: { error: { code: 'INTERNAL', message: 'Something went wrong.' } } };
     if (path === '/search') return { status: 200, body: searchResults({ results: cars }) };
     return undefined;
   });
@@ -72,5 +74,15 @@ describe('DestinationPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Looks like you took a wrong turn' }),
     ).toBeInTheDocument();
+  });
+
+  it('still has a page heading when the city doesn’t load', async () => {
+    mockDestination();
+    renderPage('wellington');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "We couldn't load this page" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 });

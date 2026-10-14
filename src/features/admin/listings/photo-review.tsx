@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { formatNumber } from '@/lib/format';
+import { smallPhoto } from '@/lib/photos';
 import { ConfirmDialog } from './confirm-dialog';
 import {
   adminVehicleQueryKey,
@@ -109,10 +110,12 @@ export function PhotoReview({ vehicleId, photos }: { vehicleId: string; photos: 
                   aria-label={`${name} photo, full size (new tab)`}
                   className="block bg-ink/5 outline-offset-2 transition-opacity duration-120 hover:opacity-90"
                 >
+                  {/* The link opens the larger copy, to check focus and detail. */}
                   <img
-                    src={photo.url}
+                    src={smallPhoto(photo.url)}
                     alt={`${name} photo`}
                     loading="lazy"
+                    decoding="async"
                     className="aspect-4/3 w-full object-cover"
                   />
                 </a>

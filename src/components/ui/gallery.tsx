@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { smallPhoto } from '@/lib/photos';
 import { motion } from '@/styles/tokens';
 import { IconButton } from './icon-button';
+import { Photo } from './photo';
 
 export interface GalleryPhoto {
   id: string;
@@ -12,6 +13,8 @@ export interface GalleryPhoto {
   alt: string;
   /** What the photo shows, e.g. "Rear" or "Existing damage". */
   label?: string;
+  /** A tiny copy shown blurred while the photo loads (plan §12.5). */
+  placeholder?: string;
 }
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -150,7 +153,8 @@ const overlayButton =
 /**
  * The listing's photo gallery (spec §6): swipe or drag between photos, with momentum; arrow buttons on
  * hover and arrow keys; thumbnails on larger screens. Tapping a photo, or the expand button, opens it full
- * screen. Photos load as they come near, apart from the first.
+ * screen. Photos load as they come near, apart from the first, with a blurred copy until they do (plan
+ * §12.5).
  */
 export function Gallery({
   photos,
@@ -209,19 +213,22 @@ export function Gallery({
               const photo = photos[slide];
               if (!photo) return null;
               return (
-                <img
-                  src={photo.url}
-                  alt={photo.alt}
-                  draggable={false}
-                  // The first photo, and the ones either side of the current one, load straight away.
-                  loading={slide === 0 || Math.abs(slide - index) <= 1 ? 'eager' : 'lazy'}
-                  fetchPriority={slide === 0 ? 'high' : undefined}
-                  decoding="async"
-                  width={1200}
-                  height={800}
-                  className="size-full object-cover select-none"
-                  style={slide === 0 && transitionName ? { viewTransitionName: transitionName } : undefined}
-                />
+                <div className="relative size-full overflow-hidden">
+                  <Photo
+                    src={photo.url}
+                    placeholder={photo.placeholder}
+                    alt={photo.alt}
+                    draggable={false}
+                    // The first photo, and the ones either side of the current one, load straight away.
+                    loading={slide === 0 || Math.abs(slide - index) <= 1 ? 'eager' : 'lazy'}
+                    fetchPriority={slide === 0 ? 'high' : undefined}
+                    decoding="async"
+                    width={1200}
+                    height={800}
+                    className="size-full object-cover select-none"
+                    style={slide === 0 && transitionName ? { viewTransitionName: transitionName } : undefined}
+                  />
+                </div>
               );
             }}
           />
@@ -297,13 +304,14 @@ export function Gallery({
                 aria-current={slide === index || undefined}
                 onClick={() => go(slide)}
                 className={cn(
-                  'block h-14 w-20 overflow-hidden rounded-control ring-2 ring-transparent ring-offset-2 ring-offset-canvas',
+                  'relative block h-14 w-20 overflow-hidden rounded-control ring-2 ring-transparent ring-offset-2 ring-offset-canvas',
                   'opacity-70 transition-[opacity,scale] duration-120 ease-out hover:opacity-100 active:scale-95',
                   'aria-current:opacity-100 aria-current:ring-primary',
                 )}
               >
-                <img
+                <Photo
                   src={smallPhoto(photo.url)}
+                  placeholder={photo.placeholder}
                   alt=""
                   loading="lazy"
                   decoding="async"

@@ -81,6 +81,39 @@ describe('Gallery', () => {
     // The gallery stays on the photo the lightbox was showing.
     expect(screen.getByText('Photo 3 of 3: Boot')).toBeInTheDocument();
   });
+
+  it('loads the large copy first, small copies as thumbnails, each blurred until it loads', () => {
+    const placeholder = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAQAcJaQAA3AA/v3AgAA=';
+    const listing = [
+      {
+        id: 'a',
+        url: 'https://media.test/vehicles/v1/photos/a-1600.webp',
+        alt: 'Front of the car',
+        label: 'Front',
+        placeholder,
+      },
+      // Uploaded before placeholders: the frame's own background shows while it loads.
+      {
+        id: 'b',
+        url: 'https://media.test/vehicles/v1/photos/b-1600.webp',
+        alt: 'Rear of the car',
+        label: 'Rear',
+      },
+    ];
+    renderWithProviders(
+      <Gallery photos={listing} index={0} onIndexChange={() => {}} label="Photos of the car" />,
+    );
+
+    const front = screen.getByRole('img', { name: 'Front of the car' });
+    expect(front).toHaveAttribute('src', 'https://media.test/vehicles/v1/photos/a-1600.webp');
+    expect(front).toHaveAttribute('fetchpriority', 'high');
+    expect((front.nextElementSibling as HTMLElement).style.backgroundImage).toContain(placeholder);
+    expect(screen.getByRole('img', { name: 'Rear of the car', hidden: true }).nextElementSibling).toBeNull();
+
+    const thumbnail = screen.getByRole('button', { name: 'Show photo 1 of 2: Front' }).querySelector('img')!;
+    expect(thumbnail).toHaveAttribute('src', 'https://media.test/vehicles/v1/photos/a-800.webp');
+    expect((thumbnail.nextElementSibling as HTMLElement).style.backgroundImage).toContain(placeholder);
+  });
 });
 
 function FilterSheet() {

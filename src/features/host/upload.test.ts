@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UploadTarget } from '@/api/types';
+import type { ImageTools } from '@/lib/image-resize';
 import { mockApi } from '@/test/utils';
-import { contentTypeOf, sendFile, uploadProblem } from './upload';
+import {
+  contentTypeOf,
+  prepareUpload,
+  sendFile,
+  uploadFile,
+  uploadProblem,
+  type UploadPurpose,
+} from './upload';
 import { uploadVehicleDocument, uploadVehiclePhoto } from './vehicle-files';
 
 /** A stand-in for XMLHttpRequest that records what was sent and answers with `FakeXhr.reply`. */
@@ -56,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const localTarget: UploadTarget = {
@@ -227,6 +236,112 @@ describe('uploading to a car', () => {
       upload: s3Target.key,
       expiry: '2027-03-31',
     });
+  });
+});
+
+describe('making photos smaller before they go up', () => {
+  /** Image tools that read any photo as 4032×3024, as a phone takes it, and record what they encode. */
+  function phoneTools() {
+    const encoded: string[] = [];
+    const tools: ImageTools<string> = {
+      decode: async () => ({ image: 'bitmap', width: 4032, height: 3024, release: () => {} }),
+      pixels: () => [],
+      toJpeg: async (_image, width, height, quality) => {
+        encoded.push(`${width}x${height} at ${quality}`);
+        return new Blob(['smaller'], { type: 'image/jpeg' });
+      },
+    };
+    return { tools, encoded };
+  }
+  const phonePhoto = new Blob(['x'.repeat(5_000)], { type: 'image/png' });
+
+  it('keeps the small print of documents and evidence readable: 3000 px at quality 0.85', async () => {
+    const { tools, encoded } = phoneTools();
+    const purposes: UploadPurpose[] = [
+      'VEHICLE_DOCUMENT',
+      'INCIDENT_FILE',
+      'SUPPORT_FILE',
+      'INSPECTION_PHOTO',
+      'MESSAGE_PHOTO',
+    ];
+    for (const purpose of purposes) {
+      const prepared = await prepareUpload(phonePhoto, purpose, 'image/png', tools);
+      expect(prepared.contentType).toBe('image/jpeg');
+      expect(prepared.file.size).toBe('smaller'.length);
+    }
+    expect(encoded).toEqual(purposes.map(() => '3000x2250 at 0.85'));
+  });
+
+  it('sends a profile photo at the listing photo size, as it is only ever shown small', async () => {
+    const { tools, encoded } = phoneTools();
+    await prepareUpload(phonePhoto, 'PROFILE_PHOTO', 'image/png', tools);
+    expect(encoded).toEqual(['2000x1500 at 0.86']);
+  });
+
+  it('leaves listing photos, resized as they were checked, and PDFs as they are', async () => {
+    const { tools, encoded } = phoneTools();
+    expect(await prepareUpload(photo, 'VEHICLE_PHOTO', 'image/jpeg', tools)).toEqual({
+      file: photo,
+      contentType: 'image/jpeg',
+    });
+    const pdf = new File(['%PDF'], 'wof.pdf', { type: 'application/pdf' });
+    expect(await prepareUpload(pdf, 'VEHICLE_DOCUMENT', 'application/pdf', tools)).toEqual({
+      file: pdf,
+      contentType: 'application/pdf',
+    });
+    expect(encoded).toEqual([]);
+  });
+
+  it('signs and sends the smaller copy', async () => {
+    // jsdom can't read or draw images, so the browser's are stood in for.
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 4032, height: 3024, close: () => {} })),
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillRect: () => {},
+      drawImage: () => {},
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback, type) =>
+      callback(new Blob(['small'], { type })),
+    );
+    let signature: unknown;
+    mockApi({
+      'POST /uploads/signature': (init) => {
+        signature = JSON.parse(String(init?.body));
+        return { status: 200, body: s3Target };
+      },
+    });
+    FakeXhr.reply = (xhr) => xhr.respondText(204, '');
+    const scan = new File(['x'.repeat(5_000)], 'wof.jpg', { type: 'image/jpeg' });
+
+    await uploadFile({ purpose: 'VEHICLE_DOCUMENT', vehicleId: 'v1', file: scan, filename: scan.name });
+
+    expect(signature).toEqual({
+      purpose: 'VEHICLE_DOCUMENT',
+      vehicleId: 'v1',
+      contentType: 'image/jpeg',
+      size: 5,
+    });
+    const sent = (FakeXhr.sent[0]?.body as FormData).get('file') as File;
+    expect(sent.size).toBe(5);
+  });
+
+  it('sends a photo the browser can’t read as it is (HEIC outside Safari): the API converts it', async () => {
+    let signature: unknown;
+    mockApi({
+      'POST /uploads/signature': (init) => {
+        signature = JSON.parse(String(init?.body));
+        return { status: 200, body: s3Target };
+      },
+    });
+    FakeXhr.reply = (xhr) => xhr.respondText(204, '');
+    const heic = new File(['heic bytes'], 'IMG_0001.HEIC');
+
+    await uploadFile({ purpose: 'SUPPORT_FILE', file: heic });
+
+    expect(signature).toEqual({ purpose: 'SUPPORT_FILE', contentType: 'image/heic', size: heic.size });
+    expect(((FakeXhr.sent[0]?.body as FormData).get('file') as File).size).toBe(heic.size);
   });
 });
 

@@ -29,7 +29,8 @@ const buttonVariants = cva(
           'bg-danger text-white inset-shadow-highlight hover:bg-danger-hover focus-visible:outline-danger',
       },
       size: {
-        sm: 'h-10 px-4 text-sm',
+        // Compact with a mouse; on a touch screen still the 44 px minimum touch target (plan §12.2).
+        sm: 'h-10 px-4 text-sm pointer-coarse:h-11',
         md: 'h-11 px-5 text-ui',
         lg: 'h-12 px-6 text-base',
         icon: 'size-11',

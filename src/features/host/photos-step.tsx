@@ -5,12 +5,14 @@ import { useEffect, useSyncExternalStore } from 'react';
 import type { HostVehicle, PublicPolicies } from '@/api/types';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
+import { browserImageTools } from '@/lib/image-resize';
+import { smallPhoto } from '@/lib/photos';
 import { motion } from '@/styles/tokens';
 import { AngleIllustration } from './angle-illustrations';
 import { FileButton } from './file-button';
 import { removePhotoRequest, storeVehicle } from './host-api';
 import { InlineConfirm } from './inline-confirm';
-import { browserImageTools, preparePhoto } from './photo-checks';
+import { preparePhoto } from './photo-checks';
 import { PhotoStatusBadge, RequirementBadge } from './status-badges';
 import type { StepProps } from './step-props';
 import { StepFrame } from './step-frame';
@@ -148,8 +150,10 @@ function PhotoTile({ vehicle, policies, angle, required, uploads, touch }: TileP
           {!damage && photo ? (
             <m.img
               key={photo.id}
-              src={photo.url}
+              src={smallPhoto(photo.url)}
               alt={`${label} photo`}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 size-full object-cover"
               initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -173,8 +177,10 @@ function PhotoTile({ vehicle, policies, angle, required, uploads, touch }: TileP
                   transition={motion.spring.snappy}
                 >
                   <img
-                    src={item.url}
+                    src={smallPhoto(item.url)}
                     alt="Damage photo"
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 size-full object-cover"
                   />
                 </m.li>

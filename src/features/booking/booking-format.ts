@@ -132,6 +132,24 @@ export function formatTimeLeft(ms: number): string {
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
 
+/** A request waits up to 24 hours for its Host (plan §8.2). */
+const REQUEST_HOURS = 24;
+
+/**
+ * How long a Host has to answer a request, after "… has": "until Mon, 12 Oct, 10:00 am (NZ time)" once it's
+ * sent; before then "24 hours", or until the trip's start when that's sooner, as a request never waits past
+ * it (plan §8.2).
+ */
+export function requestAnswerWindow(
+  booking: { requestExpiresAt?: string; start?: string },
+  now = Date.now(),
+): string {
+  const start = booking.start ? new Date(booking.start).getTime() : NaN;
+  const startsSooner = start > now && start < now + REQUEST_HOURS * 3_600_000 ? booking.start : undefined;
+  const until = booking.requestExpiresAt ?? startsSooner;
+  return until ? `until ${formatNzDateTime(until)} (NZ time)` : `${REQUEST_HOURS} hours`;
+}
+
 /** "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago", or the date: when a notification arrived. */
 export function formatRelativeTime(iso: string, now = Date.now()): string {
   const elapsed = Math.max(0, now - new Date(iso).getTime());

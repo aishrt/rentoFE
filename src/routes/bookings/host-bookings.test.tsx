@@ -450,6 +450,31 @@ describe('HostBookingPage', () => {
     expect(screen.getByRole('region', { name: 'What you’d earn' })).toBeInTheDocument();
   });
 
+  it('says a request expired because it wasn’t answered in time', async () => {
+    mockHost((sentRequest) =>
+      sentRequest.path === `/bookings/${REF}`
+        ? {
+            status: 200,
+            body: {
+              booking: hostRequest({
+                status: 'EXPIRED',
+                requestExpiresAt: undefined,
+                payment: { status: 'CANCELLED' },
+                expiry: { reason: 'HOST_NO_ANSWER', paymentReturned: false },
+                actions: NO_ACTIONS,
+              }),
+            },
+          }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    expect(await screen.findByText('This request expired')).toBeInTheDocument();
+    expect(
+      screen.getByText('It wasn’t answered in time, so Kiri’s card authorisation was released.'),
+    ).toBeInTheDocument();
+  });
+
   it('shows what the booking earned, and what its payouts settled for other bookings', async () => {
     const completed = hostConfirmed({
       status: 'COMPLETED',

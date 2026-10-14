@@ -4,7 +4,6 @@ import { SegmentedTabs, type TabOption } from '@/components/ui/segmented-tabs';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { DestinationsPanel } from '@/features/admin/content/destinations';
 import { FeaturedCarsPanel } from '@/features/admin/content/featured-cars';
-import { FooterLinksPanel } from '@/features/admin/content/footer-links';
 import { HeroTextPanel } from '@/features/admin/content/hero-text';
 import { HomepageReviewsPanel } from '@/features/admin/content/homepage-reviews';
 import { LegalPagesPanel } from '@/features/admin/content/legal-pages';
@@ -12,7 +11,7 @@ import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 
 const TAB_PREFIX = 'content';
 
-type Tab = 'featured' | 'headline' | 'reviews' | 'legal' | 'destinations' | 'footer';
+type Tab = 'featured' | 'headline' | 'reviews' | 'legal' | 'destinations';
 
 const TABS = [
   { value: 'featured', label: 'Featured cars' },
@@ -20,7 +19,6 @@ const TABS = [
   { value: 'reviews', label: 'Customer reviews' },
   { value: 'legal', label: 'Legal pages' },
   { value: 'destinations', label: 'Destinations' },
-  { value: 'footer', label: 'Footer links' },
 ] as const satisfies readonly TabOption<Tab>[];
 
 /** FAQs and help articles were tabs here; they have their own page now (plan §12.6, FAQs & help). */
@@ -36,13 +34,12 @@ const PANELS: Record<Tab, ComponentType> = {
   reviews: HomepageReviewsPanel,
   legal: LegalPagesPanel,
   destinations: DestinationsPanel,
-  footer: FooterLinksPanel,
 };
 
 /**
  * The website's content (spec §18; plan §9, Days 19–23; §12.6), admin only: the homepage's featured cars,
- * headline and customer reviews, the legal pages, destination pages and the footer's links. FAQs and help
- * articles have their own page. The API clears the website's cache on each save, so changes show there
+ * headline and customer reviews, the legal pages and destination pages. FAQs and help articles have their
+ * own page. The API clears the website's cache on each save, so changes show there
  * within a minute.
  */
 export function AdminContentPage() {
@@ -61,11 +58,11 @@ export function AdminContentPage() {
       <AdminPageHeader
         eyebrow="Platform"
         title="Content"
-        description="What the website shows: the homepage’s featured cars, headline and customer reviews, the legal pages, destination pages and the footer’s links. Changes show on the website within a minute of saving."
+        description="What the website shows: the homepage’s featured cars, headline and customer reviews, the legal pages and destination pages. Changes show on the website within a minute of saving."
       />
 
       {/*
-        Six tabs are wider than a phone: they scroll sideways there. The padding leaves room for the tabs' shadow,
+        Five tabs are wider than a phone: they scroll sideways there. The padding leaves room for the tabs' shadow,
         which the scroller would clip, and the negative margins take that room back.
       */}
       <div className="scrollbar-subtle relative -mx-4 mt-6 -mb-6 overflow-x-auto px-4 pt-2 pb-6">

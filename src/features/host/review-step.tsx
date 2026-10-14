@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatNzdFromCents } from '@/lib/format';
+import { smallPhoto } from '@/lib/photos';
 import { AngleIllustration } from './angle-illustrations';
 import { hostKeys, storeVehicle, submitVehicleRequest } from './host-api';
 import { coverPhoto, missingByStep } from './listing-summary';
@@ -32,7 +33,12 @@ function ListingCard({ vehicle }: { vehicle: HostVehicle }) {
     <Card className="grid overflow-hidden sm:grid-cols-[14rem_minmax(0,1fr)]">
       <div className="relative aspect-4/3 bg-canvas sm:aspect-auto">
         {cover ? (
-          <img src={cover} alt="" className="absolute inset-0 size-full object-cover" />
+          <img
+            src={smallPhoto(cover)}
+            alt=""
+            decoding="async"
+            className="absolute inset-0 size-full object-cover"
+          />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <AngleIllustration angle="FRONT" className="w-1/2 text-primary/60" />

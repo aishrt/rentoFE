@@ -88,7 +88,7 @@ export function FeatureChips({ value, onChange, labelId, error }: FeatureChipsPr
                 type="button"
                 aria-label={`Remove ${feature}`}
                 onClick={() => onChange(value.filter((chosen) => chosen !== feature))}
-                className="flex size-8 items-center justify-center rounded-full transition-[background-color,scale] duration-120 hover:bg-primary/15 active:scale-90 focus-visible:outline-2 focus-visible:outline-primary"
+                className="relative flex size-8 items-center justify-center rounded-full transition-[background-color,scale] duration-120 before:absolute before:-inset-1.5 hover:bg-primary/15 active:scale-90 focus-visible:outline-2 focus-visible:outline-primary"
               >
                 <X aria-hidden="true" className="size-4" />
               </button>
@@ -107,7 +107,7 @@ export function FeatureChips({ value, onChange, labelId, error }: FeatureChipsPr
                   type="button"
                   onClick={() => add(feature)}
                   className={cn(
-                    'inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-sm text-ink',
+                    'inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-sm text-ink pointer-coarse:min-h-11',
                     'transition-[border-color,background-color,scale] duration-120 ease-out hover:border-primary/40 hover:bg-primary/5 active:scale-96',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   )}

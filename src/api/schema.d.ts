@@ -3494,7 +3494,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Coordinates and address of a suggestion */
+        /**
+         * Coordinates and address of a suggestion
+         * @description A street address is kept for a day, so asking again doesn’t reach Google. 503 PLACES_UNAVAILABLE when Google fails or times out.
+         */
         get: {
             parameters: {
                 query?: {
@@ -3520,6 +3523,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description A service this needs isn't set up or available yet, e.g. payments before the Stripe keys are set */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -7687,7 +7699,7 @@ export interface paths {
         post?: never;
         /**
          * Calendar override: unblock dates
-         * @description Staff, Host and recurring blocks; never a trip’s.
+         * @description Staff, Host and recurring blocks; never a trip’s. A recurring block removed here stays removed when the rules are rebuilt.
          */
         delete: {
             parameters: {
@@ -16453,6 +16465,8 @@ export interface components {
             variant?: string;
             photo: {
                 url: string;
+                /** @description A tiny copy of the photo (a data: URI) to show blurred while it loads. Photos uploaded before it existed may have none */
+                placeholder?: string;
                 alt: string;
             } | null;
             suburb?: string;
@@ -17169,6 +17183,8 @@ export interface components {
             variant?: string;
             photo: {
                 url: string;
+                /** @description A tiny copy of the photo (a data: URI) to show blurred while it loads. Photos uploaded before it existed may have none */
+                placeholder?: string;
                 alt: string;
             } | null;
             suburb?: string;
@@ -17307,6 +17323,8 @@ export interface components {
             extraKmCents: number;
             petFriendly: boolean;
             childSeat: boolean;
+            /** @description Existing damage the Host declared (spec §6), as plain text with line breaks; left out when none */
+            damageNotes?: string;
             pricing: {
                 dailyCents: number;
                 weeklyDiscountPct: number;
@@ -17333,6 +17351,8 @@ export interface components {
                 /** @enum {string} */
                 type: "FRONT" | "REAR" | "DRIVER" | "PASSENGER" | "INTERIOR" | "DASH" | "BOOT" | "TYRES" | "DAMAGE";
                 url: string;
+                /** @description A tiny copy of the photo (a data: URI) to show blurred while it loads. Photos uploaded before it existed may have none */
+                placeholder?: string;
                 alt: string;
             }[];
             compliance: components["schemas"]["VehicleCompliance"];

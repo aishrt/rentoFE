@@ -6,7 +6,6 @@ import { ApiError } from '@/api/client';
 import type { VehicleDetail } from '@/api/types';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
-import { Alert } from '@/components/ui/alert';
 import { BackLink } from '@/components/ui/back-link';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -206,21 +205,23 @@ export function VehiclePage() {
   if (vehicle.isError) {
     if (vehicle.error instanceof ApiError && vehicle.error.status === 404) return <VehicleNotFound />;
     return (
-      <Container className="py-16">
+      <Container className="flex justify-center py-16 sm:py-24">
         <PageMeta title="Car" noindex />
-        <Alert
-          variant="danger"
-          role="alert"
+        <EmptyState
+          visual={
+            <IconBadge size="xl">
+              <CarFront />
+            </IconBadge>
+          }
           title="We couldn't load this car"
-          action={
-            <Button variant="secondary" size="sm" onClick={() => void vehicle.refetch()}>
+          description={vehicle.error.message}
+          actions={
+            <Button onClick={() => void vehicle.refetch()}>
               <RotateCw aria-hidden="true" />
               Try again
             </Button>
           }
-        >
-          {vehicle.error.message}
-        </Alert>
+        />
       </Container>
     );
   }

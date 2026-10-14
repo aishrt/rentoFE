@@ -352,6 +352,10 @@ describe('CheckoutPage: payment', () => {
     });
     renderCheckout();
     expect(await screen.findByRole('heading', { level: 1, name: 'Request to book' })).toBeInTheDocument();
+    // The trip starts weeks ahead, so the Host has the full 24 hours.
+    expect(
+      await screen.findByText(/Your host has 24 hours to answer, and you’re only charged if they accept\./),
+    ).toBeInTheDocument();
     await continueToVerification();
 
     await userEvent.click(await screen.findByRole('checkbox', { name: /I agree to the Guest Agreement/ }));

@@ -328,4 +328,18 @@ describe('VehiclePage', () => {
     expect(await screen.findByRole('heading', { name: "This car isn't available" })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Browse cars' })).toHaveAttribute('href', '/cars');
   });
+
+  it('still has a page heading when the car doesn’t load', async () => {
+    mockRoutes(({ path }) =>
+      path === '/vehicles/2022-toyota-rav4-queenstown'
+        ? { status: 500, body: { error: { code: 'INTERNAL', message: 'Something went wrong.' } } }
+        : undefined,
+    );
+    renderListing();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "We couldn't load this car" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
 });

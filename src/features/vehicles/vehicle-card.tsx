@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { VehicleCard as VehicleCardData } from '@/api/types';
 import { Badge } from '@/components/ui/badge';
+import { Photo } from '@/components/ui/photo';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
 import { smallPhoto } from '@/lib/photos';
@@ -47,9 +48,10 @@ const photoBadge = 'bg-surface/95 text-ink shadow-card';
  * name and year, rating (or New), place and distance, key specs and features, and the daily price with the
  * estimated total for the searched dates.
  *
- * On hover the photo zooms 4% and the card lifts (plan §12.4). Opening it morphs the photo into the listing's
- * gallery (a view transition named per car). The listing's data is prefetched on hover or focus, or on touch
- * screens once the card is in view, so it opens instantly (plan §12.5).
+ * A blurred copy of the photo shows while it loads (plan §12.5). On hover the photo zooms 4% and the card
+ * lifts (plan §12.4). Opening it morphs the photo into the listing's gallery (a view transition named per
+ * car). The listing's data is prefetched on hover or focus, or on touch screens once the card is in view, so
+ * it opens instantly (plan §12.5).
  */
 export function VehicleCard({
   vehicle,
@@ -104,8 +106,9 @@ export function VehicleCard({
     >
       <div className="relative aspect-4/3 overflow-hidden rounded-t-card bg-ink/6">
         {vehicle.photo ? (
-          <img
+          <Photo
             src={smallPhoto(vehicle.photo.url)}
+            placeholder={vehicle.photo.placeholder}
             alt={vehicle.photo.alt}
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : undefined}

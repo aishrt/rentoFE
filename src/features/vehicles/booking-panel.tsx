@@ -9,6 +9,7 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TimePicker } from '@/components/ui/time-picker';
+import { requestAnswerWindow } from '@/features/booking/booking-format';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
@@ -273,7 +274,7 @@ export function BookingPanel({ vehicle, booking, className }: BookingPanelProps)
         <p className="mt-3 text-center text-xs text-muted">
           {vehicle.rules.instantBook
             ? "You won't be charged yet."
-            : "You won't be charged yet. The host has 24 hours to accept your request."}
+            : `You won't be charged yet. The host has ${requestAnswerWindow({ start: quote.data?.start })} to accept your request.`}
         </p>
       </div>
     </div>
