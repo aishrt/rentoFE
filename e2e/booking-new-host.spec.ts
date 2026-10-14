@@ -189,10 +189,11 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   await choose(page, 'Doors', /^5\b/);
   await next(page);
 
-  // Step 2: rego and WOF expiry (well after the trip), and the three required documents.
+  // Step 2: rego, WOF and insurance expiry (well after the trip), and the three required documents.
   await expect(page.getByRole('heading', { name: 'Documents', exact: true })).toBeVisible();
   await pickDate(page, /^Registration expires/, 5);
   await pickDate(page, /^WOF expires/, 5);
+  await pickDate(page, /^Insurance expires/, 5);
   for (const label of DOCUMENTS) {
     await upload(page, `Upload ${label}`);
     await expect(page.getByRole('button', { name: `Upload another ${label}`, exact: true })).toBeVisible({

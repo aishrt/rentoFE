@@ -14,7 +14,7 @@ import { earliestPickupDay, upcomingBusy } from '@/features/vehicles/availabilit
 import { useVehicleAvailability } from '@/features/vehicles/vehicle-api';
 import { optionDetail, optionFee } from '@/features/vehicles/vehicle-format';
 import { cn } from '@/lib/cn';
-import { nzWallClockParts } from './booking-format';
+import { nzToday } from '@/lib/dates';
 import type { AddressDraft, AddressErrors, CheckoutChoices, ResolvedChoices } from './checkout-state';
 
 // The legend above each date-and-time pair turns blue while either of its pickers has focus or is open.
@@ -64,7 +64,7 @@ export function TripSection({
   pricing,
   onContinue,
 }: TripSectionProps) {
-  const [today] = useState(() => nzWallClockParts(new Date()).date);
+  const [today] = useState(() => nzToday());
   const { minNoticeHours } = vehicle.rules;
   // Days wholly inside the Host's minimum notice can't be chosen.
   const earliest = useMemo(() => {

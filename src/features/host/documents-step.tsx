@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, FileText, Gauge, Upload } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm, useWatch, type UseFormGetValues } from 'react-hook-form';
 import type { HostVehicle } from '@/api/types';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,7 +9,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { formatDateValue, toDateInputValue } from '@/lib/dates';
+import { formatDateValue, nzToday } from '@/lib/dates';
 import { toast } from '@/components/ui/toast';
 import {
   documentSlots,
@@ -93,15 +93,22 @@ function DocumentRow({
   slot,
   uploads,
   getValues,
+  today,
 }: {
   vehicle: HostVehicle;
   slot: DocumentSlot;
   uploads: ReturnType<typeof useUploads<DocumentType>>;
   getValues: UseFormGetValues<DocumentsValues>;
+  today: string;
 }) {
   const documents = vehicle.documents.filter((document) => document.type === slot.type);
   const state = uploads.slots[slot.type];
   const label = DOCUMENT_LABELS[slot.type];
+  // The car has no insurance date of its own: it goes with the file, for the reminder before it runs out.
+  const insurance = slot.type === 'INSURANCE';
+  const [insuranceExpiry, setInsuranceExpiry] = useState('');
+  const [insuranceError, setInsuranceError] = useState<string>();
+  const insuranceRef = useRef<HTMLButtonElement>(null);
 
   const onFile = (file: File) => {
     const problem = uploadProblem(file, 'VEHICLE_DOCUMENT');
@@ -109,10 +116,21 @@ function DocumentRow({
       uploads.fail(slot.type, problem);
       return;
     }
+    if (insurance && !insuranceExpiry) {
+      setInsuranceError('Choose the date your insurance expires, then upload it');
+      insuranceRef.current?.focus();
+      return;
+    }
     // The dates from this step go with the file, so our team can check they match.
     const { regoExpiry, inspectionExpiry } = getValues();
     const expiry =
-      slot.type === 'REGO' ? regoExpiry : slot.type === 'WOF' || slot.type === 'COF' ? inspectionExpiry : '';
+      slot.type === 'REGO'
+        ? regoExpiry
+        : slot.type === 'WOF' || slot.type === 'COF'
+          ? inspectionExpiry
+          : insurance
+            ? insuranceExpiry
+            : '';
     void uploads.run(
       slot.type,
       async () => file,
@@ -144,6 +162,25 @@ function DocumentRow({
         </ul>
       )}
       {state && <UploadProgress state={state} label={label} />}
+      {insurance && (
+        <Field
+          label="Insurance expires"
+          error={insuranceError}
+          description="The date on the policy you're uploading. We'll remind you before it runs out."
+          className="sm:max-w-xs"
+        >
+          <DatePicker
+            ref={insuranceRef}
+            value={insuranceExpiry}
+            onChange={(value) => {
+              setInsuranceExpiry(value);
+              setInsuranceError(undefined);
+            }}
+            min={today}
+            calendarLabel="Choose the insurance expiry date"
+          />
+        </Field>
+      )}
       <div>
         <FileButton
           accept="application/pdf,image/*"
@@ -179,7 +216,7 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
     mode: 'onTouched',
   });
   const [needsCof, ownerIsHost] = useWatch({ control, name: ['needsCof', 'ownerIsHost'] });
-  const [today] = useState(() => toDateInputValue(new Date()));
+  const [today] = useState(() => nzToday());
   const ruc = needsRuc(vehicle.fuelType);
   // On an approved car, a later date waits for our team to check the document showing it (plan §3).
   const pending = vehicle.pendingExpiries;
@@ -331,6 +368,7 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
               slot={slot}
               uploads={uploads}
               getValues={getValues}
+              today={today}
             />
           ))}
         </ul>

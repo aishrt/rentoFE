@@ -1,4 +1,11 @@
-import { addDays, combineDateTime, parseDateValue, toDateInputValue } from '@/lib/dates';
+import {
+  addDays,
+  combineDateTime,
+  nzToday,
+  nzWallClockParts,
+  parseDateValue,
+  toDateInputValue,
+} from '@/lib/dates';
 import { filterParams, tripParams, type PlaceValue } from './place';
 
 /*
@@ -51,20 +58,24 @@ export function validateSearch(
 
   const start = combineDateTime(values.pickupDate, values.pickupTime);
   const end = combineDateTime(values.returnDate, values.returnTime);
+  // Trip times are NZ times, whatever the device's time zone (a visitor still abroad, say), so they're
+  // compared as written, against the time in NZ now.
+  const pickup = toDateTimeParam(values.pickupDate, values.pickupTime);
+  const nzNow = nzWallClockParts(new Date(now));
   if (!errors.pickupDate && !errors.pickupTime && !start) {
     errors.pickupDate = 'Enter a valid pick-up date and time';
-  } else if (start && start.getTime() < now) {
+  } else if (start && pickup < toDateTimeParam(nzNow.date, nzNow.time)) {
     errors.pickupDate = 'Pick-up needs to be in the future';
   }
-  if (start && end && end.getTime() <= start.getTime())
+  if (start && end && toDateTimeParam(values.returnDate, values.returnTime) <= pickup)
     errors.returnDate = 'Return needs to be after pick-up';
 
   return errors;
 }
 
-/** Tomorrow at 10 am, back three days later. */
+/** Tomorrow in NZ at 10 am, back three days later. */
 export function defaultSearchValues(now = new Date()): SearchValues {
-  const pickup = addDays(now, 1);
+  const pickup = addDays(parseDateValue(nzToday(now))!, 1);
   return {
     place: { label: '' },
     pickupDate: toDateInputValue(pickup),

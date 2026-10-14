@@ -12,7 +12,7 @@ import { TimePicker } from '@/components/ui/time-picker';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { PriceWithEstimate } from '@/features/currency/price-with-estimate';
 import { cn } from '@/lib/cn';
-import { toDateInputValue } from '@/lib/dates';
+import { nzToday } from '@/lib/dates';
 import { earliestPickupDay, fullyBookedDays, upcomingBusy } from './availability';
 import type { Booking } from './use-booking';
 import { useVehicleAvailability } from './vehicle-api';
@@ -37,7 +37,7 @@ interface BookingPanelProps {
  */
 export function BookingPanel({ vehicle, booking, className }: BookingPanelProps) {
   const id = useId();
-  const [today] = useState(() => toDateInputValue(new Date()));
+  const [today] = useState(() => nzToday());
   const { minNoticeHours } = vehicle.rules;
   // Days wholly inside the Host's minimum notice can't be chosen.
   const earliest = useMemo(() => {

@@ -65,6 +65,28 @@ describe('VehicleEditorPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('asks for the insurance expiry date before uploading the policy', async () => {
+    let signed = false;
+    api(sampleVehicle(), {
+      'POST /uploads/signature': () => {
+        signed = true;
+        return { status: 500, body: {} };
+      },
+    });
+    render('/host/vehicles/v1/2');
+    const button = await screen.findByRole('button', { name: 'Upload Insurance' });
+    await userEvent.upload(
+      button.nextElementSibling as HTMLInputElement,
+      new File(['%PDF'], 'policy.pdf', { type: 'application/pdf' }),
+    );
+
+    expect(
+      await screen.findByText('Choose the date your insurance expires, then upload it'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Insurance expires/ })).toHaveFocus();
+    expect(signed).toBe(false);
+  });
+
   it('saves step 1 with PATCH, including the furthest step, then moves on to documents', async () => {
     let sent: Record<string, unknown> | undefined;
     api(sampleVehicle(), {

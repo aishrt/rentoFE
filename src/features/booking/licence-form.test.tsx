@@ -2,8 +2,8 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
+import { nzWallClockParts } from '@/lib/dates';
 import { renderWithProviders } from '@/test/utils';
-import { nzWallClockParts } from './booking-format';
 import { LicenceForm } from './licence-form';
 import { readiness } from './test-fixtures';
 

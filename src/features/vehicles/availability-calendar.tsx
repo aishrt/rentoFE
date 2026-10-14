@@ -5,6 +5,7 @@ import {
   WEEKDAYS,
   addMonths,
   formatMonthYear,
+  nzToday,
   parseDateValue,
   toDateInputValue,
   weekdayIndex,
@@ -74,7 +75,7 @@ function MonthTable({ month, busy, today }: { month: Date; busy: Set<string>; to
  */
 export function AvailabilitySection({ vehicleId }: { vehicleId: string }) {
   const availability = useVehicleAvailability(vehicleId);
-  const [today] = useState(() => toDateInputValue(new Date()));
+  const [today] = useState(() => nzToday());
   const thisMonth = parseDateValue(`${today.slice(0, 8)}01`) ?? new Date();
   const busy = busyDays(availability.data?.busy ?? []);
 

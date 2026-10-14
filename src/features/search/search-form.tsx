@@ -6,7 +6,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Field } from '@/components/ui/field';
 import { TimePicker } from '@/components/ui/time-picker';
 import { cn } from '@/lib/cn';
-import { toDateInputValue } from '@/lib/dates';
+import { nzToday } from '@/lib/dates';
 import { LocationAutocomplete } from './location-autocomplete';
 import {
   SEARCH_FIELDS,
@@ -64,7 +64,7 @@ export function SearchForm({
 }: SearchFormProps) {
   const navigate = useNavigate();
   const [values, setValues] = useState<SearchValues>(() => ({ ...defaultSearchValues(), ...initial }));
-  const [today] = useState(() => toDateInputValue(new Date()));
+  const [today] = useState(() => nzToday());
   const [touched, setTouched] = useState<Partial<Record<SearchField, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
   const whereRef = useRef<HTMLInputElement>(null);

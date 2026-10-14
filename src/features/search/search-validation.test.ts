@@ -5,7 +5,8 @@ const place = (label: string) => ({ label });
 
 describe('search form checks', () => {
   it('defaults to tomorrow at 10 am for three days', () => {
-    const values = defaultSearchValues(new Date(2026, 8, 25, 15, 30));
+    // 3:30 pm on 25 September in NZ (NZST, UTC+12).
+    const values = defaultSearchValues(new Date('2026-09-25T03:30:00Z'));
     expect(values).toMatchObject({
       place: { label: '' },
       pickupDate: '2026-09-26',
@@ -13,6 +14,18 @@ describe('search form checks', () => {
       returnDate: '2026-09-29',
       returnTime: '10:00',
     });
+    // 1:30 am on the 26th in NZ, though still the 25th in much of the world: tomorrow is NZ's tomorrow.
+    expect(defaultSearchValues(new Date('2026-09-25T13:30:00Z')).pickupDate).toBe('2026-09-27');
+  });
+
+  it('goes by the time in NZ, whatever the device’s time zone', () => {
+    // 9 am on Thu 15 October in NZ (NZDT, UTC+13): still the evening of the 14th in Europe.
+    const now = Date.parse('2026-10-14T20:00:00Z');
+    const trip = { place: place('Queenstown'), returnDate: '2026-10-18', returnTime: '10:00' };
+    expect(validateSearch({ ...trip, pickupDate: '2026-10-15', pickupTime: '08:00' }, { now })).toEqual({
+      pickupDate: 'Pick-up needs to be in the future',
+    });
+    expect(validateSearch({ ...trip, pickupDate: '2026-10-15', pickupTime: '10:00' }, { now })).toEqual({});
   });
 
   it('accepts the defaults once a destination is chosen', () => {
