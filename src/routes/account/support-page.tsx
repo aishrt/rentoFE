@@ -19,7 +19,7 @@ import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AccountPageHeader, AccountShell } from '@/features/account/account-shell';
 import { SettingsSection } from '@/features/account/settings-section';
-import { INCIDENT_STATUS_LABELS, incidentTypeLabel } from '@/features/incidents/incident-labels';
+import { incidentStatusLabel, incidentTypeLabel } from '@/features/incidents/incident-labels';
 import { useMyIncidents } from '@/features/incidents/incidents-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatRelativeTime } from '@/features/booking/booking-format';
@@ -148,7 +148,10 @@ function Incidents() {
                     {incident.caseRef} · Trip {incident.bookingRef} · {formatRelativeTime(incident.updatedAt)}
                   </p>
                 </div>
-                <StatusBadge status={INCIDENT_STATUS_LABELS[incident.status]} className="max-sm:hidden" />
+                <StatusBadge
+                  status={incidentStatusLabel(incident.status, incident.awaitingYou)}
+                  className="max-sm:hidden"
+                />
                 <ChevronRight aria-hidden="true" className="nudge-right size-4 shrink-0 text-muted" />
               </Link>
             </li>

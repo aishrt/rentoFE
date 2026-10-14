@@ -22,6 +22,34 @@ import { ReviewSection } from './review-section';
 
 const ORDER = Object.keys(DOCUMENT_LABELS) as DocumentType[];
 
+type Expiries = Pick<HostVehicle, 'regoExpiry' | 'wofExpiry' | 'cofExpiry' | 'pendingExpiries'>;
+/** The car's date each document shows. */
+const EXPIRY_FIELD: Partial<Record<DocumentType, 'regoExpiry' | 'wofExpiry' | 'cofExpiry'>> = {
+  REGO: 'regoExpiry',
+  WOF: 'wofExpiry',
+  COF: 'cofExpiry',
+};
+
+/**
+ * On a car approved before, a later rego, WOF or CoF date takes effect when staff verify a document showing it
+ * (plan §3): what verifying this one would do to the car's date, and the date the Host entered, to compare.
+ */
+function expiryNote(document: VehicleDocument, expiries: Expiries | undefined): string | null {
+  const field = EXPIRY_FIELD[document.type];
+  if (!field || !expiries || document.status !== 'PENDING') return null;
+  const current = expiries[field];
+  const claimed = expiries.pendingExpiries?.[field];
+  const shown = document.expiry ?? claimed;
+  const notes: string[] = [];
+  if (claimed) notes.push(`The Host entered ${formatDayValue(claimed)} as the new date.`);
+  if (shown && (!current || shown > current)) {
+    notes.push(
+      `Verifying moves the car’s date to ${formatDayValue(shown)}${current ? ` (now ${formatDayValue(current)})` : ''}: check the document shows it.`,
+    );
+  }
+  return notes.length > 0 ? notes.join(' ') : null;
+}
+
 /**
  * The listing's documents (plan §9, Days 8–11): registration, WOF or CoF, RUC, insurance and the owner's
  * consent. They're private files, opened through a short-lived link (plan §3, public and private files).
@@ -29,9 +57,15 @@ const ORDER = Object.keys(DOCUMENT_LABELS) as DocumentType[];
 export function DocumentReview({
   vehicleId,
   documents,
+  expiries,
 }: {
   vehicleId: string;
   documents: HostVehicle['documents'];
+  /**
+   * On a car approved before: its dates, and the later ones its Host entered that wait for a document. Left out
+   * for a new listing, whose dates apply as entered.
+   */
+  expiries?: Expiries;
 }) {
   const queryClient = useQueryClient();
   // Kept while the dialog closes, so its text doesn't change as it animates out.
@@ -91,6 +125,7 @@ export function DocumentReview({
             const label = DOCUMENT_LABELS[document.type];
             const name = DOCUMENT_NAMES[document.type];
             const expired = document.expiry !== undefined && document.expiry < today;
+            const note = expiryNote(document, expiries);
             return (
               <li
                 key={document.id}
@@ -115,6 +150,7 @@ export function DocumentReview({
                         </span>
                       )}
                     </p>
+                    {note && <p className="mt-1 text-sm text-ink">{note}</p>}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

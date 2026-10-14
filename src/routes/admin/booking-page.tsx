@@ -102,7 +102,11 @@ function AdminBooking({ bookingRef }: { bookingRef: string }) {
       <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="grid min-w-0 gap-6">
           <TripCard booking={booking} />
-          <HandoverCard booking={booking} bookingRef={bookingRef} />
+          <HandoverCard
+            booking={booking}
+            bookingRef={bookingRef}
+            extraCharges={detail.data.extraCharges}
+          />
           <PaymentsCard payments={detail.data.payments} refundableCents={detail.data.refundableCents} />
           <PayoutsCard payouts={detail.data.payouts} />
           <ExtraChargesCard charges={detail.data.extraCharges} queryRef={bookingRef} />

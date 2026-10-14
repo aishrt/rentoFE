@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
+import { refreshStaleData } from '@/api/stale-data';
 import type { AttachmentInput, Incident, NewIncidentRequest } from '@/api/types';
 
 /* Damage and incident reporting (spec §15): the user's cases, one case, reporting and adding to it. */
@@ -43,5 +44,7 @@ export function useReplyToIncident(ref: string) {
     mutationFn: async (body: { note: string; attachments: AttachmentInput[] }): Promise<Incident> =>
       (await unwrap(client.POST('/incidents/{ref}/events', { params: { path: { ref } }, body }))).incident,
     onSuccess: (incident) => queryClient.setQueryData(incidentQueryKey(ref), incident),
+    // Support closed the case or changed it meanwhile: show it as it is now.
+    onError: refreshStaleData(queryClient, [incidentQueryKey(ref), incidentsQueryKey]),
   });
 }

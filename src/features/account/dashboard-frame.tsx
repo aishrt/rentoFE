@@ -136,10 +136,11 @@ export function DashboardFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-8 md:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
-      <div className="max-md:hidden md:sticky md:top-24 md:self-start">{sidebar}</div>
-      <div className="min-w-0 max-md:pb-6">{children}</div>
-      {tabBar}
+    // Printed (a receipt, say), only the page itself.
+    <div className="grid gap-8 md:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12 print:block">
+      <div className="max-md:hidden md:sticky md:top-24 md:self-start print:hidden">{sidebar}</div>
+      <div className="min-w-0 max-md:pb-6 print:pb-0">{children}</div>
+      <div className="contents print:hidden">{tabBar}</div>
     </div>
   );
 }

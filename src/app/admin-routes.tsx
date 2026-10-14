@@ -146,6 +146,12 @@ export const adminRoutes: RouteObject[] = [
             lazy: page(() => import('@/routes/admin/settings-page'), 'AdminSettingsPage'),
           },
           {
+            // Staff alerts arrive here and in the header's bell (staff-alerts.ts).
+            path: 'notifications',
+            handle: { title: 'Notifications' } satisfies AdminRouteHandle,
+            lazy: page(() => import('@/routes/admin/notifications-page'), 'AdminNotificationsPage'),
+          },
+          {
             path: '*',
             handle: { title: 'Not found' } satisfies AdminRouteHandle,
             lazy: page(() => import('@/routes/admin/admin-not-found-page'), 'AdminNotFoundPage'),

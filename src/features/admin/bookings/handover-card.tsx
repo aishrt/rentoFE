@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLocation } from 'react-router';
 import { z } from 'zod';
-import type { Booking, ConditionReport, Handover } from '@/api/types';
+import type { AdminBookingDetail, Booking, ConditionReport, Handover } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import {
   staffHandoverQueryKey,
   useStaffHandover,
 } from './bookings-api';
+import { CorrectReadingButton, ExtraKmStatus } from './handover-corrections';
 
 /*
  * A booking's handover in the staff portal (spec §14, plan §8.2): both condition reports, and completing a
@@ -54,9 +55,19 @@ const HAS_HANDOVER: readonly Booking['status'][] = ['CONFIRMED', 'ACTIVE', 'COMP
 /**
  * The check-in and check-out condition reports: photos with their capture times, the odometer, fuel or
  * battery, damage, and who recorded and confirmed each. While a trip is under way without a check-out,
- * support completes it here with the Host's readings (plan §8.2).
+ * support completes it here with the Host's readings (plan §8.2). Staff with the refunds permission correct a
+ * mistyped reading, and charge extra kilometres held for a check.
  */
-export function HandoverCard({ booking, bookingRef }: { booking: Booking; bookingRef: string }) {
+export function HandoverCard({
+  booking,
+  bookingRef,
+  extraCharges,
+}: {
+  booking: Booking;
+  bookingRef: string;
+  /** The booking's charges after the trip, to say where the extra kilometres stand. */
+  extraCharges?: AdminBookingDetail['extraCharges'];
+}) {
   const relevant = HAS_HANDOVER.includes(booking.status);
   const handover = useStaffHandover(bookingRef, relevant);
   const { hash } = useLocation();
@@ -102,14 +113,22 @@ export function HandoverCard({ booking, bookingRef }: { booking: Booking; bookin
             {handover.error.message}
           </Alert>
         ) : (
-          <HandoverDetails handover={handover.data} bookingRef={bookingRef} />
+          <HandoverDetails handover={handover.data} bookingRef={bookingRef} extraCharges={extraCharges} />
         )}
       </DetailCard>
     </div>
   );
 }
 
-function HandoverDetails({ handover, bookingRef }: { handover: Handover; bookingRef: string }) {
+function HandoverDetails({
+  handover,
+  bookingRef,
+  extraCharges,
+}: {
+  handover: Handover;
+  bookingRef: string;
+  extraCharges?: AdminBookingDetail['extraCharges'];
+}) {
   const missingCheckOut = handover.bookingStatus === 'ACTIVE' && !handover.checkOut;
   const km = handover.kilometres;
   return (
@@ -124,11 +143,14 @@ function HandoverDetails({ handover, bookingRef }: { handover: Handover; booking
               ? ', with unlimited kilometres'
               : ` of ${formatNumber(km.allowance)} km included`}
           </p>
-          {km.extra > 0 && (
-            <p>
-              {formatNumber(km.extra)} extra km: {formatNzd(km.extraChargeCents)} charged to the Guest.
-            </p>
-          )}
+          {km.extra > 0 &&
+            (extraCharges ? (
+              <ExtraKmStatus handover={handover} bookingRef={bookingRef} charges={extraCharges} />
+            ) : (
+              <p>
+                {formatNumber(km.extra)} extra km: {formatNzd(km.extraChargeCents)} charged to the Guest.
+              </p>
+            ))}
           {handover.fuelShortfall && (
             <p className="text-danger">
               Returned with less {handover.energy === 'BATTERY' ? 'charge' : 'fuel'} than the policy asks.
@@ -140,6 +162,8 @@ function HandoverDetails({ handover, bookingRef }: { handover: Handover; booking
       <Report
         title="Check-in"
         report={handover.checkIn}
+        other={handover.checkOut}
+        bookingRef={bookingRef}
         energy={handover.energy}
         empty="Check-in isn’t done yet."
       />
@@ -147,6 +171,8 @@ function HandoverDetails({ handover, bookingRef }: { handover: Handover; booking
         title="Check-out"
         report={handover.checkOut}
         earlier={handover.checkIn}
+        other={handover.checkIn}
+        bookingRef={bookingRef}
         energy={handover.energy}
         empty={
           handover.bookingStatus === 'COMPLETED'
@@ -176,12 +202,17 @@ function Report({
   title,
   report,
   earlier,
+  other,
+  bookingRef,
   energy,
   empty,
 }: {
   title: 'Check-in' | 'Check-out';
   report: ConditionReport | null;
   earlier?: ConditionReport | null;
+  /** The other report, whose odometer a correction to this one is checked against. */
+  other: ConditionReport | null;
+  bookingRef: string;
   energy: Handover['energy'];
   empty: string;
 }) {
@@ -221,6 +252,7 @@ function Report({
           <Confirmation party="Guest" at={report.confirmedByGuestAt} />
           <Confirmation party="Host" at={report.confirmedByHostAt} />
         </div>
+        <CorrectReadingButton report={report} other={other} energy={energy} bookingRef={bookingRef} />
       </div>
 
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">

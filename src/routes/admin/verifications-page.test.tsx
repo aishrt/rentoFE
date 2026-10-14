@@ -247,6 +247,35 @@ describe('AdminVerificationsPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('says when the licence doesn’t cover a booking that waited for it', async () => {
+    mockApi({
+      'GET /admin/verifications': { status: 200, body: { items: [kiri] } },
+      'POST /admin/users/u20/identity-review': {
+        status: 200,
+        body: {
+          identityStatus: 'APPROVED',
+          confirmed: [],
+          waitingForHost: [],
+          released: [],
+          licenceNotEligible: ['RV-7K2Q9M'],
+        },
+      },
+    });
+    render();
+
+    await userEvent.click(
+      (await card('Kiri Smith')).getByRole('button', { name: 'Approve Kiri Smith’s identity check' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Kiri Smith’s identity?' }));
+    await userEvent.click(dialog.getByRole('button', { name: 'Approve' }));
+
+    expect(
+      await screen.findByText(
+        'We’ve emailed them. RV-7K2Q9M isn’t confirmed: the licence doesn’t cover that trip. Cancel it from the booking if it can’t go ahead.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('shows how the ID compared, and the full licence number only when asked', async () => {
     let shown = 0;
     mockApi({

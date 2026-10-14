@@ -285,7 +285,9 @@ describe('HostBookingPage', () => {
         'You cancelled, and Kiri was refunded in full. A $50 Host cancellation fee comes off your next payout.',
       ),
     ).toBeInTheDocument();
-    expect(sent.find((entry) => entry.path.endsWith('/cancel'))?.body).toEqual({});
+    expect(sent.find((entry) => entry.path.endsWith('/cancel'))?.body).toEqual({
+      expectedRefundCents: 105_080,
+    });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     // A cancelled booking pays nothing, and the Guest's mobile is no longer shared.
     expect(screen.queryByRole('region', { name: /What you/ })).not.toBeInTheDocument();
@@ -446,6 +448,179 @@ describe('HostBookingPage', () => {
     expect(screen.getByText(/There’s nothing for you to do/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'What you’d earn' })).toBeInTheDocument();
+  });
+
+  it('shows what the booking earned, and what its payouts settled for other bookings', async () => {
+    const completed = hostConfirmed({
+      status: 'COMPLETED',
+      actions: NO_ACTIONS,
+      payout: {
+        hostPayoutCents: 21_360,
+        commissionCents: 5_340,
+        commissionGstCents: 697,
+        type: 'TRIP',
+        status: 'PAID',
+        scheduledFor: '2026-10-09T01:00:00.000Z',
+        paidAt: '2026-10-09T01:00:00.000Z',
+        paidCents: 13_760,
+        earnings: {
+          rentalCents: 26_700,
+          deliveryCents: 0,
+          extraChargesCents: 1_750,
+          keptFeeCents: 0,
+          commissionCents: 5_690,
+          commissionGstCents: 743,
+          hostFundedRefundsCents: 4_000,
+          hostCancellationFeeCents: 0,
+          netCents: 18_760,
+        },
+        settled: [{ type: 'HOST_CANCELLATION_FEE', amountCents: 5_000 }],
+      },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: completed } }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    const earnings = within(await screen.findByRole('region', { name: 'What you earn' }));
+    // The same figure as the booking's row on the earnings page.
+    expect(earnings.getByText('You earn').nextElementSibling).toHaveTextContent('NZ$187.60');
+    expect(earnings.getByText('Platform commission').closest('div')).toHaveTextContent('−$56.90');
+    expect(earnings.getByText('Refunds you fund').closest('div')).toHaveTextContent('−$40');
+    expect(earnings.getByText('Paid to you so far').nextElementSibling).toHaveTextContent('$137.60');
+    // The $50 fee owed from another booking came off these payouts: with it they add up to what was earned.
+    expect(earnings.getByText('Settled: Host cancellation fee').closest('div')).toHaveTextContent('$50');
+  });
+
+  it('shows a cancelled booking’s kept share, when it’s paid, and a payout already sent, owed back', async () => {
+    const keptShare = hostConfirmed({
+      status: 'CANCELLED',
+      guest: hostRequest().guest,
+      actions: NO_ACTIONS,
+      cancellation: {
+        at: '2026-10-08T01:00:00.000Z',
+        by: 'GUEST',
+        reason: 'GUEST_CANCELLED',
+        refundCents: 19_185,
+        feeCents: 14_685,
+        hostShareCents: 10_680,
+      },
+      payout: {
+        hostPayoutCents: 21_360,
+        commissionCents: 5_340,
+        commissionGstCents: 697,
+        type: 'CANCELLATION_FEE',
+        status: 'SCHEDULED',
+        scheduledFor: '2026-10-11T01:00:00.000Z',
+        earnings: {
+          rentalCents: 0,
+          deliveryCents: 0,
+          extraChargesCents: 0,
+          keptFeeCents: 13_350,
+          commissionCents: 2_670,
+          commissionGstCents: 348,
+          hostFundedRefundsCents: 0,
+          hostCancellationFeeCents: 0,
+          netCents: 10_680,
+        },
+        refunds: [
+          { amountCents: 19_185, at: '2026-10-08T01:00:00.000Z', fundedBy: 'HOST', cancellation: true },
+        ],
+      },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: keptShare } }
+        : undefined,
+    );
+    const { unmount } = renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    // Its own payout, 24 hours after the trip's start: not the next one.
+    expect(
+      await screen.findByText(
+        /^Kiri cancelled\. Your share of the fee kept, \$106\.80, is paid on its own, from /,
+      ),
+    ).toBeInTheDocument();
+    const earnings = within(screen.getByRole('region', { name: 'What you earn' }));
+    expect(earnings.getByText('You earn').nextElementSibling).toHaveTextContent('NZ$106.80');
+    expect(earnings.getByText('Your part of the fee kept').closest('div')).toHaveTextContent('$133.50');
+    expect(earnings.getByText('Under the cancellation policy')).toBeInTheDocument();
+    expect(earnings.getByText(/Paid to your Stripe account from/)).toBeInTheDocument();
+    unmount();
+
+    // Support cancelled a no-show after the trip's payout was sent: the Host keeps their share of it.
+    const noShow = hostConfirmed({
+      ...keptShare,
+      cancellation: { ...keptShare.cancellation!, by: 'SUPPORT', reason: 'GUEST_NO_SHOW' },
+      payout: {
+        ...keptShare.payout!,
+        type: 'TRIP',
+        status: 'PAID',
+        scheduledFor: '2026-10-07T01:00:00.000Z',
+        paidAt: '2026-10-07T01:00:00.000Z',
+        paidCents: 21_360,
+        owed: { refundsCents: 0, payoutSentCents: 10_680 },
+      },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: noShow } }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    expect(
+      await screen.findByText(
+        'Rento Vroom support cancelled this booking as a guest no-show, and Kiri was refunded $191.85. The trip’s payout was already sent: you keep $106.80 of it, your share of the fee kept.',
+      ),
+    ).toBeInTheDocument();
+    const money = within(screen.getByRole('region', { name: 'What you earn' }));
+    expect(money.getByText('Paid to you so far').nextElementSibling).toHaveTextContent('$213.60');
+    expect(money.getByText('Payout already sent, owed back').closest('div')).toHaveTextContent('−$106.80');
+  });
+
+  it('shows a Host’s own cancellation fee on the cancelled booking', async () => {
+    const cancelled = hostConfirmed({
+      status: 'CANCELLED',
+      guest: hostRequest().guest,
+      actions: NO_ACTIONS,
+      cancellation: {
+        at: '2026-10-08T01:00:00.000Z',
+        by: 'HOST',
+        reason: 'HOST_CANCELLED',
+        refundCents: 105_080,
+        hostFeeCents: 2_000,
+      },
+      payout: {
+        hostPayoutCents: 67_840,
+        commissionCents: 16_960,
+        commissionGstCents: 2_212,
+        earnings: {
+          rentalCents: 0,
+          deliveryCents: 0,
+          extraChargesCents: 0,
+          keptFeeCents: 0,
+          commissionCents: 0,
+          commissionGstCents: 0,
+          hostFundedRefundsCents: 0,
+          hostCancellationFeeCents: 2_000,
+          netCents: -2_000,
+        },
+      },
+    });
+    mockHost((sentRequest) =>
+      sentRequest.method === 'GET' && sentRequest.path === `/bookings/${REF}`
+        ? { status: 200, body: { booking: cancelled } }
+        : undefined,
+    );
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    const money = within(await screen.findByRole('region', { name: 'What you earn' }));
+    expect(money.getByText('Host cancellation fee').closest('div')).toHaveTextContent('−$20');
+    expect(money.getByText('Nothing more is paid for this booking.')).toBeInTheDocument();
+    expect(money.queryByText('The guest pays')).not.toBeInTheDocument();
   });
 
   it('sends the Guest of a booking to their trip page', async () => {

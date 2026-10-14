@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import type { EarningsRow, HostPayout, PayoutAccount } from '@/api/types';
+import type { Earnings as EarningsData, EarningsRow, HostPayout, PayoutAccount } from '@/api/types';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
 import { ParkingBays } from '@/components/brand/patterns/parking-bays';
 import { Container } from '@/components/layout/container';
@@ -37,6 +37,8 @@ import {
   downloadStatement,
   useEarnings,
   useHostPayouts,
+  openBlankTab,
+  useEarningsMonth,
   useOpenStripeDashboard,
   useStartPayoutSetup,
   useSyncPayoutAccount,
@@ -55,7 +57,7 @@ const HOLD_WORDS: Record<NonNullable<HostPayout['holdReason']>, string> = {
 
 const TYPE_WORDS: Record<HostPayout['type'], string> = {
   TRIP: 'Trip',
-  CANCELLATION_FEE: 'Cancellation fee',
+  CANCELLATION_FEE: 'Your share of a cancellation fee',
   EXTRA_CHARGE: 'Extra charge',
 };
 
@@ -87,9 +89,19 @@ function PayoutSetup({ account }: { account: PayoutAccount }) {
                 : ' a few days later'}
               .
             </p>
+            {dashboard.isError && (
+              <p role="alert" className="mt-2 text-sm text-danger">
+                {dashboard.error.message}
+              </p>
+            )}
           </div>
         </div>
-        <Button variant="secondary" loading={dashboard.isPending} onClick={() => dashboard.mutate()}>
+        {/* The tab opens in the click itself, so the browser doesn't block it while the link comes. */}
+        <Button
+          variant="secondary"
+          loading={dashboard.isPending}
+          onClick={() => dashboard.mutate(openBlankTab())}
+        >
           <ExternalLink aria-hidden="true" />
           Bank details in Stripe
         </Button>
@@ -122,6 +134,9 @@ function PayoutSetup({ account }: { account: PayoutAccount }) {
 /** A deduction's line, as on the payout email (plan §8.1, items 10 and 15). */
 function deductionLabel(deduction: HostPayout['deductions'][number]): string {
   if (deduction.type === 'HOST_CANCELLATION_FEE') return 'Host cancellation fee';
+  // A trip payout sent before its booking was cancelled, owed back less the Host's share of the kept fee.
+  if (deduction.type === 'HOST_FUNDED_REFUND' && deduction.payoutSent)
+    return deduction.bookingRef ? `Payout already sent for ${deduction.bookingRef}` : 'A payout already sent';
   if (deduction.type === 'HOST_FUNDED_REFUND')
     return deduction.bookingRef ? `Refund for ${deduction.bookingRef}` : 'Refund to a guest';
   return 'Other deduction';
@@ -193,8 +208,12 @@ function PayoutRow({ payout }: { payout: HostPayout }) {
   );
 }
 
-function BookingsTable({ rows }: { rows: EarningsRow[] }) {
-  if (rows.length === 0) return <p className="text-sm text-muted">No trips this month yet.</p>;
+function BookingsTable({ rows, thisMonth }: { rows: EarningsRow[]; thisMonth: boolean }) {
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-muted">{thisMonth ? 'No trips this month yet.' : 'No trips that month.'}</p>
+    );
+  }
   return (
     <div className="grid gap-2">
       {/* On a phone the columns run past the card's edge. */}
@@ -254,11 +273,26 @@ function BookingsTable({ rows }: { rows: EarningsRow[] }) {
   );
 }
 
-/** Each trip's breakdown, a month at a time: this month, or an earlier one with trips. */
-function TripsByMonth({ rows, capped }: { rows: EarningsRow[]; capped: boolean }) {
+/**
+ * Each trip's breakdown, a month at a time: this month, or any other the chart shows or with trips. The page
+ * has the latest 100 trips; a month they don't all reach is asked for on its own.
+ */
+function TripsByMonth({
+  rows,
+  capped,
+  chartMonths,
+  tripMonths,
+}: {
+  rows: EarningsRow[];
+  capped: boolean;
+  chartMonths: string[];
+  tripMonths: string[];
+}) {
   const current = nzMonth(new Date());
   const [month, setMonth] = useState(current);
-  const months = [...new Set([current, ...rows.map((row) => nzMonth(new Date(row.start)))])].sort().reverse();
+  const months = [...new Set([current, ...chartMonths, ...tripMonths])].sort().reverse();
+  const asked = useEarningsMonth(month, capped);
+  const shown = capped ? asked.data : rows.filter((row) => nzMonth(new Date(row.start)) === month);
   return (
     <Card asChild className="grid gap-4 p-5 sm:p-6">
       <section aria-labelledby="trips-by-month">
@@ -271,15 +305,27 @@ function TripsByMonth({ rows, capped }: { rows: EarningsRow[]; capped: boolean }
             onChange={setMonth}
             options={months.map((key) => ({ value: key, label: monthLabel(key) }))}
             icon={<CalendarDays aria-hidden="true" />}
-            listLabel="Months with trips"
+            listLabel="Months"
             className="sm:max-w-56"
           />
         </div>
-        <BookingsTable rows={rows.filter((row) => nzMonth(new Date(row.start)) === month)} />
-        {capped && (
-          <p className="text-xs text-muted">
-            These are your latest 100 trips. The earnings statement below has every one.
-          </p>
+        {shown ? (
+          <BookingsTable rows={shown} thisMonth={month === current} />
+        ) : asked.isError ? (
+          <Alert
+            variant="danger"
+            role="alert"
+            title="We couldn’t load that month’s trips"
+            action={
+              <Button variant="secondary" size="sm" onClick={() => void asked.refetch()}>
+                Try again
+              </Button>
+            }
+          >
+            {asked.error.message}
+          </Alert>
+        ) : (
+          <Skeleton aria-label="Loading the month’s trips" className="h-24 rounded-control" />
         )}
       </section>
     </Card>
@@ -304,7 +350,10 @@ function statementChoices(now = new Date()) {
   return [...taxYears, ...months];
 }
 
-function Statement() {
+/** For a GST-registered Host's tax invoice: who charges the commission (plan §8.1, item 22). */
+type Supplier = NonNullable<EarningsData['supplier']>;
+
+function Statement({ supplier }: { supplier?: Supplier }) {
   const choices = statementChoices();
   const [period, setPeriod] = useState(choices[3]!.value);
   const [busy, setBusy] = useState(false);
@@ -329,6 +378,12 @@ function Statement() {
           A spreadsheet (CSV) for your records and tax return: rental, delivery, extra charges, commission,
           deductions and GST in separate columns.
         </p>
+        {supplier && (
+          <p className="mt-2 text-sm text-muted">
+            For your GST records, the commission is charged by {supplier.name}
+            {supplier.gstNumber ? `, GST number ${supplier.gstNumber}` : ''}.
+          </p>
+        )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
@@ -364,8 +419,14 @@ function Earnings() {
       onSuccess: (account) => {
         if (account.payoutsEnabled)
           toast('Payouts are set up', { description: 'You’ll be paid after each trip.' });
-        setParams({}, { replace: true });
       },
+      // Stripe's own message updates it later; the Host can check by refreshing.
+      onError: (failed) =>
+        toast('We couldn’t check your payout setup with Stripe', {
+          description: `${failed.message} Refresh the page in a minute to see where it stands.`,
+          tone: 'danger',
+        }),
+      onSettled: () => setParams({}, { replace: true }),
     });
   }, [returned, sync, setParams]);
 
@@ -404,7 +465,7 @@ function Earnings() {
   const all = payouts.data?.pages.flatMap((page) => page.payouts) ?? [];
   const upcoming = all.filter((payout) => payout.status !== 'PAID');
   const paid = all.filter((payout) => payout.status === 'PAID');
-  const { feesOwedCents, refundsOwedCents } = first.account;
+  const { feesOwedCents, refundsOwedCents, payoutsOwedCents } = first.account;
   // What the Host owes, each kind on its own line, taken off their next payout (plan §8.1, items 10 and 15).
   const owed = [
     {
@@ -416,6 +477,12 @@ function Earnings() {
       label: 'Refunds owed',
       detail: 'Refunds to guests you fund, made after the trip was paid out, taken off your next payout',
       cents: refundsOwedCents,
+    },
+    {
+      label: 'Payouts owed back',
+      detail:
+        'Trip payouts sent before the booking was cancelled, less your share of the fee kept, taken off your next payout',
+      cents: payoutsOwedCents,
     },
   ].filter((line) => line.cents > 0);
   const lastMonth = earnings.data.months.at(-2)?.month;
@@ -479,6 +546,12 @@ function Earnings() {
             </h2>
             <p className="font-semibold text-ink tabular-nums">{formatNzd(summary.upcomingPayoutsCents)}</p>
           </div>
+          {/* As payouts are sent: each less the refunds of its own trip, then what's owed below. */}
+          <p className="mt-1 text-xs text-muted">
+            {owed.length > 0
+              ? 'What they’ll pay you, after what you owe below comes off'
+              : 'What they’ll pay you, after any refunds you fund'}
+          </p>
           {owed.map((line) => (
             <div
               key={line.label}
@@ -532,9 +605,14 @@ function Earnings() {
         </Card>
       </div>
 
-      <TripsByMonth rows={earnings.data.bookings} capped={earnings.data.bookings.length >= 100} />
+      <TripsByMonth
+        rows={earnings.data.bookings}
+        capped={earnings.data.bookings.length >= 100}
+        chartMonths={earnings.data.months.map((month) => month.month)}
+        tripMonths={earnings.data.tripMonths}
+      />
 
-      <Statement />
+      <Statement supplier={earnings.data.supplier} />
     </div>
   );
 }

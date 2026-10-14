@@ -2,6 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Message, ThreadDetail } from '@/api/types';
+import { Toaster } from '@/components/ui/toast';
 import { applyMessagingEvent, messagesQueryKey } from '@/features/messages/message-keys';
 import { message, threadDetail, threadSummary } from '@/features/messages/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
@@ -118,6 +119,43 @@ describe('MessagesPage', () => {
     expect(screen.queryByRole('tab', { name: 'Your guests' })).not.toBeInTheDocument();
   });
 
+  it('shows more conversations a page at a time', async () => {
+    const cursors = [] as (string | null)[];
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /threads/unread':
+          return { status: 200, body: { count: 1 } };
+        case 'GET /threads': {
+          const cursor = request.query.get('cursor');
+          cursors.push(cursor);
+          return cursor === 'page-2'
+            ? {
+                status: 200,
+                body: {
+                  threads: [threadSummary({ ref: 'RV-OLDER1', otherParty: { id: 'h2', firstName: 'Tama' } })],
+                  unreadTotal: 1,
+                },
+              }
+            : { status: 200, body: { threads: [threadSummary()], unreadTotal: 1, nextCursor: 'page-2' } };
+        }
+        default:
+          return undefined;
+      }
+    });
+    render('/messages');
+
+    expect(await screen.findByRole('link', { name: /Hana/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Tama/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(await screen.findByRole('link', { name: /Tama/ })).toHaveAttribute('href', '/messages/RV-OLDER1');
+    expect(screen.getByRole('link', { name: /Hana/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(cursors).toEqual([null, 'page-2']);
+  });
+
   it('lets a host see only their guests’ conversations', async () => {
     mockMessaging({ user: hostUser });
     const { router } = render('/messages');
@@ -214,6 +252,34 @@ describe('ConversationPage', () => {
     mockMessaging({ thread: threadDetail({ bookingStatus: 'PENDING', contactsHidden: true }) });
     render('/messages/RV-7K2Q9M');
     expect(await screen.findByText('Contact details are hidden for now')).toBeInTheDocument();
+  });
+
+  it('says so when unblocking fails', async () => {
+    mockMessaging({
+      thread: threadDetail({
+        canSend: false,
+        blockedByMe: true,
+        readOnlyReason: 'You blocked Hana. Unblock them to send messages.',
+      }),
+    });
+    renderWithRouter(
+      [
+        {
+          path: '/messages/:ref',
+          element: (
+            <>
+              <ConversationPage />
+              <Toaster />
+            </>
+          ),
+        },
+      ],
+      '/messages/RV-7K2Q9M',
+    );
+
+    // The API doesn't answer the unblock.
+    await userEvent.click(await screen.findByRole('button', { name: 'Unblock Hana' }));
+    expect(await screen.findByText('We couldn’t unblock them')).toBeInTheDocument();
   });
 
   it('shows why messages can’t be sent instead of the box to write in', async () => {

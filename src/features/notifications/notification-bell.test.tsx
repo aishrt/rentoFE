@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Toaster } from '@/components/ui/toast';
+import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { renderWithRouter } from '@/test/utils';
 import { NotificationBell } from './notification-bell';
 import {
@@ -128,5 +130,38 @@ describe('NotificationBell', () => {
 
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     expect(router.state.location.pathname).toBe('/');
+  });
+});
+
+describe('NotificationBell: when marking read fails', () => {
+  it('says so', async () => {
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'GET /notifications':
+          return { status: 200, body: { notifications: [item({})], unreadCount: 1, total: 1 } };
+        case 'POST /notifications/read':
+          return { status: 500, body: { error: { code: 'INTERNAL', message: 'Something went wrong.' } } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter(
+      [
+        {
+          path: '/',
+          element: (
+            <>
+              <NotificationBell />
+              <Toaster />
+            </>
+          ),
+        },
+      ],
+      '/',
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mark all as read' }));
+    expect(await screen.findByText('We couldn’t update your notifications')).toBeInTheDocument();
   });
 });

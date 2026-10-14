@@ -161,6 +161,55 @@ describe('CheckInPage', () => {
     });
   });
 
+  it('says plainly when the guest’s licence doesn’t cover the trip', async () => {
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /bookings/RV-7K2Q9M/inspections':
+          return { status: 200, body: { handover: handover() } };
+        case 'POST /bookings/RV-7K2Q9M/inspections':
+          return {
+            status: 409,
+            body: {
+              error: {
+                code: 'LICENCE_NOT_ELIGIBLE',
+                message:
+                  'Your driver licence can’t be used for this trip: it expires before the trip ends. Update your licence details in your account, or contact support.',
+              },
+            },
+          };
+        default:
+          return undefined;
+      }
+    });
+    render('/trips/RV-7K2Q9M/check-in');
+    for (const [index, angle] of ANGLES.entries()) {
+      await screen.findByText(new RegExp(`${index + 1}/8$`));
+      await userEvent.upload(
+        document.querySelector<HTMLInputElement>('input[type="file"]')!,
+        photo(`${angle}.jpg`),
+      );
+      await screen.findByText(/^Taken /);
+      await userEvent.click(screen.getByRole('button', { name: /Next/ }));
+    }
+    await userEvent.type(await screen.findByLabelText(/Odometer/), '45210');
+    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Next/ }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: /show the car as it is now/ }));
+    const start = screen.getByRole('button', { name: 'Start the trip' });
+    await vi.waitFor(() => expect(start).toBeEnabled());
+    await userEvent.click(start);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Your licence can’t be used for this trip');
+    expect(alert).toHaveTextContent(/it expires before the trip ends/);
+    expect(within(alert).getByRole('link', { name: 'Update your licence' })).toHaveAttribute(
+      'href',
+      '/account',
+    );
+  });
+
   it('takes a photo with the in-app camera and uploads it like any other', async () => {
     mockHandover(() => handover());
     const track = { stop: vi.fn() };
@@ -452,5 +501,149 @@ describe('HandoverPage', () => {
     await userEvent.click(offer.getByRole('button', { name: 'Not now' }));
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(router.state.location.state).toBeNull();
+  });
+});
+
+describe('Handover problems', () => {
+  const error = (status: number, code: string, message: string) => ({
+    status,
+    body: { error: { code, message } },
+  });
+
+  /** Mocks the handover with these answers to recording and confirming, and counts its loads. */
+  function mockProblems(
+    current: () => Handover,
+    answers: { submit?: () => MockAnswer; confirm?: () => MockAnswer },
+  ) {
+    return mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /bookings/RV-7K2Q9M/inspections':
+          return { status: 200, body: { handover: current() } };
+        case 'POST /bookings/RV-7K2Q9M/inspections':
+          return answers.submit?.();
+        case 'POST /bookings/RV-7K2Q9M/inspections/CHECK_IN/confirm':
+          return answers.confirm?.();
+        case 'GET /bookings/RV-7K2Q9M':
+          return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Not here' } } };
+        default:
+          return undefined;
+      }
+    });
+  }
+
+  /** Takes every photo, enters the readings and taps Start the trip. */
+  async function finishCheckIn() {
+    for (const [index, angle] of ANGLES.entries()) {
+      await screen.findByText(new RegExp(`${index + 1}/8$`));
+      await userEvent.upload(
+        document.querySelector<HTMLInputElement>('input[type="file"]')!,
+        photo(`${angle}.jpg`),
+      );
+      await screen.findByText(/^Taken /);
+      await userEvent.click(screen.getByRole('button', { name: /Next/ }));
+    }
+    await userEvent.type(await screen.findByLabelText(/Odometer/), '45210');
+    await userEvent.click(screen.getByRole('button', { name: /Next/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Next/ }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: /show the car as it is now/ }));
+    const start = screen.getByRole('button', { name: 'Start the trip' });
+    await vi.waitFor(() => expect(start).toBeEnabled());
+    await userEvent.click(start);
+  }
+
+  it('shows the check-in the other party recorded first, rather than a dead end', async () => {
+    let current = handover();
+    mockProblems(() => current, {
+      submit: () => {
+        current = handover({
+          bookingStatus: 'ACTIVE',
+          checkIn: report(),
+          actions: { ...handover().actions, checkIn: false },
+        });
+        return error(409, 'NOT_CHECK_IN', 'Check-in is already done.');
+      },
+    });
+    render('/trips/RV-7K2Q9M/check-in');
+    await finishCheckIn();
+    expect(await screen.findByRole('heading', { name: 'Check-in is done' })).toBeInTheDocument();
+  });
+
+  it('uploads the photos again when the API can’t find them', async () => {
+    let refuse = true;
+    const sent = mockProblems(() => handover(), {
+      submit: () => {
+        if (!refuse) {
+          return {
+            status: 201,
+            body: { handover: handover({ bookingStatus: 'ACTIVE', checkIn: report() }) },
+          };
+        }
+        refuse = false;
+        return error(400, 'UPLOAD_NOT_FOUND', 'We couldn’t find that upload. Please upload the file again.');
+      },
+    });
+    const uploadsBefore = vi.mocked(uploadFile).mock.calls.length;
+    const { router } = render('/trips/RV-7K2Q9M/check-in');
+    await finishCheckIn();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Your photos need to upload again, and they’re on their way.',
+    );
+    // Each of the 8 again, with a new key.
+    await vi.waitFor(() => expect(vi.mocked(uploadFile).mock.calls.length).toBe(uploadsBefore + 16));
+    const start = screen.getByRole('button', { name: 'Start the trip' });
+    await vi.waitFor(() => expect(start).toBeEnabled());
+    await userEvent.click(start);
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/trips/RV-7K2Q9M/handover'));
+
+    const [first, second] = sent
+      .filter((request) => request.method === 'POST' && request.path.endsWith('/inspections'))
+      .map((request) => (request.body as { photos: { key: string }[] }).photos.map((taken) => taken.key));
+    expect(second).toHaveLength(8);
+    expect(second!.filter((key) => first!.includes(key))).toEqual([]);
+  });
+
+  it('says check-in has closed once the end time has passed', async () => {
+    mockProblems(
+      () =>
+        handover({
+          checkInClosesAt: '2026-10-12T21:00:00.000Z',
+          actions: { ...handover().actions, checkIn: false },
+        }),
+      {},
+    );
+    render('/trips/RV-7K2Q9M/check-in');
+    expect(await screen.findByRole('heading', { name: 'Check-in has closed' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Contact support' })).toHaveAttribute(
+      'href',
+      '/contact?category=BOOKING&booking=RV-7K2Q9M',
+    );
+  });
+
+  it('says why a confirmation failed, and loads the handover again', async () => {
+    let current = handover({
+      bookingStatus: 'ACTIVE',
+      checkIn: report(),
+      actions: { ...handover().actions, checkIn: false, checkOut: true, confirmCheckIn: true },
+    });
+    const sent = mockProblems(() => current, {
+      confirm: () => {
+        current = { ...current, actions: { ...current.actions, confirmCheckIn: false } };
+        return error(404, 'NOT_FOUND', 'That report hasn’t been done yet.');
+      },
+    });
+    render('/trips/RV-7K2Q9M/handover');
+
+    const checkIn = await screen.findByRole('region', { name: 'Check-in' });
+    await userEvent.click(within(checkIn).getByRole('button', { name: 'Confirm it’s right' }));
+    expect(await within(checkIn).findByRole('alert')).toHaveTextContent('That report hasn’t been done yet.');
+    await vi.waitFor(() =>
+      expect(sent.filter((request) => request.path === '/bookings/RV-7K2Q9M/inspections')).toHaveLength(2),
+    );
+    await vi.waitFor(() =>
+      expect(within(checkIn).queryByRole('button', { name: 'Confirm it’s right' })).not.toBeInTheDocument(),
+    );
   });
 });

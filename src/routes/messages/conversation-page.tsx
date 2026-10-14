@@ -107,7 +107,19 @@ function ClosedNotice({ thread }: { thread: ThreadDetail }) {
           variant="secondary"
           size="sm"
           loading={block.isPending}
-          onClick={() => block.mutate({ userId: thread.otherParty.id, block: false })}
+          onClick={() =>
+            block.mutate(
+              { userId: thread.otherParty.id, block: false },
+              {
+                onSuccess: () =>
+                  toast(`${thread.otherParty.firstName} is unblocked`, {
+                    description: 'You can message each other again.',
+                  }),
+                onError: (error) =>
+                  toast('We couldn’t unblock them', { description: error.message, tone: 'danger' }),
+              },
+            )
+          }
         >
           Unblock {thread.otherParty.firstName}
         </Button>

@@ -14,13 +14,14 @@ afterEach(() => {
 function mockPrivacy({
   closure = { allowed: true, blockers: [] },
   alreadyOpen = false,
-}: { closure?: AccountClosure; alreadyOpen?: boolean } = {}) {
+  added = false,
+}: { closure?: AccountClosure; alreadyOpen?: boolean; added?: boolean } = {}) {
   return mockRoutes((request) => {
     switch (`${request.method} ${request.path}`) {
       case 'GET /me/account-closure':
         return { status: 200, body: closure };
       case 'POST /me/privacy-requests':
-        return { status: 201, body: { ref: 'ST-4HX8PA', alreadyOpen } };
+        return { status: 201, body: { ref: 'ST-4HX8PA', alreadyOpen, added } };
       default:
         return undefined;
     }
@@ -80,6 +81,31 @@ describe('PrivacySection', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Send request' }));
 
     expect(await screen.findByText('You’ve already asked')).toBeInTheDocument();
+  });
+
+  it('says a second correction was added to the request already open', async () => {
+    const sent = mockPrivacy({ alreadyOpen: true, added: true });
+    renderWithProviders(
+      <>
+        <PrivacySection />
+        <Toaster />
+      </>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ask us to correct something' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Ask us to correct your information' });
+    await userEvent.type(
+      within(dialog).getByLabelText('What needs correcting'),
+      'My date of birth is 21 April',
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send request' }));
+
+    expect(await screen.findByText('Added to your request')).toBeInTheDocument();
+    expect(screen.getByText(/We’ve added this to ST-4HX8PA/)).toBeInTheDocument();
+    expect(sent.find((request) => request.method === 'POST')?.body).toEqual({
+      type: 'CORRECTION',
+      message: 'My date of birth is 21 April',
+    });
   });
 
   it('asks to close the account once nothing is under way', async () => {

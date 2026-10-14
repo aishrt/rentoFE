@@ -9,7 +9,9 @@ import type {
   AdminVehicleSuspension,
   Booking,
   Handover,
+  ReadingCorrectionRequest,
   StaffCompletionRequest,
+  StaffHandoverResponse,
 } from '@/api/types';
 
 /*
@@ -220,6 +222,37 @@ export async function completeTripRequest(ref: string, body: StaffCompletionRequ
     client.POST('/admin/bookings/{id}/complete', { params: { path: { id: ref } }, body }),
   );
   return response.handover;
+}
+
+/** A 403 on a money action means the refunds permission is missing (OWN_RECORD says why it isn't). */
+function needsRefunds(error: unknown): never {
+  if (error instanceof ApiError && error.status === 403 && error.code !== 'OWN_RECORD') {
+    throw new ApiError(403, error.code, REFUNDS_PERMISSION_MESSAGE);
+  }
+  throw error;
+}
+
+/**
+ * Needs the refunds permission: corrects a reading on the check-in or check-out report, with a note for the
+ * audit log (plan §8.2). On a completed trip the extra kilometres are worked out again from it at once.
+ */
+export async function correctReadingRequest(
+  ref: string,
+  body: ReadingCorrectionRequest,
+): Promise<StaffHandoverResponse> {
+  return unwrap(
+    client.POST('/admin/bookings/{id}/readings', { params: { path: { id: ref } }, body }),
+  ).catch(needsRefunds);
+}
+
+/**
+ * Needs the refunds permission: charges the extra kilometres from the readings as they stand, without waiting
+ * for the other party to confirm or the daily limit that holds a charge for a check by staff.
+ */
+export async function chargeExtraKmRequest(ref: string): Promise<StaffHandoverResponse> {
+  return unwrap(client.POST('/admin/bookings/{id}/extra-km', { params: { path: { id: ref } } })).catch(
+    needsRefunds,
+  );
 }
 
 // A booking's messages ---------------------------------------------------------------------------------------

@@ -29,6 +29,7 @@ import {
   refundSentence,
 } from '@/features/booking/booking-format';
 import { DetailCard, ProtectionDetails, StatusBadge, TripStops } from '@/features/booking/booking-parts';
+import { useHandlesMoney } from '@/features/admin/use-money-permission';
 import { PriceBreakdown } from '@/features/booking/price-breakdown';
 import { incidentTypeLabel } from '@/features/incidents/incident-labels';
 import { threadPath } from './bookings-api';
@@ -294,6 +295,8 @@ export function ExtraChargesCard({
   charges: AdminBookingDetail['extraCharges'];
   queryRef?: string;
 }) {
+  // Cancelling a charge needs the refunds permission (plan §6.2).
+  const money = useHandlesMoney();
   return (
     <DetailCard title="Extra charges" icon={ReceiptText}>
       {charges.length === 0 ? (
@@ -310,7 +313,7 @@ export function ExtraChargesCard({
                 <StatusBadge status={EXTRA_CHARGE_STATUS[charge.status]} />
               </div>
               <p className="break-words">{charge.description}</p>
-              {queryRef && (charge.status === 'PENDING' || charge.status === 'FAILED') && (
+              {money && queryRef && (charge.status === 'PENDING' || charge.status === 'FAILED') && (
                 <CancelChargeButton charge={charge} queryRef={queryRef} />
               )}
             </li>

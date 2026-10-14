@@ -54,6 +54,8 @@ export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
   const [loaded, setLoaded] = useState(false);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const uploading = useRef(new Set<string>());
+  // Retaken or removed: an upload still running for one mustn't save it back in the browser.
+  const removed = useRef(new Set<string>());
   const current = useRef<InspectionPhoto[]>([]);
 
   useEffect(() => {
@@ -78,9 +80,16 @@ export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
           contentType: photo.contentType,
           onProgress: (fraction) => patch(photo.id, { progress: fraction }),
         });
+        if (removed.current.has(photo.id)) return;
         await savePhoto({ ...stored(photo), key });
+        // Removed while it was being saved: take it out again.
+        if (removed.current.has(photo.id)) {
+          await removePhoto(photo.id);
+          return;
+        }
         patch(photo.id, { key, status: 'uploaded', progress: 1 });
       } catch (error) {
+        if (removed.current.has(photo.id)) return;
         patch(
           photo.id,
           isNetworkProblem(error)
@@ -153,6 +162,7 @@ export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
       const exifTakenAt = await readExifTakenAt(file);
       if (replace) {
         for (const old of current.current.filter((photo) => photo.angle === angle)) {
+          removed.current.add(old.id);
           URL.revokeObjectURL(old.previewUrl);
           await removePhoto(old.id);
         }
@@ -182,15 +192,32 @@ export function useInspectionPhotos(bookingRef: string, stage: PhotoStage) {
   );
 
   const remove = useCallback(async (id: string) => {
+    removed.current.add(id);
     const gone = current.current.find((photo) => photo.id === id);
     if (gone) URL.revokeObjectURL(gone.previewUrl);
     await removePhoto(id);
     setPhotos((list) => list.filter((photo) => photo.id !== id));
   }, []);
 
+  /**
+   * Uploads every photo again. The API refuses an upload it can't find (UPLOAD_NOT_FOUND): one sent with a
+   * report that then failed, as each is attached once, or one left unsent for over a day.
+   */
+  const uploadAgain = useCallback(async () => {
+    const sent = current.current.filter((photo) => photo.key);
+    const fresh = sent.map(({ key: _sent, ...photo }): InspectionPhoto => ({
+      ...photo,
+      status: 'waiting',
+      progress: 0,
+    }));
+    for (const photo of fresh) await savePhoto(stored(photo));
+    setPhotos((list) => list.map((photo) => fresh.find((again) => again.id === photo.id) ?? photo));
+    fresh.forEach((photo) => void upload(photo));
+  }, [upload]);
+
   const clear = useCallback(() => clearPhotos(bookingRef, stage), [bookingRef, stage]);
 
-  return { photos, loaded, online, add, remove, clear, retry: upload };
+  return { photos, loaded, online, add, remove, clear, retry: upload, uploadAgain };
 }
 
 /**

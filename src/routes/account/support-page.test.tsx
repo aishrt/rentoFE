@@ -120,6 +120,9 @@ describe('TicketPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Where do I collect the car?' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'RV-7K2Q9M' })).toHaveAttribute('href', '/trips/RV-7K2Q9M');
+    // In the Guest's dashboard, under Help and support.
+    const sidebar = within(screen.getByRole('navigation', { name: 'Your dashboard' }));
+    expect(sidebar.getByRole('link', { name: 'Help and support' })).toHaveAttribute('aria-current', 'page');
     const messages = within(screen.getByRole('list', { name: 'Messages' }));
     expect(messages.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       expect.stringMatching(/^YouIs it at the airport\?/),

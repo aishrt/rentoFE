@@ -1,11 +1,12 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminBookingDetail, AdminCancellationPreview } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
 import { bookingDetail, payment, payout } from '@/features/admin/bookings/test-fixtures';
 import { handover, report } from '@/features/handover/test-fixtures';
-import { mockApi, renderWithRouter } from '@/test/utils';
+import { sessionQueryKey } from '@/features/auth/use-session';
+import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminBookingPage } from './booking-page';
 
 afterEach(() => {
@@ -367,6 +368,36 @@ describe('AdminBookingPage: actions', () => {
     await userEvent.click(dialog.getByRole('button', { name: 'Refund' }));
 
     expect(await dialog.findByRole('alert')).toHaveTextContent('You need the refunds permission');
+  });
+
+  it('hides refunds and cancelling a charge from support staff without the refunds permission', async () => {
+    mockApi({
+      'GET /admin/bookings/RV-7K2Q9M': ok(
+        bookingDetail({
+          extraCharges: [
+            { id: 'x1', type: 'EXTRA_KM', description: '120 km over', amountCents: 4_200, status: 'FAILED' },
+          ],
+        }),
+      ),
+    });
+    const { queryClient } = render();
+    expect(await screen.findByRole('button', { name: 'Refund' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel charge' })).toBeInTheDocument();
+
+    // The session says what this staff member may do.
+    act(() =>
+      queryClient.setQueryData(sessionQueryKey, { ...adminUser, roles: ['SUPPORT'], permissions: [] }),
+    );
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Refund' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Cancel charge' })).not.toBeInTheDocument();
+    act(() =>
+      queryClient.setQueryData(sessionQueryKey, {
+        ...adminUser,
+        roles: ['SUPPORT'],
+        permissions: ['REFUNDS'],
+      }),
+    );
+    expect(await screen.findByRole('button', { name: 'Refund' })).toBeInTheDocument();
   });
 
   it('cancels a confirmed booking as a platform cancellation, then reloads it', async () => {

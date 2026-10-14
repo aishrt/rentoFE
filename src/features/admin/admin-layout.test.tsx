@@ -1,8 +1,10 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RouteObject } from 'react-router';
 import type { SessionUser } from '@/api/types';
 import { adminRoutes } from '@/app/admin-routes';
+import { notification, notifications } from '@/features/notifications/test-fixtures';
 import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminLayout, type AdminRouteHandle } from './admin-layout';
 
@@ -19,7 +21,10 @@ const supportUser = {
 } as SessionUser;
 
 const render = (user: SessionUser, path: string) => {
-  mockApi({ 'POST /auth/session': { status: 200, body: { user } } });
+  mockApi({
+    'POST /auth/session': { status: 200, body: { user } },
+    'GET /notifications': { status: 200, body: { notifications: [], unreadCount: 0, total: 0 } },
+  });
   return renderWithRouter(
     [
       {
@@ -76,5 +81,50 @@ describe('AdminLayout: the administrator’s pages', () => {
     for (const path of ['settings', 'payments', 'refunds']) {
       expect(pages.some((route) => route.path === path)).toBe(true);
     }
+  });
+});
+
+describe('AdminLayout: notifications', () => {
+  it('has the bell, whose alerts open their pages in the portal and whose Show all opens its own page', async () => {
+    const latest = [
+      notification({
+        type: 'CAPTURE_UNSETTLED',
+        title: 'A payment needs checking',
+        body: 'RV-7K2Q9M: the capture hasn’t settled.',
+        link: '/admin/bookings/RV-7K2Q9M',
+      }),
+      ...notifications(2, { read: true }).map((item, index) => ({ ...item, id: `r${index}` })),
+    ];
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: adminUser } },
+      'GET /notifications': { status: 200, body: { notifications: latest, unreadCount: 1, total: 7 } },
+      'POST /notifications/read': { status: 200, body: { unreadCount: 0, total: 7 } },
+    });
+    renderWithRouter(
+      [
+        {
+          path: '/admin',
+          element: <AdminLayout user={adminUser as SessionUser} />,
+          children: [
+            { index: true, element: <p>Overview</p> },
+            { path: 'bookings/:ref', element: <p>The booking’s record</p> },
+          ],
+        },
+      ],
+      '/admin',
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }));
+    expect(await screen.findByRole('menuitem', { name: /Show all 7 notifications/ })).toHaveAttribute(
+      'href',
+      '/admin/notifications',
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /A payment needs checking/ }));
+    expect(await screen.findByText('The booking’s record')).toBeInTheDocument();
+  });
+
+  it('has a notifications page in the portal', () => {
+    const pages = (adminRoutes[0]!.children![0]!.children ?? []) as RouteObject[];
+    expect(pages.find((route) => route.path === 'notifications')?.handle).toEqual({ title: 'Notifications' });
   });
 });

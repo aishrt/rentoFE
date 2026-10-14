@@ -17,6 +17,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initials, staffRoleLabel } from '@/features/auth/roles';
 import { useLogout } from '@/features/auth/use-session';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { AdminOnlyNotice } from './admin-only-notice';
 import { AdminSidebar } from './admin-sidebar';
 
@@ -125,7 +126,11 @@ export function AdminLayout({ user }: { user: SessionUser }) {
                 <span className="font-medium text-ink">{title}</span>
               </p>
             </div>
-            <StaffMenu user={user} />
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+              {/* Staff alerts arrive here (staff-alerts.ts), with "Show all" to the portal's own page. */}
+              <NotificationBell allPath="/admin/notifications" />
+              <StaffMenu user={user} />
+            </div>
           </div>
         </header>
 

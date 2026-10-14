@@ -25,6 +25,10 @@ import { areaName } from '@/features/handover/car-areas';
 import { CarDiagram } from '@/features/handover/car-diagram';
 import { DamageEditor, type EditablePin } from '@/features/handover/damage-editor';
 import {
+  checkInClosed,
+  supportPath,
+  UPLOADING_AGAIN,
+  uploadsGone,
   useConfirmInspection,
   useFlagDamage,
   useHandover,
@@ -128,6 +132,12 @@ function ReportSection({
           party or contact support.
         </Alert>
       )}
+      {/* Refused because the page was out of date, the handover loads again (useHandoverMutation). */}
+      {confirm.isError && (
+        <Alert variant="danger" role="alert" title="We couldn’t confirm it">
+          {confirm.error.message}
+        </Alert>
+      )}
 
       <Card className="grid gap-6 p-5 sm:p-6">
         <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
@@ -227,8 +237,9 @@ function ReportSection({
           <div className="grid gap-2">
             <p className="text-sm font-medium text-ink">Damage photos</p>
             <ul className="flex flex-wrap gap-3">
-              {extra.map((photo) => (
-                <li key={photo.url} className="w-40">
+              {/* By position: a photo's link changes now and then, the photo doesn't. */}
+              {extra.map((photo, index) => (
+                <li key={index} className="w-40">
                   <a href={photo.url} target="_blank" rel="noreferrer">
                     <img
                       src={photo.url}
@@ -324,6 +335,9 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
           void store.clear();
           setFlagged(true);
         },
+        onError: (error) => {
+          if (uploadsGone(error)) void store.uploadAgain();
+        },
       },
     );
 
@@ -391,7 +405,7 @@ function FlagDamageDialogContent({ handover }: { handover: Handover }) {
         </Field>
         {flag.isError && (
           <Alert variant="danger" role="alert">
-            {flag.error.message}
+            {uploadsGone(flag.error) ? UPLOADING_AGAIN : flag.error.message}
           </Alert>
         )}
       </div>
@@ -478,19 +492,40 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
         </Card>
       )}
 
-      {!data.checkIn && !data.checkOut && !data.actions.checkIn && !data.actions.checkOut && (
-        <EmptyState
-          className="mx-auto py-6"
-          titleAs="h2"
-          visual={
-            <IconBadge size="xl">
-              <CarFront />
-            </IconBadge>
-          }
-          title="No handover yet"
-          description={`Check-in opens ${formatNzDateTime(data.checkInOpensAt)} (NZ time), 2 hours before the trip.`}
-        />
-      )}
+      {!data.checkIn &&
+        !data.checkOut &&
+        !data.actions.checkIn &&
+        !data.actions.checkOut &&
+        (checkInClosed(data) ? (
+          <EmptyState
+            className="mx-auto py-6"
+            titleAs="h2"
+            visual={
+              <IconBadge size="xl">
+                <CarFront />
+              </IconBadge>
+            }
+            title="Check-in has closed"
+            description="The trip’s end time has passed without a check-in. Please contact support and we’ll sort out the booking."
+            actions={
+              <Button asChild>
+                <Link to={supportPath(data)}>Contact support</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            className="mx-auto py-6"
+            titleAs="h2"
+            visual={
+              <IconBadge size="xl">
+                <CarFront />
+              </IconBadge>
+            }
+            title="No handover yet"
+            description={`Check-in opens ${formatNzDateTime(data.checkInOpensAt)} (NZ time), 2 hours before the trip.`}
+          />
+        ))}
 
       {data.checkOut && (
         <>

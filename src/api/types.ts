@@ -169,6 +169,11 @@ export type DamagePinInput = Schemas['DamagePinInput'];
 export type FlagDamageRequest = Schemas['FlagDamageRequest'];
 /** Support completes a trip whose check-out is missing, with the Host's readings (plan §8.2). */
 export type StaffCompletionRequest = Schemas['StaffCompletionRequest'];
+/** Staff correct a reading on a condition report, with a note for the audit log (plan §8.2). */
+export type ReadingCorrectionRequest = Schemas['ReadingCorrectionRequest'];
+/** What charging or correcting the extra kilometres did, in words for staff. */
+export type ExtraKmResult = Schemas['ExtraKmResult'];
+export type StaffHandoverResponse = Schemas['StaffHandoverResponse'];
 
 // Host payouts and earnings (Phase 3).
 export type Earnings = Schemas['Earnings'];
@@ -208,6 +213,7 @@ export type AdminUsers = Schemas['AdminUsers'];
 export type AdminUserDetail = Schemas['AdminUserDetail'];
 export type RiskFlag = Schemas['RiskFlag'];
 export type RiskUser = Schemas['RiskUser'];
+export type RiskQueue = Schemas['RiskQueue'];
 export type AdminBookingRow = Schemas['AdminBookingRow'];
 export type AdminBookings = Schemas['AdminBookings'];
 export type AdminBookingDetail = Schemas['AdminBookingDetail'];

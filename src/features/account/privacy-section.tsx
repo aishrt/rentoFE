@@ -94,12 +94,15 @@ function RequestForm({ kind, onDone }: { kind: Kind; onDone: () => void }) {
     request.mutate(
       { type: kind, ...(message.trim() && { message: message.trim() }) },
       {
-        onSuccess: ({ ref, alreadyOpen }) => {
+        onSuccess: ({ ref, alreadyOpen, added }) => {
           onDone();
-          toast(alreadyOpen ? 'You’ve already asked' : 'Request sent', {
-            description: alreadyOpen
-              ? `We’re working on it under ${ref}. You’ll find it in Help and support.`
-              : `Your reference is ${ref}. We’ll reply by email, and it’s in Help and support.`,
+          // The same request already open: what they wrote now is added to it.
+          toast(added ? 'Added to your request' : alreadyOpen ? 'You’ve already asked' : 'Request sent', {
+            description: added
+              ? `We’ve added this to ${ref}, which we’re working on. You’ll find it in Help and support.`
+              : alreadyOpen
+                ? `We’re working on it under ${ref}. You’ll find it in Help and support.`
+                : `Your reference is ${ref}. We’ll reply by email, and it’s in Help and support.`,
           });
         },
         onError: (failure) => {
@@ -164,7 +167,8 @@ export function PrivacyRequestDialog({ kind, onClose }: { kind: Kind | null; onC
 /**
  * Privacy (NZ Privacy Act 2020, plan §8.2 and §14): a copy of the user's information, a correction, or closing
  * the account. Each goes to the support team as a request, answered by email and shown in Help and support.
- * Closing is refused while a trip, booking, incident, charge or payout is still under way.
+ * Closing is refused while a trip, booking, incident, charge, payout or card dispute is still under way, money
+ * is owed either way, or a trip has only just finished.
  */
 export function PrivacySection() {
   const [open, setOpen] = useState<Kind | null>(null);

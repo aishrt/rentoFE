@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, client, unwrap } from '@/api/client';
+import { refreshStaleData } from '@/api/stale-data';
 import type {
   Incident,
   IncidentChargeRequest,
@@ -50,6 +51,8 @@ export interface VerificationOutcome {
   stillInReview: string[];
   /** Bookings that wait for their car's suspension to be lifted before they're confirmed. */
   carSuspended: string[];
+  /** Bookings the Guest's licence doesn't cover (it expires before the trip ends, say): they keep waiting. */
+  licenceNotEligible: string[];
 }
 
 // The API's limit for a review note, under the decision dialog's own.
@@ -81,7 +84,7 @@ export async function reviewVerificationRequest(input: {
   const params = { path: { id: input.userId } };
   const body = { decision: input.decision, ...(input.notes && { note: input.notes }) };
   try {
-    const { confirmed, waitingForHost, released, stillInReview, carSuspended } =
+    const { confirmed, waitingForHost, released, stillInReview, carSuspended, licenceNotEligible } =
       input.kind === 'IDENTITY'
         ? await unwrap(client.POST('/admin/users/{id}/identity-review', { params, body }))
         : await unwrap(client.POST('/admin/users/{id}/licence-review', { params, body }));
@@ -91,6 +94,7 @@ export async function reviewVerificationRequest(input: {
       released,
       stillInReview: stillInReview ?? [],
       carSuspended: carSuspended ?? [],
+      licenceNotEligible: licenceNotEligible ?? [],
     };
   } catch (error) {
     throw asNotesError(error);
@@ -167,17 +171,25 @@ function useCaseChanged(ref: string) {
   };
 }
 
+/** A change refused because someone else changed the case meanwhile: the case and its lists are fetched again. */
+function useCaseStale(ref: string) {
+  const queryClient = useQueryClient();
+  return refreshStaleData(queryClient, [adminIncidentQueryKey(ref), adminIncidentListsQueryKey]);
+}
+
 /**
  * An update for both parties, one of them or staff only, a new status, or taking the case. Resolving or
  * closing the last open case on a booking releases its payouts.
  */
 export function useStaffIncidentUpdate(ref: string) {
   const changed = useCaseChanged(ref);
+  const stale = useCaseStale(ref);
   return useMutation({
     mutationFn: async (body: StaffIncidentUpdateRequest): Promise<Incident> =>
       (await unwrap(client.POST('/admin/incidents/{ref}/events', { params: { path: { ref } }, body })))
         .incident,
     onSuccess: changed,
+    onError: stale,
   });
 }
 
@@ -197,6 +209,7 @@ export function useIncidentAssignees() {
  */
 export function useAssignIncident(ref: string) {
   const changed = useCaseChanged(ref);
+  const stale = useCaseStale(ref);
   return useMutation({
     mutationFn: async (userId: string | null): Promise<Incident> =>
       (
@@ -205,6 +218,7 @@ export function useAssignIncident(ref: string) {
         )
       ).incident,
     onSuccess: changed,
+    onError: stale,
   });
 }
 
@@ -214,10 +228,12 @@ export function useAssignIncident(ref: string) {
  */
 export function useIncidentCharge(ref: string) {
   const changed = useCaseChanged(ref);
+  const stale = useCaseStale(ref);
   return useMutation({
     mutationFn: async (body: IncidentChargeRequest): Promise<Incident> =>
       (await unwrap(client.POST('/admin/incidents/{ref}/charges', { params: { path: { ref } }, body })))
         .incident,
     onSuccess: changed,
+    onError: stale,
   });
 }

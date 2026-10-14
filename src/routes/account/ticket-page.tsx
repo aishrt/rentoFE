@@ -16,6 +16,7 @@ import { Field } from '@/components/ui/field';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { StatusBadge } from '@/features/booking/booking-parts';
@@ -186,19 +187,26 @@ function Ticket({ ticketRef }: { ticketRef: string }) {
   );
 }
 
-/** One of the user's support requests: the conversation with support, and a reply (spec §8). */
+/**
+ * One of the user's support requests: the conversation with support, and a reply (spec §8). In the Guest's
+ * dashboard, under Help and support (plan §12.6).
+ */
 export function TicketPage() {
   const { ref = '' } = useParams();
   return (
-    <Container className="max-w-3xl py-8 sm:py-12">
+    <Container className="py-8 sm:py-12">
       <PageBackdrop art={ConnectionArcs} />
       <PageMeta title={`Support request ${ref}`} noindex />
-      <BackLink to="/account/support">Help and support</BackLink>
-      <div className="mt-6">
-        <RequireSignedIn fallback={<Skeleton aria-hidden="true" className="h-64 rounded-card" />}>
-          {() => <Ticket key={ref} ticketRef={ref} />}
-        </RequireSignedIn>
-      </div>
+      <AccountShell>
+        <div className="max-w-3xl">
+          <BackLink to="/account/support">Help and support</BackLink>
+          <div className="mt-6">
+            <RequireSignedIn fallback={<Skeleton aria-hidden="true" className="h-64 rounded-card" />}>
+              {() => <Ticket key={ref} ticketRef={ref} />}
+            </RequireSignedIn>
+          </div>
+        </div>
+      </AccountShell>
     </Container>
   );
 }

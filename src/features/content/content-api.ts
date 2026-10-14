@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
 import type { ContactRequest, LegalPage } from '@/api/types';
 
@@ -41,9 +41,14 @@ export function useLegalDocument(key: LegalKey) {
   });
 }
 
-/** Sends the Contact Us form; the answer is the new support ticket's reference. */
+/**
+ * Sends the Contact Us form; the answer is the new support ticket's reference. It joins My support requests
+ * (['support', 'tickets'], support-api.ts).
+ */
 export function useContactRequest() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: ContactRequest) => (await unwrap(client.POST('/support/tickets', { body }))).ref,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['support', 'tickets'] }),
   });
 }

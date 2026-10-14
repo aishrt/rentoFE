@@ -70,3 +70,12 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, StatusLabel> = {
   RESOLVED: { label: 'Resolved', tone: 'neutral' },
   CLOSED: { label: 'Closed', tone: 'ended' },
 };
+
+/**
+ * A case's status as this party reads it: waiting for them only when support asked them (`awaitingYou`); a
+ * question for the other side alone reads as with our team.
+ */
+export function incidentStatusLabel(status: IncidentStatus, awaitingYou?: boolean): StatusLabel {
+  if (status === 'AWAITING_RESPONSE' && !awaitingYou) return { label: 'With our team', tone: 'waiting' };
+  return INCIDENT_STATUS_LABELS[status];
+}

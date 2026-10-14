@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Earnings, EarningsRow, HostPayouts } from '@/api/types';
+import { Toaster } from '@/components/ui/toast';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { guestUser, renderWithRouter } from '@/test/utils';
 import { EarningsPage } from './earnings-page';
@@ -54,6 +55,7 @@ function earnings(overrides: Partial<Earnings> = {}): Earnings {
     },
     months,
     bookings: [],
+    tripMonths: [],
     gstRegistered: false,
     ...overrides,
   };
@@ -73,6 +75,7 @@ function payouts(
       requirements: [],
       feesOwedCents: 0,
       refundsOwedCents: 0,
+      payoutsOwedCents: 0,
       ...account,
     },
   };
@@ -228,15 +231,98 @@ describe('EarningsPage', () => {
     expect(trips.queryByText(/RV-AUG234/)).not.toBeInTheDocument();
 
     await userEvent.click(trips.getByRole('button', { name: /October 2026/ }));
-    const months = within(screen.getByRole('listbox', { name: 'Months with trips' }));
-    expect(months.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'October 2026',
-      'August 2026',
-    ]);
+    // Every month the chart shows, and any other with trips, newest first.
+    const months = within(screen.getByRole('listbox', { name: 'Months' }));
+    const options = months.getAllByRole('option').map((option) => option.textContent);
+    expect(options.slice(0, 3)).toEqual(['December 2026', 'November 2026', 'October 2026']);
+    expect(options).toContain('January 2026');
     await userEvent.click(months.getByRole('option', { name: 'August 2026' }));
 
     expect(trips.getByRole('row', { name: /RV-AUG234 \$267 −\$53\.40 −\$50 \$163\.60/ })).toBeInTheDocument();
     expect(trips.queryByText(/RV-OCT234/)).not.toBeInTheDocument();
+    await userEvent.click(trips.getByRole('button', { name: /August 2026/ }));
+    await userEvent.click(
+      within(screen.getByRole('listbox', { name: 'Months' })).getByRole('option', { name: 'March 2026' }),
+    );
+    expect(trips.getByText('No trips that month.')).toBeInTheDocument();
+  });
+
+  it('asks for a month the latest 100 trips don’t all reach', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-08T00:00:00.000Z'));
+    const latest = Array.from({ length: 100 }, (_, index) =>
+      row({ ref: `RV-N${String(index).padStart(5, '0')}` }),
+    );
+    const sent = mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: hostUser } };
+        case 'GET /host/earnings':
+          return request.query.get('month') === '2025-11'
+            ? {
+                status: 200,
+                body: earnings({
+                  bookings: [row({ ref: 'RV-OLD777', start: '2025-11-03T21:00:00.000Z' })],
+                }),
+              }
+            : { status: 200, body: earnings({ bookings: latest, tripMonths: ['2026-10', '2025-11'] }) };
+        case 'GET /host/payouts':
+          return { status: 200, body: payouts() };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    const trips = within(await screen.findByRole('region', { name: 'Trips by month' }));
+    await userEvent.click(await trips.findByRole('button', { name: /October 2026/ }));
+    await userEvent.click(
+      within(screen.getByRole('listbox', { name: 'Months' })).getByRole('option', { name: 'November 2025' }),
+    );
+    expect(await trips.findByText(/RV-OLD777/)).toBeInTheDocument();
+    expect(sent.some((request) => request.query.get('month') === '2025-11')).toBe(true);
+  });
+
+  it('labels a kept fee’s payout, a payout already sent and owed back, and what the upcoming payouts come to', async () => {
+    mockEarnings({ feesOwedCents: 2500, refundsOwedCents: 1000, payoutsOwedCents: 10680 }, {}, [
+      {
+        id: 'p5',
+        type: 'CANCELLATION_FEE',
+        status: 'PAID',
+        amountCents: 0,
+        deductions: [
+          { type: 'HOST_FUNDED_REFUND', amountCents: 10680, bookingRef: 'RV-NOSHOW', payoutSent: true },
+        ],
+        scheduledFor: '2026-09-20T21:00:00.000Z',
+        paidAt: '2026-09-20T21:05:00.000Z',
+        booking: { ref: 'RV-KEPT22', vehicleTitle: '2019 Mazda 3', start: '2026-09-19T21:00:00.000Z' },
+      },
+    ]);
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    const kept = (await screen.findByText('2019 Mazda 3')).closest('li')!;
+    expect(within(kept).getByText(/Your share of a cancellation fee/)).toBeInTheDocument();
+    expect(within(kept).getByText('Payout already sent for RV-NOSHOW')).toBeInTheDocument();
+    // A payout already sent is owed apart from refunds.
+    const sentBack = screen.getByText('Payouts owed back');
+    expect(sentBack.parentElement).toHaveTextContent('Trip payouts sent before the booking was cancelled');
+    expect(sentBack.parentElement?.nextElementSibling).toHaveTextContent('−$106.80');
+    expect(screen.getByText('Refunds owed').parentElement?.nextElementSibling).toHaveTextContent('−$10');
+    expect(screen.getByText('What they’ll pay you, after what you owe below comes off')).toBeInTheDocument();
+  });
+
+  it('names who charges the commission for a GST-registered Host', async () => {
+    mockEarnings(
+      {},
+      { gstRegistered: true, supplier: { name: 'Rento Vroom Limited', gstNumber: '123-456-789' } },
+    );
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    expect(
+      await screen.findByText(
+        'For your GST records, the commission is charged by Rento Vroom Limited, GST number 123-456-789.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows Host cancellation fees still owed, to come off the next payout', async () => {
@@ -312,6 +398,77 @@ describe('EarningsPage', () => {
       expect(assign).toHaveBeenCalledWith('https://connect.stripe.com/setup/e/acct_1/abc'),
     );
     expect(sent.some((request) => request.path === '/host/connect/onboarding-link')).toBe(true);
+  });
+
+  it('opens Stripe’s dashboard in a tab opened on the click, and says why when it can’t', async () => {
+    const tab = { opener: {}, location: { href: '' }, close: vi.fn() };
+    const open = vi.fn(() => tab);
+    vi.stubGlobal('open', open);
+    let fail = false;
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: hostUser } };
+        case 'GET /host/earnings':
+          return { status: 200, body: earnings() };
+        case 'GET /host/payouts':
+          return { status: 200, body: payouts({ connected: true, payoutsEnabled: true }) };
+        case 'POST /host/connect/dashboard-link':
+          return fail
+            ? {
+                status: 409,
+                body: { error: { code: 'NO_PAYOUT_ACCOUNT', message: 'Set up payouts first.' } },
+              }
+            : { status: 200, body: { url: 'https://connect.stripe.com/express/acct_1/login' } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Bank details in Stripe' }));
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    await vi.waitFor(() => expect(tab.location.href).toBe('https://connect.stripe.com/express/acct_1/login'));
+    expect(tab.opener).toBeNull();
+
+    fail = true;
+    await userEvent.click(screen.getByRole('button', { name: 'Bank details in Stripe' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Set up payouts first.');
+    expect(tab.close).toHaveBeenCalled();
+  });
+
+  it('says when the payout setup couldn’t be checked on the way back from Stripe, and tidies the address', async () => {
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: hostUser } };
+        case 'GET /host/earnings':
+          return { status: 200, body: earnings() };
+        case 'GET /host/payouts':
+          return { status: 200, body: payouts({ connected: true }) };
+        case 'POST /host/connect/sync':
+          return { status: 500, body: { error: { code: 'INTERNAL', message: 'Stripe didn’t answer.' } } };
+        default:
+          return undefined;
+      }
+    });
+    const { router } = renderWithRouter(
+      [
+        {
+          path: '/host/earnings',
+          element: (
+            <>
+              <EarningsPage />
+              <Toaster />
+            </>
+          ),
+        },
+      ],
+      '/host/earnings?payouts=done',
+    );
+
+    expect(await screen.findByText('We couldn’t check your payout setup with Stripe')).toBeInTheDocument();
+    await vi.waitFor(() => expect(router.state.location.search).toBe(''));
   });
 
   it('says payouts are set up once Stripe has everything', async () => {

@@ -61,11 +61,10 @@ export function HostApplicationForm({ phoneVerified, onPhoneRequired, onApplied 
     }
   });
 
+  // A refusal such as 409 HOST_SUSPENDED shows in the API's words; field messages go by their fields.
   const serverError =
     apply.isError && !(apply.error instanceof ApiError && apply.error.code === 'PHONE_NOT_VERIFIED')
-      ? apply.error instanceof ApiError && apply.error.code === 'HOST_SUSPENDED'
-        ? apply.error.message
-        : formErrorMessage(apply.error)
+      ? formErrorMessage(apply.error, FIELDS)
       : null;
 
   return (

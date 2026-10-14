@@ -1,9 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { RefreshCw, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router';
-import type { RiskUser } from '@/api/types';
+import type { RiskQueue, RiskUser } from '@/api/types';
 import { staggerIndex } from '@/components/motion/presets';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { toast } from '@/components/ui/toast';
@@ -24,26 +25,36 @@ import { formatNumber } from '@/lib/format';
 
 /**
  * The risk queue (plan §14): people our automatic checks flagged, such as a licence used on two accounts or
- * many failed payments, most flags first. Staff look into each flag and clear it, or suspend the account
- * from the person's record.
+ * many failed payments, most flags first, a page at a time. Staff look into each flag and clear it, or suspend
+ * the account from the person's record.
  */
 export function AdminRiskPage() {
   const queryClient = useQueryClient();
   const queue = useRiskQueue();
+  const people = queue.data?.pages.flatMap((page) => page.users);
+  const total = queue.data?.pages[0]?.total ?? 0;
   const updateCache = useUpdateUserCache();
   const clear = useMutation({
     mutationFn: clearRiskFlagRequest,
     onSuccess: (user, { flagId }) => {
       // It leaves the queue straight away; the refetch then confirms the order.
-      queryClient.setQueryData<{ users: RiskUser[] }>(
-        riskQueueQueryKey,
-        (previous) =>
-          previous && {
-            users: previous.users
-              .map((person) => ({ ...person, flags: person.flags.filter((flag) => flag.id !== flagId) }))
-              .filter((person) => person.flags.length > 0),
-          },
-      );
+      queryClient.setQueryData<InfiniteData<RiskQueue>>(riskQueueQueryKey, (previous) => {
+        if (!previous) return previous;
+        const pages = previous.pages.map((page) => ({
+          ...page,
+          users: page.users
+            .map((person) => ({ ...person, flags: person.flags.filter((flag) => flag.id !== flagId) }))
+            .filter((person) => person.flags.length > 0),
+        }));
+        const left = previous.pages.reduce((sum, page) => sum + page.users.length, 0);
+        const now = pages.reduce((sum, page) => sum + page.users.length, 0);
+        return {
+          ...previous,
+          pages: pages.map((page, index) =>
+            index === 0 ? { ...page, total: page.total - (left - now) } : page,
+          ),
+        };
+      });
       updateCache(user);
       toast('Flag cleared');
     },
@@ -60,7 +71,7 @@ export function AdminRiskPage() {
           queue.data && (
             <div className="flex items-center gap-2 text-sm text-muted">
               <span aria-live="polite">
-                {formatNumber(queue.data.length)} {queue.data.length === 1 ? 'person' : 'people'}
+                {formatNumber(total)} {total === 1 ? 'person' : 'people'}
               </span>
               <IconButton
                 label="Refresh the list"
@@ -86,7 +97,7 @@ export function AdminRiskPage() {
           />
         )}
 
-        {queue.data?.length === 0 && (
+        {people?.length === 0 && (
           <EmptyList
             icon={<ShieldCheck />}
             title="Nothing to review"
@@ -94,9 +105,9 @@ export function AdminRiskPage() {
           />
         )}
 
-        {queue.data && queue.data.length > 0 && (
+        {people && people.length > 0 && (
           <ul aria-label="People to review" className="grid gap-4">
-            {queue.data.map((person, index) => (
+            {people.map((person, index) => (
               <PersonCard
                 key={person.id}
                 person={person}
@@ -106,6 +117,18 @@ export function AdminRiskPage() {
               />
             ))}
           </ul>
+        )}
+
+        {queue.hasNextPage && (
+          <div className="mt-6">
+            <Button
+              variant="secondary"
+              loading={queue.isFetchingNextPage}
+              onClick={() => void queue.fetchNextPage()}
+            >
+              Show more
+            </Button>
+          </div>
         )}
       </div>
     </div>

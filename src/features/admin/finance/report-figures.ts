@@ -47,7 +47,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
         icon: CalendarPlus,
         value: (report) => report.bookings.created,
         format: formatNumber,
-        hint: 'Made on these days, not counting unfinished checkouts',
+        hint: 'Made on these days, not counting checkouts left unpaid',
       },
       {
         label: 'Confirmed',

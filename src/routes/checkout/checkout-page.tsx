@@ -252,7 +252,11 @@ function Checkout({ vehicle }: { vehicle: VehicleDetail }) {
   const tripReady = holding || (!tripBlocked && current);
   const pricing = datesComplete && !current && !quote.isError && !holding;
 
-  const readiness = useCheckoutReadiness(resolved.end || undefined, user !== null);
+  const readiness = useCheckoutReadiness(
+    resolved.end || undefined,
+    user !== null,
+    resolved.start || undefined,
+  );
   const readinessOk = readiness.data ? readiness.data.problems.length === 0 : null;
   // The identity check or the licence is with support: the Guest can still book, and the card is only
   // authorised (plan §8.2).

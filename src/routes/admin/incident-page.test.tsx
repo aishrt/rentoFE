@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Incident } from '@/api/types';
 import { Toaster } from '@/components/ui/toast';
-import { mockApi, renderWithRouter } from '@/test/utils';
+import { sessionQueryKey } from '@/features/auth/use-session';
+import { adminUser, mockApi, renderWithRouter } from '@/test/utils';
 import { AdminIncidentPage } from './incident-page';
 
 afterEach(() => {
@@ -520,6 +521,15 @@ describe('AdminIncidentPage', () => {
     await userEvent.click(form.getByRole('button', { name: 'Charge $120' }));
 
     expect(await form.findByRole('alert')).toHaveTextContent('You need the refunds permission');
+  });
+
+  it('leaves the charge form out for support staff without the refunds permission', async () => {
+    mockApi({ ...team, 'GET /admin/incidents/IN-ABC123': { status: 200, body: { incident: resolved() } } });
+    const { queryClient } = render();
+    queryClient.setQueryData(sessionQueryKey, { ...adminUser, roles: ['SUPPORT'], permissions: [] });
+
+    expect(await screen.findByText(/Charging the Guest needs the refunds permission/)).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Charge the Guest' })).not.toBeInTheDocument();
   });
 
   it('says when there’s no such case', async () => {

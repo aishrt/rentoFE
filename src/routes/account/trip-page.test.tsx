@@ -85,6 +85,10 @@ describe('TripPage', () => {
       'href',
       `/incidents/new?booking=${REF}`,
     );
+    // In the Guest's dashboard, under Trips, with the phone's tab bar.
+    const sidebar = within(screen.getByRole('navigation', { name: 'Your dashboard' }));
+    expect(sidebar.getByRole('link', { name: 'Trips' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('navigation', { name: 'Your dashboard, quick links' })).toBeInTheDocument();
   });
 
   it('offers to report an incident after the trip, but not on a booking that never went ahead', async () => {
@@ -313,11 +317,102 @@ describe('TripPage', () => {
     expect(
       screen.getByText(/Refunded \$525\.40; \$525\.40 kept under the cancellation policy\./),
     ).toBeInTheDocument();
+    // The refund shown goes with it, so a lower one by now isn't taken without asking again.
     expect(sent.find((request) => request.path.endsWith('/cancel'))?.body).toEqual({
       reason: 'Plans changed',
+      expectedRefundCents: 52_540,
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Cancel trip' })).not.toBeInTheDocument();
+  });
+
+  it('shows the new refund and asks again when it dropped after the preview', async () => {
+    let previews = 0;
+    const sent = mockTrip(confirmedBooking(), (request) => {
+      if (request.path === `/bookings/${REF}/cancellation-preview`) {
+        previews += 1;
+        return {
+          status: 200,
+          body:
+            previews === 1
+              ? preview({
+                  refundCents: 105_080,
+                  feeCents: 0,
+                  message: 'You’ll get a full refund of $1,050.80.',
+                })
+              : preview(),
+        };
+      }
+      if (request.path === `/bookings/${REF}/cancel`) {
+        return {
+          status: 409,
+          body: {
+            error: {
+              code: 'REFUND_CHANGED',
+              message:
+                'The refund has changed since you opened this: it’s now $525.40, not $1,050.80. Check it, then confirm again.',
+              fields: { expectedRefundCents: 'You’ll get 50% back.' },
+            },
+          },
+        };
+      }
+      return undefined;
+    });
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel trip' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Cancel this booking?' }));
+    expect(await dialog.findByText('You’ll get a full refund of $1,050.80.')).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel booking' }));
+
+    expect(await dialog.findByText('The refund has changed')).toBeInTheDocument();
+    expect(dialog.getByText(/it’s now \$525\.40, not \$1,050\.80/)).toBeInTheDocument();
+    // The preview is asked for again, and shows the new figure to confirm.
+    await waitFor(() =>
+      expect(dialog.getByText('Refund to your card').nextElementSibling).toHaveTextContent('$525.40'),
+    );
+    expect(sent.find((request) => request.path.endsWith('/cancel'))?.body).toEqual({
+      expectedRefundCents: 105_080,
+    });
+    expect(dialog.getByRole('button', { name: 'Cancel booking' })).toBeInTheDocument();
+  });
+
+  it('says why support cancelled a trip, and when the payment was already refunded', async () => {
+    const cancelled = (cancellation: NonNullable<Booking['cancellation']>) =>
+      confirmedBooking({
+        status: 'CANCELLED',
+        payment: { status: 'REFUNDED' },
+        cancellation,
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      });
+    const at = new Date().toISOString();
+    mockTrip(
+      cancelled({ at, by: 'SUPPORT', reason: 'GUEST_NO_SHOW', refundCents: 4_500, feeCents: 101_580 }),
+    );
+    const { unmount } = render();
+    const noShow = (await screen.findByText('Cancelled as a no-show')).closest('[role="status"]');
+    expect(noShow).toHaveTextContent(
+      'Rento Vroom support cancelled this trip as a no-show at the pick-up time, so the cancellation policy applies as at that time. Refunded $45; $1,015.80 kept under the cancellation policy.',
+    );
+    unmount();
+
+    mockTrip(
+      cancelled({
+        at,
+        by: 'SUPPORT',
+        reason: 'HOST_NO_SHOW',
+        refundCents: 0,
+        feeCents: 0,
+        earlierRefundCents: 105_080,
+      }),
+    );
+    render();
+    const hostNoShow = (await screen.findByText('Liam couldn’t provide the car')).closest('[role="status"]');
+    // Staff had refunded it all already: not "Nothing was charged".
+    expect(hostNoShow).toHaveTextContent(
+      'Rento Vroom support cancelled this trip because Liam couldn’t provide the car. A host cancellation always gets you a full refund. Already refunded: $1,050.80 went back to your card before it was cancelled.',
+    );
+    expect(hostNoShow).not.toHaveTextContent(/Nothing was charged/);
   });
 
   it('doesn’t promise an address or a mobile number on a booking that has ended', async () => {

@@ -63,3 +63,37 @@ describe('MessageList: a message support removed', () => {
     expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
   });
 });
+
+describe('MessageList: photos', () => {
+  it('shows the smaller copy, opens the photo itself, and keeps each photo when its link changes', () => {
+    const photos = (stamp: string) => [
+      {
+        url: `https://api.test/files/private/a.jpg?e=${stamp}`,
+        previewUrl: `https://api.test/files/private/a-800.webp?e=${stamp}`,
+        contentType: 'image/jpeg',
+      },
+      { url: `https://api.test/files/private/b.jpg?e=${stamp}`, contentType: 'image/jpeg' },
+    ];
+    const list = (stamp: string) => (
+      <MessageList
+        otherName="Hana"
+        messages={[message({ id: 'm1', body: 'The car park', attachments: photos(stamp) })]}
+      />
+    );
+    const { rerender } = render(list('1'));
+
+    const first = screen.getByRole('img', { name: 'Photo 1' });
+    expect(first).toHaveAttribute('src', 'https://api.test/files/private/a-800.webp?e=1');
+    expect(first.closest('a')).toHaveAttribute('href', 'https://api.test/files/private/a.jpg?e=1');
+    // An older photo has no smaller copy: the photo itself shows.
+    expect(screen.getByRole('img', { name: 'Photo 2' })).toHaveAttribute(
+      'src',
+      'https://api.test/files/private/b.jpg?e=1',
+    );
+
+    rerender(list('2'));
+    // The same image element, with its new link.
+    expect(screen.getByRole('img', { name: 'Photo 1' })).toBe(first);
+    expect(first).toHaveAttribute('src', 'https://api.test/files/private/a-800.webp?e=2');
+  });
+});

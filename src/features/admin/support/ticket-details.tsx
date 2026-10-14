@@ -1,4 +1,4 @@
-import { CircleDot, MessagesSquare, UserCheck } from 'lucide-react';
+import { CircleDot, MessagesSquare, UserCheck, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { StaffTicket } from '@/api/types';
@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { threadPath } from '@/features/admin/bookings/bookings-api';
 import { TICKET_CATEGORY, TICKET_STATUS } from '@/features/admin/ops/admin-labels';
+import { useIncidentAssignees } from '@/features/admin/operations/operations-api';
 import { EmailAddress } from '@/features/admin/ops/email-address';
 import { formatNzDateTime, formatRelativeTime } from '@/features/booking/booking-format';
 import { TICKET_STATUSES, useUpdateTicket } from './support-api';
@@ -18,6 +19,8 @@ const STATUS_OPTIONS = TICKET_STATUSES.map((status) => ({
   value: status,
   label: TICKET_STATUS[status].label,
 }));
+
+const NOBODY = '';
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -29,12 +32,40 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * Who wrote, what it's about, and the controls: the ticket's status and "Assign to me". Each change
- * applies straight away and is in the audit log.
+ * Who wrote, what it's about, and the controls: the ticket's status, and who handles it (anyone on the
+ * support team, the admin or nobody, as for a case), with "Assign to me" for the quick way. Each change
+ * applies straight away and is in the audit log; whoever is handed it is told. The API refuses to hand it to
+ * someone it's about.
  */
 export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; ticketRef: string }) {
   const update = useUpdateTicket(ticketRef);
+  const assignees = useIncidentAssignees();
   const assigning = update.isPending && update.variables?.assignToMe === true;
+  const current = ticket.assignedToId ?? NOBODY;
+  const team = assignees.data ?? [];
+  const assigneeOptions = [
+    { value: NOBODY, label: 'Nobody yet' },
+    ...team.map((person) => ({ value: person.id, label: person.you ? `${person.name} (you)` : person.name })),
+    // Shown while the team loads, or when whoever has it has left the team, until it's handed on.
+    ...(current && !team.some((person) => person.id === current)
+      ? [{ value: current, label: ticket.assignedTo ?? 'A former staff member' }]
+      : []),
+  ];
+
+  const handTo = (value: string) => {
+    if (value === current) return;
+    const person = team.find((candidate) => candidate.id === value);
+    update.mutate(
+      { assignTo: value || null },
+      {
+        onSuccess: () => {
+          if (!person) toast('Nobody has the ticket now');
+          else if (person.you) toast('Assigned to you');
+          else toast(`Assigned to ${person.name}`, { description: 'We’ve let them know.' });
+        },
+      },
+    );
+  };
 
   const changeStatus = (value: string) => {
     const status = TICKET_STATUSES.find((option) => option === value);
@@ -66,12 +97,25 @@ export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; tick
             disabled={update.isPending}
           />
         </Field>
-        <div>
-          <p className="text-sm font-medium text-ink">Assigned to</p>
-          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-3">
-            <span className={ticket.assignedTo ? 'text-sm text-ink' : 'text-sm text-muted'}>
-              {ticket.assignedTo ?? 'Nobody yet'}
-            </span>
+        <div className="grid gap-3">
+          <Field
+            label="Handled by"
+            description={
+              assignees.isError
+                ? 'We couldn’t load the support team. Refresh the page to try again.'
+                : undefined
+            }
+          >
+            <Select
+              value={current}
+              onChange={handTo}
+              options={assigneeOptions}
+              icon={<UserRound />}
+              listLabel="Support team"
+              disabled={update.isPending || assignees.isPending}
+            />
+          </Field>
+          <div>
             <Button
               variant="secondary"
               size="sm"

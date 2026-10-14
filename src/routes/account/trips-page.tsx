@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
-import { useBookings, type BookingGroup } from '@/features/booking/booking-api';
+import { useBookingPages } from '@/features/booking/booking-api';
 import { BookingCard, BookingListSkeleton } from '@/features/booking/booking-card';
 import { CurrentTrips } from '@/features/handover/current-trips';
 
@@ -45,8 +45,10 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
 
 const isTab = (value: string | null): value is Tab => TABS.some((tab) => tab.value === value);
 
+/** One tab's trips, a page at a time, so a long history is all there. */
 function TripList({ group }: { group: Tab }) {
-  const trips = useBookings('guest', group as BookingGroup);
+  const trips = useBookingPages('guest', group);
+  const list = trips.data?.pages.flatMap((page) => page.bookings);
 
   if (trips.isError) {
     return (
@@ -64,8 +66,8 @@ function TripList({ group }: { group: Tab }) {
       </Alert>
     );
   }
-  if (!trips.data) return <BookingListSkeleton />;
-  if (trips.data.length === 0) {
+  if (!list) return <BookingListSkeleton />;
+  if (list.length === 0) {
     const empty = EMPTY[group];
     return (
       <EmptyState
@@ -89,13 +91,26 @@ function TripList({ group }: { group: Tab }) {
     );
   }
   return (
-    <ul className="grid gap-4">
-      {trips.data.map((trip, index) => (
-        <li key={trip.id} className="stagger-in" style={staggerIndex(index)}>
-          <BookingCard booking={trip} viewer="GUEST" to={`/trips/${trip.ref}`} />
-        </li>
-      ))}
-    </ul>
+    <div className="grid gap-6">
+      <ul className="grid gap-4">
+        {list.map((trip, index) => (
+          <li key={trip.id} className="stagger-in" style={staggerIndex(index % 100)}>
+            <BookingCard booking={trip} viewer="GUEST" to={`/trips/${trip.ref}`} />
+          </li>
+        ))}
+      </ul>
+      {trips.hasNextPage && (
+        <div>
+          <Button
+            variant="secondary"
+            loading={trips.isFetchingNextPage}
+            onClick={() => void trips.fetchNextPage()}
+          >
+            Show more
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

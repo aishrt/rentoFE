@@ -64,9 +64,17 @@ const rangi: RiskUser = {
 
 const card = async (name: string) => within(await screen.findByRole('listitem', { name }));
 
+/** One page of the queue, as the API sends it. */
+const page = (users: RiskUser[], extra: { total?: number; page?: number; nextPage?: number } = {}) => ({
+  users,
+  total: extra.total ?? users.length,
+  page: extra.page ?? 1,
+  ...(extra.nextPage && { nextPage: extra.nextPage }),
+});
+
 describe('AdminRiskPage', () => {
   it('lists each flagged person with what was flagged and when', async () => {
-    mockApi({ 'GET /admin/risk': { status: 200, body: { users: [aroha, rangi] } } });
+    mockApi({ 'GET /admin/risk': { status: 200, body: page([aroha, rangi]) } });
     render();
 
     const first = await card('Aroha Ngata');
@@ -87,7 +95,7 @@ describe('AdminRiskPage', () => {
     let queue = [aroha, rangi];
     const cleared = vi.fn();
     const fetchMock = mockApi({
-      'GET /admin/risk': () => ({ status: 200, body: { users: queue } }),
+      'GET /admin/risk': () => ({ status: 200, body: page(queue) }),
       'POST /admin/users/u11/risk-flags/f3/clear': () => {
         cleared();
         queue = [aroha];
@@ -106,13 +114,35 @@ describe('AdminRiskPage', () => {
     expect(screen.queryByRole('listitem', { name: 'Rangi Walker' })).not.toBeInTheDocument();
     expect(await screen.findByText('1 person')).toBeInTheDocument();
     const queueRequests = fetchMock.mock.calls.filter(([input]) =>
-      String((input as Request).url).endsWith('/admin/risk'),
+      String((input as Request).url).includes('/admin/risk'),
     );
     expect(queueRequests.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('shows more people a page at a time', async () => {
+    // The first request is the first page; the next, the second.
+    let requests = 0;
+    const fetchMock = mockApi({
+      'GET /admin/risk': () =>
+        (requests += 1) === 1
+          ? { status: 200, body: page([aroha], { total: 2, nextPage: 2 }) }
+          : { status: 200, body: page([rangi], { total: 2, page: 2 }) },
+    });
+    render();
+
+    await card('Aroha Ngata');
+    expect(screen.getByText('2 people')).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: 'Rangi Walker' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(await card('Rangi Walker')).toBeTruthy();
+    expect(screen.getByRole('listitem', { name: 'Aroha Ngata' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(String((fetchMock.mock.calls.at(-1)![0] as Request).url)).toMatch(/page=2/);
+  });
+
   it('says when there’s nothing to review', async () => {
-    mockApi({ 'GET /admin/risk': { status: 200, body: { users: [] } } });
+    mockApi({ 'GET /admin/risk': { status: 200, body: page([]) } });
     render();
 
     expect(await screen.findByText('Nothing to review')).toBeInTheDocument();

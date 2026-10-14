@@ -21,6 +21,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { formErrorMessage } from '@/features/account/form-errors';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useHostVehicle } from '@/features/host/host-api';
 import { HostPageHeader } from '@/features/host/host-nav';
@@ -59,6 +60,17 @@ const rowsFrom = (data: MaintenanceReminders): Row[] =>
     done: Boolean(reminder.doneAt),
   }));
 
+const MAX_KM = 2_000_000;
+const ROW_FIELDS = ['title', 'dueAt', 'dueOdometer', 'notes'] as const;
+
+/** An odometer reading as typed ("45,000"), checked as the API does; null when it isn't one. */
+function kilometres(value: string): number | null {
+  const digits = value.replace(/[,\s]/g, '');
+  if (!/^\d+$/.test(digits)) return null;
+  const km = Number(digits);
+  return km <= MAX_KM ? km : null;
+}
+
 /** What a list of rows would save, to tell whether anything has changed since the last save. */
 const fingerprint = (rows: Row[]) =>
   JSON.stringify(rows.map((row) => [row.id, row.title, row.dueAt, row.dueOdometer, row.notes, row.done]));
@@ -82,21 +94,34 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
       toast('Reminders saved', { description: 'We’ll remind you at 9 am when one is near.' });
     },
   });
-  const fields = save.error instanceof ApiError ? (save.error.fields ?? {}) : {};
+  // Readings checked before sending, then the API's own messages, each beside its field.
+  const [checked, setChecked] = useState<Record<string, string>>({});
+  const fields = { ...(save.error instanceof ApiError ? (save.error.fields ?? {}) : {}), ...checked };
+  const fieldNames = rows.flatMap((_, index) => ROW_FIELDS.map((field) => `reminders.${index}.${field}`));
   const update = (key: string, change: Partial<Row>) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...change } : row)));
 
-  const submit = () =>
+  const submit = () => {
+    const wrong = Object.fromEntries(
+      rows.flatMap((row, index) =>
+        row.dueOdometer.trim() && kilometres(row.dueOdometer) === null
+          ? [[`reminders.${index}.dueOdometer`, 'Enter whole kilometres, like 45,000']]
+          : [],
+      ),
+    );
+    setChecked(wrong);
+    if (Object.keys(wrong).length > 0) return;
     save.mutate({
       reminders: rows.map((row) => ({
         ...(row.id && { id: row.id }),
         title: row.title.trim(),
         ...(row.dueAt && { dueAt: row.dueAt }),
-        ...(row.dueOdometer.trim() && { dueOdometer: Number(row.dueOdometer.replace(/[,\s]/g, '')) }),
+        ...(row.dueOdometer.trim() && { dueOdometer: kilometres(row.dueOdometer)! }),
         ...(row.notes.trim() && { notes: row.notes.trim() }),
         done: row.done,
       })),
     });
+  };
 
   // A reminder just added takes the focus, as the button that added it may have gone with the empty state.
   const [added, setAdded] = useState<string | null>(null);
@@ -166,7 +191,7 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
                     onChange={(event) => update(row.key, { title: event.target.value })}
                   />
                 </Field>
-                <Field label="Notes (optional)">
+                <Field label="Notes (optional)" error={fields[`reminders.${index}.notes`]}>
                   <Input
                     value={row.notes}
                     maxLength={500}
@@ -180,7 +205,7 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
                     placeholder="Choose a date"
                   />
                 </Field>
-                <Field label="Or at (km)">
+                <Field label="Or at (km)" error={fields[`reminders.${index}.dueOdometer`]}>
                   <Input
                     inputMode="numeric"
                     value={row.dueOdometer}
@@ -207,7 +232,8 @@ function Editor({ vehicleId, data }: { vehicleId: string; data: MaintenanceRemin
       )}
       {save.isError && (
         <Alert variant="danger" role="alert">
-          {save.error.message}
+          {/* What no field shows, such as too many reminders, or "Some details need fixing." */}
+          {formErrorMessage(save.error, fieldNames) ?? save.error.message}
         </Alert>
       )}
       {rows.length > 0 && (

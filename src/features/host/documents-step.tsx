@@ -181,6 +181,12 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
   const [needsCof, ownerIsHost] = useWatch({ control, name: ['needsCof', 'ownerIsHost'] });
   const [today] = useState(() => toDateInputValue(new Date()));
   const ruc = needsRuc(vehicle.fuelType);
+  // On an approved car, a later date waits for our team to check the document showing it (plan §3).
+  const pending = vehicle.pendingExpiries;
+  const waitingNote = (next: string | undefined, current: string | undefined, document: string) =>
+    next
+      ? `Your new date applies once our team has checked the new ${document}${current ? `. Until then, guests can book up to ${formatDateValue(current)}` : ''}.`
+      : undefined;
 
   const saveTo = (target: StepTarget) =>
     handleSubmit((values) =>
@@ -221,7 +227,11 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
         title="Registration and warrant"
         description="Guests see that your rego and WOF are current, with the month they expire, but never the dates or your plate."
       >
-        <Field label="Registration expires" error={errors.regoExpiry?.message}>
+        <Field
+          label="Registration expires"
+          error={errors.regoExpiry?.message}
+          description={waitingNote(pending?.regoExpiry, vehicle.regoExpiry, 'registration')}
+        >
           <Controller
             control={control}
             name="regoExpiry"
@@ -237,7 +247,15 @@ export function DocumentsStep({ vehicle, policies, missing, registerSave }: Step
             )}
           />
         </Field>
-        <Field label={needsCof ? 'CoF expires' : 'WOF expires'} error={errors.inspectionExpiry?.message}>
+        <Field
+          label={needsCof ? 'CoF expires' : 'WOF expires'}
+          error={errors.inspectionExpiry?.message}
+          description={
+            needsCof
+              ? waitingNote(pending?.cofExpiry, vehicle.cofExpiry, 'CoF')
+              : waitingNote(pending?.wofExpiry, vehicle.wofExpiry, 'WOF')
+          }
+        >
           <Controller
             control={control}
             name="inspectionExpiry"

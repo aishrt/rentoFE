@@ -1,5 +1,6 @@
 import {
   Ban,
+  Banknote,
   CalendarClock,
   CalendarX,
   Car,
@@ -142,9 +143,11 @@ export interface QueueLink {
   to: string | ((now: Date) => string);
   /** Hidden from the support team, who can't open the page. */
   adminOnly?: boolean;
+  /** Payments and payouts: hidden from support staff without the refunds permission, who can't open them. */
+  money?: boolean;
 }
 
-/** What's waiting for the team, each linking to the page where it's dealt with. */
+/** What's waiting for the team, each linking to the page where it's dealt with, which lists the same ones. */
 export const queueLinks: QueueLink[] = [
   { key: 'hostApplications', label: 'Host applications', icon: KeyRound, to: '/admin/host-applications' },
   { key: 'listingReviews', label: 'Listing reviews', icon: CarFront, to: '/admin/vehicles' },
@@ -160,12 +163,21 @@ export const queueLinks: QueueLink[] = [
     label: 'Failed payments',
     icon: CreditCard,
     to: (now) => `/admin/payments?view=failed&from=${presetRange('30d', now).from}`,
+    money: true,
   },
   {
     key: 'heldPayouts',
     label: 'Held payouts',
     icon: WalletCards,
     to: '/admin/payments?tab=payouts&status=HELD',
+    money: true,
+  },
+  {
+    key: 'failedPayouts',
+    label: 'Failed payouts',
+    icon: Banknote,
+    to: '/admin/payments?tab=payouts&status=FAILED',
+    money: true,
   },
   { key: 'failedJobs', label: 'Failed jobs', icon: ServerCrash, to: '/admin/jobs', adminOnly: true },
 ];

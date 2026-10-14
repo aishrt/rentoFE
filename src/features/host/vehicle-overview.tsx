@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
+import { formatDateValue } from '@/lib/dates';
 import { AngleIllustration } from './angle-illustrations';
 import { setVehicleActiveRequest, storeVehicle } from './host-api';
 import { HostPageHeader } from './host-nav';
@@ -65,6 +66,34 @@ function Submitted({ vehicle }: { vehicle: HostVehicle }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+/** The documents that show each expiry date, as the Host names them. */
+const PENDING_DATE_NAMES = { regoExpiry: 'registration', wofExpiry: 'WOF', cofExpiry: 'CoF' } as const;
+
+/**
+ * New expiry dates on an approved car (plan §3): each applies once our team has checked the document that
+ * shows it, and until then guests book within the date checked before.
+ */
+function PendingDates({ vehicle }: { vehicle: HostVehicle }) {
+  const pending = vehicle.pendingExpiries;
+  const dates = (Object.keys(PENDING_DATE_NAMES) as (keyof typeof PENDING_DATE_NAMES)[]).flatMap((key) => {
+    const next = pending?.[key];
+    return next ? [{ name: PENDING_DATE_NAMES[key], next, current: vehicle[key] }] : [];
+  });
+  if (dates.length === 0) return null;
+  return (
+    <Alert title="New expiry dates waiting for our check">
+      <ul className="grid gap-1">
+        {dates.map(({ name, next, current }) => (
+          <li key={name}>
+            {`The ${name} date ${formatDateValue(next)} applies once we’ve checked the new ${name} you upload.`}
+            {current && ` Until then, guests can book up to ${formatDateValue(current)}.`}
+          </li>
+        ))}
+      </ul>
+    </Alert>
   );
 }
 
@@ -220,6 +249,7 @@ export function VehicleOverview({ vehicle, policies }: { vehicle: HostVehicle; p
       ) : (
         <StatusNote vehicle={vehicle} />
       )}
+      <PendingDates vehicle={vehicle} />
 
       {/* grid-cols-1 here and below: truncated step summaries would otherwise widen a phone’s page. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">

@@ -55,6 +55,9 @@ describe('ReceiptPage', () => {
     expect(details.getByText('Visa ending 4242')).toBeInTheDocument();
     expect(details.getByText('02/10/2026')).toBeInTheDocument();
     expect(screen.getByText('Kiri Tester')).toBeInTheDocument();
+    // In the Guest's dashboard, under Trips.
+    const sidebar = within(screen.getByRole('navigation', { name: 'Your dashboard' }));
+    expect(sidebar.getByRole('link', { name: 'Trips' })).toHaveAttribute('aria-current', 'page');
 
     const charges = within(screen.getByRole('region', { name: 'Charges' }));
     expect(charges.getByText('3 days × $89')).toBeInTheDocument();

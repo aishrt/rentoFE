@@ -110,6 +110,7 @@ const reviewsAndTripsSchema = z
     homepageThreshold: wholeField(0, 1000),
     damageReportWindowHours: wholeField(1, 720, ' hours'),
     lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
+    threadReadOnlyDays: wholeField(0, 365, ' days'),
     quietHoursStart: timeField(),
     quietHoursEnd: timeField(),
   })
@@ -133,6 +134,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
         homepageThreshold: String(reviews.homepageThreshold),
         damageReportWindowHours: String(trips.damageReportWindowHours),
         lateReturnGraceMinutes: String(trips.lateReturnGraceMinutes),
+        threadReadOnlyDays: String(trips.threadReadOnlyDays),
         quietHoursStart: sms.quietHoursStart,
         quietHoursEnd: sms.quietHoursEnd,
       })}
@@ -146,6 +148,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
           ...current.trips,
           damageReportWindowHours: Number(values.damageReportWindowHours),
           lateReturnGraceMinutes: Number(values.lateReturnGraceMinutes),
+          threadReadOnlyDays: Number(values.threadReadOnlyDays),
         },
         sms: { quietHoursStart: values.quietHoursStart, quietHoursEnd: values.quietHoursEnd },
       })}
@@ -156,7 +159,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             name="windowDays"
             label="Time to leave a review"
             unit="days"
-            description="After the trip ends."
+            description="From when the trip is completed: at check-out, or when our team completes it."
           />
           <NumberField
             name="homepageThreshold"
@@ -175,6 +178,12 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             unit="minutes"
             description="Before a return counts as late."
           />
+          <NumberField
+            name="threadReadOnlyDays"
+            label="Messages stay open for"
+            unit="days"
+            description="After the trip ends or is cancelled, while no case on it is open. Then the conversation can be read but not added to."
+          />
           <div className="sm:col-span-2">
             <SwitchField
               name="revealTogether"
@@ -190,7 +199,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
           <TextInputField
             name="quietHoursEnd"
             label="Quiet hours end at"
-            description="Like 07:00. Reminders just before a pick-up or return still go at once."
+            description="Like 07:00. A pick-up reminder within 3 hours of pick-up, and alerts about check-in or a late return, still go at once. A return reminder waits like other texts, and isn’t sent if it would arrive after the return time."
           />
         </>
       )}

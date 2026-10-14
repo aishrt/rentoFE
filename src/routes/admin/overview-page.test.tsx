@@ -46,12 +46,14 @@ const dashboard = (overrides: Partial<AdminDashboard['figures']> = {}): AdminDas
     riskFlags: 1,
     failedPayments: 2,
     heldPayouts: 1,
+    failedPayouts: 3,
     failedJobs: 4,
   },
   generatedAt: '2026-10-07T00:00:00.000Z',
 });
 
-const supportUser = { ...adminUser, id: 'u3', firstName: 'Sam', roles: ['SUPPORT'] };
+const supportUser = { ...adminUser, id: 'u3', firstName: 'Sam', roles: ['SUPPORT'], permissions: [] };
+const moneySupportUser = { ...supportUser, permissions: ['REFUNDS'] };
 
 const render = (path = '/admin') =>
   renderWithRouter([{ path: '/admin', element: <AdminOverviewPage /> }], path);
@@ -108,9 +110,14 @@ describe('AdminOverviewPage', () => {
       'href',
       '/admin/payments?view=failed&from=2026-09-08',
     );
+    // Held and failed payouts apart, each linking to the payouts it counts.
     expect(queues.getByRole('link', { name: 'Held payouts 1 waiting' })).toHaveAttribute(
       'href',
       '/admin/payments?tab=payouts&status=HELD',
+    );
+    expect(queues.getByRole('link', { name: 'Failed payouts 3 waiting' })).toHaveAttribute(
+      'href',
+      '/admin/payments?tab=payouts&status=FAILED',
     );
     expect(queues.getByRole('link', { name: 'Held reviews 0 waiting' })).toHaveAttribute(
       'href',
@@ -171,6 +178,23 @@ describe('AdminOverviewPage', () => {
     expect(await screen.findByRole('heading', { name: 'Good afternoon, Sam' })).toBeInTheDocument();
     const queues = within(await screen.findByRole('list', { name: 'Queues' }));
     expect(queues.getByRole('link', { name: 'Risk flags 1 waiting' })).toHaveAttribute('href', '/admin/risk');
+    expect(queues.queryByRole('link', { name: /Failed jobs/ })).not.toBeInTheDocument();
+    // Payments and payouts need the refunds permission.
+    for (const name of [/Failed payments/, /Held payouts/, /Failed payouts/]) {
+      expect(queues.queryByRole('link', { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it('shows the payment and payout queues to support staff with the refunds permission', async () => {
+    mockApi({
+      'POST /auth/session': { status: 200, body: { user: moneySupportUser } },
+      'GET /admin/dashboard': { status: 200, body: dashboard() },
+    });
+    render();
+
+    const queues = within(await screen.findByRole('list', { name: 'Queues' }));
+    expect(queues.getByRole('link', { name: 'Failed payments 2 waiting' })).toBeInTheDocument();
+    expect(queues.getByRole('link', { name: 'Held payouts 1 waiting' })).toBeInTheDocument();
     expect(queues.queryByRole('link', { name: /Failed jobs/ })).not.toBeInTheDocument();
   });
 

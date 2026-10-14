@@ -125,6 +125,15 @@ export function AdminVehicleReviewPage() {
 
   const { vehicle, host, keyChanges, upcomingBookings } = listing.data;
   const place = [vehicle.suburb, vehicle.city].filter(Boolean).join(', ');
+  // A car that had been live, its own review or back for one over its key details (plan §3).
+  const reReview =
+    (vehicle.status === 'UNDER_REVIEW' || vehicle.status === 'CHANGES_REQUESTED') && keyChanges.length > 0;
+  const approvedBefore =
+    vehicle.status === 'ACTIVE' ||
+    vehicle.status === 'INACTIVE' ||
+    vehicle.status === 'SUSPENDED' ||
+    reReview ||
+    Boolean(vehicle.pendingExpiries);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -156,6 +165,18 @@ export function AdminVehicleReviewPage() {
       {vehicle.status === 'SUSPENDED' && upcomingBookings && (
         <SuspendedCarBookings bookings={upcomingBookings} className="mt-6" />
       )}
+      {vehicle.status !== 'SUSPENDED' && upcomingBookings && upcomingBookings.length > 0 && (
+        // Back for review over its key details, or rejected after one: its bookings still stand (plan §3).
+        <SuspendedCarBookings
+          bookings={upcomingBookings}
+          className="mt-6"
+          description={
+            vehicle.status === 'REJECTED'
+              ? 'The listing was rejected, but these bookings still stand and none can be confirmed. Open each one and cancel it for the Host if the car can’t be used.'
+              : 'The car is back for review, and these bookings still stand. Rejecting the listing doesn’t cancel them: cancel them for the Host from each booking if the car can’t be used.'
+          }
+        />
+      )}
 
       {keyChanges.length > 0 && <KeyChangesSection changes={keyChanges} className="mt-6" />}
 
@@ -163,7 +184,11 @@ export function AdminVehicleReviewPage() {
         <div className="grid min-w-0 gap-6">
           <ChecklistPanel checklist={vehicle.checklist} />
           <PhotoReview vehicleId={vehicle.id} photos={vehicle.photos} />
-          <DocumentReview vehicleId={vehicle.id} documents={vehicle.documents} />
+          <DocumentReview
+            vehicleId={vehicle.id}
+            documents={vehicle.documents}
+            expiries={approvedBefore ? vehicle : undefined}
+          />
           <VehicleDetailsSection vehicle={vehicle} />
           <ComplianceSection vehicle={vehicle} />
           <PricingSection vehicle={vehicle} />

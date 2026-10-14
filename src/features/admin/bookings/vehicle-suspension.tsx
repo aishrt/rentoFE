@@ -144,9 +144,12 @@ function LiftBody({ onConfirm }: { onConfirm: () => Promise<void> }) {
 export function SuspendedCarBookings({
   bookings,
   className,
+  description,
 }: {
   bookings: NonNullable<AdminVehicle['upcomingBookings']>;
   className?: string;
+  /** In place of the suspension's wording, for a car back for review or rejected. */
+  description?: string;
 }) {
   return (
     <ReviewSection
@@ -154,9 +157,10 @@ export function SuspendedCarBookings({
       title="Upcoming bookings"
       className={className}
       description={
-        bookings.length > 0
+        description ??
+        (bookings.length > 0
           ? 'The car is suspended, but these bookings still stand. Keep each one, or open it and cancel it as a platform cancellation, which refunds the Guest in full.'
-          : 'The car is suspended. It has no upcoming bookings, so there’s nothing else to do.'
+          : 'The car is suspended. It has no upcoming bookings, so there’s nothing else to do.')
       }
     >
       {bookings.length > 0 && (

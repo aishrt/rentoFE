@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
 import { useState } from 'react';
+import { isStaleDataError } from '@/api/stale-data';
 import type { ModerationReview } from '@/api/types';
 import { staggerIndex } from '@/components/motion/presets';
 import { SegmentedTabs, type TabOption } from '@/components/ui/segmented-tabs';
@@ -110,6 +111,9 @@ export function ReviewsPanel({ state, onStateChange }: ReviewsPanelProps) {
     try {
       await moderateReviewRequest({ id: review.id, action, reason: notes ?? '' });
     } catch (error) {
+      // Another moderator got there first: the lists show the review as it is now.
+      if (isStaleDataError(error))
+        void queryClient.invalidateQueries({ queryKey: moderationReviewsQueryKey() });
       throw asNotesError(error, 'reason');
     }
     setDialogOpen(false);

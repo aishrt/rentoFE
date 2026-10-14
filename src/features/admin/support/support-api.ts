@@ -117,7 +117,12 @@ export function useReplyToTicket(ref: string) {
 export function useUpdateTicket(ref: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (change: { status?: TicketStatus; assignToMe?: boolean }): Promise<StaffTicket> =>
+    mutationFn: async (change: {
+      status?: TicketStatus;
+      assignToMe?: boolean;
+      /** Another team member's id, or null for nobody (409 NOT_STAFF or OWN_RECORD otherwise). */
+      assignTo?: string | null;
+    }): Promise<StaffTicket> =>
       (
         await unwrap(
           client.PATCH('/admin/support/tickets/{ref}', { params: { path: { ref } }, body: change }),

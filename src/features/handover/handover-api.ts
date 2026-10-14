@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { client, unwrap } from '@/api/client';
+import { ApiError, client, unwrap } from '@/api/client';
+import { refreshStaleData } from '@/api/stale-data';
 import type { FlagDamageRequest, Handover, InspectionRequest, InspectionStage } from '@/api/types';
 import { bookingQueryKey, bookingsQueryKey } from '@/features/booking/booking-api';
 
@@ -19,6 +20,24 @@ export interface HandoverState {
   checkOutDamage?: boolean;
 }
 
+/** Past the end time without a check-in: the API takes none, and support sorts out the booking. */
+export const checkInClosed = (handover: Handover, now = Date.now()) =>
+  handover.bookingStatus === 'CONFIRMED' &&
+  !handover.checkIn &&
+  now >= new Date(handover.checkInClosesAt).getTime();
+
+/**
+ * The API couldn't find an upload sent with a report (each is attached once, and kept a day): the photos
+ * then upload again (useInspectionPhotos' uploadAgain) and the person sends the report once they're up.
+ */
+export const uploadsGone = (error: unknown) => error instanceof ApiError && error.code === 'UPLOAD_NOT_FOUND';
+export const UPLOADING_AGAIN =
+  'Your photos need to upload again, and they’re on their way. Try again once they’ve uploaded.';
+
+/** The contact form, about this booking. */
+export const supportPath = (handover: Pick<Handover, 'ref'>) =>
+  `/contact?category=BOOKING&booking=${encodeURIComponent(handover.ref)}`;
+
 export function useHandover(ref: string, enabled = true) {
   return useQuery({
     queryKey: handoverQueryKey(ref),
@@ -26,11 +45,16 @@ export function useHandover(ref: string, enabled = true) {
       (await unwrap(client.GET('/bookings/{id}/inspections', { params: { path: { id: ref } }, signal })))
         .handover,
     enabled: enabled && ref !== '',
-    // Photo links work for 10 minutes; fresh ones come with each refresh.
+    // Photo links work for 10 minutes at least; fresh ones come with each refresh.
     refetchInterval: 5 * 60_000,
   });
 }
 
+/**
+ * A request that changes the handover. Refused because the screen is out of date (409, such as the other
+ * party's check-in landing first, or 404), the handover and the booking load again, so what's shown and
+ * the buttons on offer catch up.
+ */
 function useHandoverMutation<Variables>(
   ref: string,
   request: (variables: Variables) => Promise<{ handover: Handover }>,
@@ -43,6 +67,7 @@ function useHandoverMutation<Variables>(
       void queryClient.invalidateQueries({ queryKey: bookingQueryKey(ref) });
       void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
     },
+    onError: refreshStaleData(queryClient, [handoverQueryKey(ref), bookingQueryKey(ref)]),
   });
 }
 

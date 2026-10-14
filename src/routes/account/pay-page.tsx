@@ -1,6 +1,7 @@
 import { Elements } from '@stripe/react-stripe-js';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleSlash, LockKeyhole, ReceiptText, Undo2 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError, client, unwrap } from '@/api/client';
 import { PageBackdrop } from '@/components/brand/page-backdrop';
@@ -13,7 +14,9 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { paymentHistoryQueryKey } from '@/features/account/dashboard-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
+import { bookingQueryKey, bookingsQueryKey } from '@/features/booking/booking-api';
 import { formatNzdCharge } from '@/features/booking/booking-format';
 import { PaymentForm } from '@/features/payments/payment-form';
 import { getStripe, stripeAppearance } from '@/features/payments/stripe';
@@ -22,10 +25,14 @@ const payLinkKey = (id: string) => ['pay-link', id] as const;
 
 function Pay({ paymentId }: { paymentId: string }) {
   const queryClient = useQueryClient();
+  // Stripe took the payment, but our record of it hasn't caught up yet.
+  const [received, setReceived] = useState(false);
   const charge = useQuery({
     queryKey: payLinkKey(paymentId),
     queryFn: async ({ signal }) =>
       (await unwrap(client.GET('/payments/{id}', { params: { path: { id: paymentId } }, signal }))).payment,
+    // Until it has: Stripe's webhook applies it within moments.
+    refetchInterval: (query) => (received && query.state.data?.status === 'DUE' ? 5_000 : false),
   });
   const start = useMutation({
     mutationFn: () => unwrap(client.POST('/payments/{id}/pay', { params: { path: { id: paymentId } } })),
@@ -36,13 +43,26 @@ function Pay({ paymentId }: { paymentId: string }) {
       }
     },
   });
-  const sync = async () => {
-    const paid = (await unwrap(client.POST('/payments/{id}/sync', { params: { path: { id: paymentId } } })))
-      .payment;
-    queryClient.setQueryData(payLinkKey(paymentId), paid);
+  const sync = async () =>
+    (await unwrap(client.POST('/payments/{id}/sync', { params: { path: { id: paymentId } } }))).payment;
+  /** Paid with Stripe: the page, the trip, the trips list and the payment history catch up. */
+  const paid = async (bookingRef: string) => {
+    try {
+      const next = await sync();
+      queryClient.setQueryData(payLinkKey(paymentId), next);
+      if (next.status === 'DUE') setReceived(true);
+    } catch {
+      // Stripe has the payment either way; our record follows from its webhook.
+      setReceived(true);
+      void queryClient.invalidateQueries({ queryKey: payLinkKey(paymentId) });
+    }
+    void queryClient.invalidateQueries({ queryKey: bookingQueryKey(bookingRef) });
+    void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
+    void queryClient.invalidateQueries({ queryKey: paymentHistoryQueryKey });
   };
 
   if (charge.isError) {
+    const missing = charge.error instanceof ApiError && charge.error.status === 404;
     return (
       <EmptyState
         className="mx-auto py-10"
@@ -51,12 +71,20 @@ function Pay({ paymentId }: { paymentId: string }) {
             <ReceiptText />
           </IconBadge>
         }
-        title="We couldn’t find that payment"
-        description="Check the link in your email, or find the charge on your trip."
+        title={missing ? 'We couldn’t find that payment' : 'We couldn’t load this payment'}
+        description={
+          missing ? 'Check the link in your email, or find the charge on your trip.' : charge.error.message
+        }
         actions={
-          <Button asChild>
-            <Link to="/trips">Your trips</Link>
-          </Button>
+          missing ? (
+            <Button asChild>
+              <Link to="/trips">Your trips</Link>
+            </Button>
+          ) : (
+            <Button loading={charge.isFetching} onClick={() => void charge.refetch()}>
+              Try again
+            </Button>
+          )
         }
       />
     );
@@ -116,12 +144,18 @@ function Pay({ paymentId }: { paymentId: string }) {
             GST included. Your card issuer converts it if your card isn’t in NZD.
           </dd>
         </dl>
-        {data.failureReason && (
-          <Alert variant="danger" title="Your saved card didn’t go through">
-            {data.failureReason} Pay with another card, Apple Pay or Google Pay.
+        {received ? (
+          <Alert variant="success" role="status" title="Payment received">
+            It may take a minute to show here and on your trip. There’s no need to pay again.
           </Alert>
+        ) : (
+          data.failureReason && (
+            <Alert variant="danger" title="Your saved card didn’t go through">
+              {data.failureReason} Pay with another card, Apple Pay or Google Pay.
+            </Alert>
+          )
         )}
-        {start.data ? (
+        {received ? null : start.data ? (
           <Elements
             key={start.data.clientSecret}
             stripe={getStripe()}
@@ -136,7 +170,8 @@ function Pay({ paymentId }: { paymentId: string }) {
               pendingLabel="Paying…"
               successLabel="Paid"
               returnUrl={window.location.href}
-              onPaid={sync}
+              onPaid={() => paid(data.bookingRef)}
+              // The decline's reason is recorded; the form says what happened.
               onFailed={() => void sync().catch(() => undefined)}
             />
           </Elements>

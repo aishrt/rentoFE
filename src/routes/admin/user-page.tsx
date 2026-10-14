@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { Ban, KeyRound, LockOpen, SearchX, UserX } from 'lucide-react';
+import { Ban, FileDown, KeyRound, LockOpen, PencilLine, SearchX, UserX } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -21,7 +21,13 @@ import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 import { LoadError } from '@/features/admin/ops/query-feedback';
 import { resetStaffMfaRequest } from '@/features/admin/staff/staff-api';
 import { RiskFlagItem } from '@/features/admin/users/risk-flag-item';
-import { ActionDialog, ReasonDialog, WaiveFeeDialog } from '@/features/admin/users/user-dialogs';
+import {
+  ActionDialog,
+  CorrectDetailsDialog,
+  ReasonDialog,
+  WaiveFeeDialog,
+  type DetailsCorrection,
+} from '@/features/admin/users/user-dialogs';
 import { fullName } from '@/features/admin/users/user-format';
 import {
   AccountSection,
@@ -32,6 +38,8 @@ import {
 import {
   clearRiskFlagRequest,
   closeUserRequest,
+  correctUserRequest,
+  downloadUserData,
   setRefundsPermissionRequest,
   suspendUserRequest,
   unsuspendUserRequest,
@@ -127,7 +135,7 @@ export function AdminUserPage() {
   return <UserRecord user={user.data} />;
 }
 
-type DialogName = 'suspend' | 'unsuspend' | 'waive' | 'close' | 'reset-mfa';
+type DialogName = 'suspend' | 'unsuspend' | 'waive' | 'close' | 'reset-mfa' | 'correct';
 
 function UserRecord({ user }: { user: AdminUserDetail }) {
   const session = useSession();
@@ -143,6 +151,9 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
   const suspended = user.status === 'SUSPENDED';
   const canAct = !user.closed && !isSelf;
   const isSupportMember = user.roles.includes('SUPPORT');
+  // Only the admin changes a staff account (the API says so too).
+  const canCorrect =
+    canAct && (isAdmin || !user.roles.some((role) => role === 'ADMIN' || role === 'SUPPORT'));
   const openFlags = user.riskFlags.filter((flag) => !flag.clearedAt);
   // Open flags first, then the cleared ones as history.
   const flags = [...openFlags, ...user.riskFlags.filter((flag) => flag.clearedAt)];
@@ -213,6 +224,24 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
     setDialog(null);
     toast(`${name}’s account is closed`, { description: 'Their details have been anonymised.' });
   };
+
+  const correct = async (input: DetailsCorrection) => {
+    const updated = await correctUserRequest({ id: user.id, ...input });
+    updateCache(updated);
+    setDialog(null);
+    toast('Details corrected', {
+      description:
+        input.email !== undefined
+          ? 'We’ve emailed the new address a link to confirm it, and told the old one.'
+          : 'The change is in the audit log.',
+    });
+  };
+
+  const download = useMutation({
+    mutationFn: () => downloadUserData(user.id),
+    onSuccess: () => toast('Their information is downloading', { description: 'Send it to them securely.' }),
+    onError: (error) => toast(userErrorMessage(error) ?? 'We couldn’t download it', { tone: 'danger' }),
+  });
 
   const resetMfa = async () => {
     await resetStaffMfaRequest(user.id);
@@ -371,6 +400,33 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
             </ReviewSection>
           )}
 
+          {/* Support staff leave their own record to another team member (plan §6.2). */}
+          {!isSelf && (
+            <ReviewSection
+              id="privacy-requests"
+              title="Privacy requests"
+              description="When they ask us to correct their details, or for a copy of the information we hold about them."
+            >
+              <div className="flex flex-wrap gap-2">
+                {canCorrect && (
+                  <Button variant="secondary" size="sm" onClick={() => setDialog('correct')}>
+                    <PencilLine aria-hidden="true" />
+                    Correct details
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={download.isPending}
+                  onClick={() => download.mutate()}
+                >
+                  <FileDown aria-hidden="true" />
+                  Download their data
+                </Button>
+              </div>
+            </ReviewSection>
+          )}
+
           {isAdmin && canAct && (
             <ReviewSection
               id="close-account"
@@ -436,11 +492,22 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
           notice={
             <Alert>
               Bookings, payments and the audit log stay for the periods the law requires. We can’t close an
-              account while a trip, booking, incident, charge or payout is under way.
+              account while a trip, booking, incident or card dispute is under way, while money is owed either
+              way (a charge, Host fees, a failed refund or a payout), or until a finished trip is past its
+              damage-report window.
             </Alert>
           }
           confirmLabel="Close account"
           onConfirm={close}
+        />
+      )}
+
+      {canCorrect && (
+        <CorrectDetailsDialog
+          {...dialogProps('correct')}
+          current={user}
+          identityChecked={user.identityStatus === 'APPROVED'}
+          onConfirm={correct}
         />
       )}
 

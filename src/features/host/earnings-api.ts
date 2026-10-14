@@ -17,6 +17,17 @@ export function useEarnings() {
   });
 }
 
+/** Every trip of one month ("2026-10"), for a month the latest 100 trips don't all reach. */
+export function useEarningsMonth(month: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...earningsQueryKey, month],
+    queryFn: async ({ signal }) =>
+      (await unwrap(client.GET('/host/earnings', { params: { query: { month } }, signal }))).bookings,
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * The payout setup and the Host's payouts: those still to be sent, soonest first, then the paid ones, newest
  * first, a page at a time (fetchNextPage) so every one can be shown.
@@ -54,12 +65,31 @@ export function useSyncPayoutAccount() {
   });
 }
 
-/** Stripe's Express dashboard in a new tab: bank account and Stripe's payouts to it. */
+/**
+ * Stripe's Express dashboard in a new tab: bank account and Stripe's payouts to it. Pass a blank tab opened in
+ * the click itself (`openBlankTab`): a browser such as Safari blocks one opened after waiting for the link. It's
+ * sent to the link once that comes, and closed again if it can't be had (the error is the mutation's).
+ */
 export function useOpenStripeDashboard() {
   return useMutation({
-    mutationFn: async () => (await unwrap(client.POST('/host/connect/dashboard-link'))).url,
-    onSuccess: (url) => window.open(url, '_blank', 'noopener'),
+    mutationFn: async (tab: Window | null) => {
+      try {
+        const { url } = await unwrap(client.POST('/host/connect/dashboard-link'));
+        if (tab) tab.location.href = url;
+        else window.open(url, '_blank', 'noopener');
+      } catch (error) {
+        tab?.close();
+        throw error;
+      }
+    },
   });
+}
+
+/** A blank tab for a link still to come, cut off from this page as `noopener` would. */
+export function openBlankTab(): Window | null {
+  const tab = window.open('', '_blank');
+  if (tab) tab.opener = null;
+  return tab;
 }
 
 /** Downloads the statement for a month ("2026-10") or a tax year ending 31 March ("2027") as CSV. */

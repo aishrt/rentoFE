@@ -2372,7 +2372,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: approve or reject a driver licence checked by hand
-         * @description Approving confirms the bookings that waited for it (requests still go to their Host), unless the identity check still waits too (`stillInReview`). Rejecting releases them with their card authorisations. The person is emailed either way. 409 NOT_IN_REVIEW when the licence isn’t waiting for a check; 403 OWN_RECORD for a support member’s own licence.
+         * @description Approving confirms the bookings that waited for it (requests still go to their Host), unless the identity check still waits too (`stillInReview`) or the licence doesn’t meet the rules for that trip (`licenceNotEligible`). Rejecting releases every request of the person’s with its card authorisation, and alerts support to each confirmed trip, whose check-in is then refused. The person is emailed either way. 409 NOT_IN_REVIEW when the licence isn’t waiting for a check; 403 OWN_RECORD for a support member’s own licence.
          */
         post: {
             parameters: {
@@ -7737,12 +7737,13 @@ export interface paths {
         };
         /**
          * What checkout’s verification step still needs
-         * @description Mobile, licence details and the eligibility rules in settings. With `end`, the licence is checked against that trip end.
+         * @description Mobile, licence details and the eligibility rules in settings. With `end`, the licence is checked against that trip end; with `start`, age and years licensed count to that trip start (otherwise to today).
          */
         get: {
             parameters: {
                 query?: {
                     end?: string;
+                    start?: string;
                 };
                 header?: never;
                 path?: never;
@@ -7788,7 +7789,7 @@ export interface paths {
         get?: never;
         /**
          * Save driver licence details
-         * @description The number is encrypted, and a keyed hash finds the same licence on another account (a risk flag, not an error). The identity check confirms it when the person uses their licence as the ID; otherwise support staff check it.
+         * @description The number is encrypted, and a keyed hash finds the same licence on another account (a risk flag, not an error). The identity check confirms it when the person uses their licence as the ID; otherwise support staff check it. The person’s upcoming bookings are checked against the new details: a request that no longer qualifies waits for support, and support hear of a confirmed trip that no longer does.
          */
         put: {
             parameters: {
@@ -7882,7 +7883,7 @@ export interface paths {
         put?: never;
         /**
          * Start the identity check (Stripe Identity)
-         * @description A photo of an ID (the driver licence if possible) and a matching selfie, on Stripe’s page. Stripe brings the person back to `returnTo`, a path on the website.
+         * @description A photo of an ID (the driver licence if possible) and a matching selfie, on Stripe’s page. Stripe brings the person back to `returnTo`, a path on the website. A check under way carries on: one waiting for the person reopens; 409 IDENTITY_PROCESSING while Stripe is checking one, ALREADY_VERIFIED or IN_REVIEW once its result is applied. A new check starts only when the last was cancelled.
          */
         post: {
             parameters: {
@@ -8554,7 +8555,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a booking, or withdraw a request
-         * @description The Guest: an unpaid checkout is released, a request withdrawn (nothing charged), a confirmed booking refunded under its tier. The Host: a confirmed booking is refunded in full and any Host cancellation fee applies; a request is declined instead (409 USE_DECLINE).
+         * @description The Guest: an unpaid checkout is released, a request withdrawn (nothing charged), a confirmed booking refunded under its tier; after the pick-up time it counts as not turning up, so the tier applies as at the start time. The Host: a confirmed booking is refunded in full and any Host cancellation fee applies, until the start time (then 409 TRIP_STARTED: support handles it); a request is declined instead (409 USE_DECLINE). With expectedRefundCents, a refund now lower than the preview showed cancels nothing (409 REFUND_CHANGED).
          */
         post: {
             parameters: {
@@ -9158,11 +9159,16 @@ export interface paths {
         };
         /**
          * Your conversations, most recent first
-         * @description One thread per booking, as Guest and as Host. Live updates arrive over Socket.IO as `message`.
+         * @description One thread per booking, as Guest and as Host, 100 to a page unless fewer are asked for; `nextCursor` asks for the next. Live updates arrive over Socket.IO as `message`.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description The `nextCursor` of the page before, for the next page */
+                    cursor?: string;
+                    /** @description How many to return, most recent first: 1 to 100 */
+                    limit?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -9176,6 +9182,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["Threads"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -9871,7 +9886,7 @@ export interface paths {
         put?: never;
         /**
          * Record the check-in or check-out
-         * @description Photos of every required angle (uploaded first with POST /uploads/signature, purpose INSPECTION_PHOTO), the odometer, the fuel or battery level and damage pins. Check-in opens 2 hours before the start and starts the trip; check-out completes it, also on a trip support marked as started without a check-in (no extra kilometres are then worked out). The Guest must have confirmed their email before check-in. The other party is asked to confirm.
+         * @description Photos of every required angle (uploaded first with POST /uploads/signature, purpose INSPECTION_PHOTO), the odometer, the fuel or battery level and damage pins. Each upload is attached once: a key sent twice, or already on a report, is refused (400). A party’s photos can’t be taken before check-in opened, or, for check-out, before the check-in (400 PHOTOS_TOO_EARLY). Check-in opens 2 hours before the start and starts the trip, and closes at the end time (409 CHECK_IN_CLOSED: support sorts out the booking); check-out completes it, also on a trip support marked as started without a check-in (no extra kilometres are then worked out). The Guest must have confirmed their email before check-in. 409 NOT_CHECK_IN or NOT_CHECK_OUT when it’s already done, also by the other party at the same moment. The other party is asked to confirm.
          */
         post: {
             parameters: {
@@ -10191,6 +10206,175 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/bookings/{id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: correct a reading on a condition report
+         * @description The odometer and/or fuel or battery level of the CHECK_IN or CHECK_OUT report, with a note for the audit log (before and after are logged). The check-out odometer can’t be below the check-in one (400). Both parties see the correction in the booking’s messages. On a completed trip a changed odometer works the extra kilometres out again at once (`extraKm`): a charge not yet paid is cancelled and replaced; one paid already stays, with any more due charged on top, or what was paid over to refund with the refund tools. 404 when that report isn’t done yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReadingCorrectionRequest"];
+                };
+            };
+            responses: {
+                /** @description Corrected */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffHandoverResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bookings/{id}/extra-km": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff with the refunds permission: charge the extra kilometres now
+         * @description From the readings as they stand, without the daily review limit (`trips.extraKmReviewAboveKmPerDay`) and without waiting for the other party to confirm the check-out: for a charge held for review once staff have checked the readings. A charge not yet paid is replaced if the amount differs. 409 NOT_COMPLETED or NO_READINGS when there’s nothing to work it out from.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The booking id or reference */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Charged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffHandoverResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/host/payouts": {
         parameters: {
             query?: never;
@@ -10269,11 +10453,14 @@ export interface paths {
         };
         /**
          * The earnings dashboard
-         * @description Earnings count on the trip’s start date in NZ time, weeks run Monday to Sunday, and amounts are net of Host-funded refunds and Host cancellation fees.
+         * @description Earnings count on the trip’s start date in NZ time, weeks run Monday to Sunday, and amounts are net of Host-funded refunds and Host cancellation fees. With `month`, the per-trip breakdown has every trip starting that month.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description A month, 2026-10: every trip starting in it, rather than the latest 100 */
+                    month?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -10287,6 +10474,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["Earnings"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Not signed in, or the session has ended */
@@ -10945,7 +11141,7 @@ export interface paths {
         };
         /**
          * A member’s public profile and the published reviews about them
-         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. This is the public profile plan §11 lists as GET /users/{id}/profile, open to visitors. A closed or suspended account is not found.
+         * @description Only what each party may see of the other (plan §6.2), and the reviews about them as Guest and as Host, without the booking each came from. Open to visitors. A closed or suspended account is not found.
          */
         get: {
             parameters: {
@@ -10965,6 +11161,56 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["UserReviews"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A member’s public profile
+         * @description The public profile of plan §11: only the fields of plan §6.2 (first name, photo, year joined, whether verified, ratings and trips as Guest and Host, and a Host’s bio and response rate), as GET /users/{id}/reviews gives it, without the reviews. Open to visitors. A closed or suspended account is not found.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserProfileResponse"];
                     };
                 };
                 /** @description Not found */
@@ -12120,7 +12366,81 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Staff: correct a person’s name, date of birth or email (a privacy request)
+         * @description After checking the details, e.g. against their ID (plan §14). Changes a name or date of birth a passed identity check has locked, noted in the audit log, which has each change before and after with the reason. A new email is marked unverified and a confirmation link sent to it; the old address is told. 409 EMAIL_TAKEN, ACCOUNT_CLOSED; 403 OWN_RECORD for their own account, FORBIDDEN for a staff account unless the admin.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminUserUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminUserResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/admin/users/{id}/suspend": {
@@ -12611,10 +12931,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Staff: people with risk flags to review */
+        /**
+         * Staff: people with risk flags to review
+         * @description Most open flags first, then the longest waiting; 25 a page, with nextPage when there are more.
+         */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    page?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -12630,6 +12955,15 @@ export interface paths {
                         "application/json": components["schemas"]["RiskQueue"];
                     };
                 };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /** @description Not signed in, or the session has ended */
                 401: {
                     headers: {
@@ -12641,6 +12975,76 @@ export interface paths {
                 };
                 /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff: download a copy of a person’s information (a privacy request)
+         * @description A JSON file of their account, bookings, payments and refunds, payouts, messages they sent, reviews by and about them, support requests and the incidents they reported (plan §14). Other people’s details, internal notes and staff-only fields are left out. Any staff member, audit-logged; 403 OWN_RECORD for their own account.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The JSON file */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -13794,7 +14198,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Staff: change a ticket’s status, or take it */
+        /**
+         * Staff: change a ticket’s status, take it, or hand it to someone
+         * @description Whoever is handed the ticket is notified; it is in the audit log. Not to someone the ticket is about (409 OWN_RECORD), nor to anyone who isn’t active staff (409 NOT_STAFF).
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -13848,6 +14255,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -15898,6 +16314,8 @@ export interface components {
             /** @description The name must match the ID once the identity check has passed or is being checked: it is then corrected through a privacy request (POST /me/privacy-requests), not PATCH /me */
             nameLocked: boolean;
             roles: ("GUEST" | "HOST" | "ADMIN" | "SUPPORT")[];
+            /** @description Staff only: what they can do beyond their role (plan §6.2), e.g. REFUNDS for refunds, charges, payments and payouts. The admin has every one. */
+            permissions?: "REFUNDS"[];
             emailVerified: boolean;
             /** @description Verified mobile number, E.164 (+64211234567) */
             phone?: string;
@@ -16117,10 +16535,10 @@ export interface components {
         };
         AccountClosure: {
             allowed: boolean;
-            /** @description Why the account can’t be closed yet (plan §8.2): a trip or booking still to come or under way, an open incident, an unpaid charge or a payout still due */
+            /** @description Why the account can’t be closed yet (plan §8.2): a trip or booking still to come or under way, an open incident, an unpaid charge or a payout still due, Host fees or refunds owed, a failed refund still to return, an open card dispute, or a trip still in its damage-report window or whose extra kilometres aren’t worked out yet */
             blockers: {
                 /** @enum {string} */
-                code: "UPCOMING_TRIP" | "HOSTED_BOOKING" | "OPEN_INCIDENT" | "UNPAID_CHARGE" | "PAYOUT_DUE";
+                code: "UPCOMING_TRIP" | "HOSTED_BOOKING" | "OPEN_INCIDENT" | "UNPAID_CHARGE" | "PAYOUT_DUE" | "FEES_OWED" | "REFUND_PENDING" | "OPEN_DISPUTE" | "RECENT_TRIP";
                 message: string;
             }[];
         };
@@ -16129,6 +16547,8 @@ export interface components {
             ref: string;
             /** @description The same request was already open, so no new one was made */
             alreadyOpen: boolean;
+            /** @description With alreadyOpen: the message was added to the open request, which goes back to support (as a reply does) */
+            added: boolean;
         };
         PrivacyRequest: {
             /**
@@ -16193,6 +16613,8 @@ export interface components {
             stillInReview?: string[];
             /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
             carSuspended?: string[];
+            /** @description Bookings not confirmed because the Guest’s licence no longer meets the rules for that trip (it expires before the trip ends, say): they keep waiting until the Guest updates it, support cancels them or their time runs out */
+            licenceNotEligible?: string[];
         };
         LicenceReviewRequest: {
             /** @enum {string} */
@@ -16287,6 +16709,7 @@ export interface components {
                 lateReturnGraceMinutes: number;
                 damageReportWindowHours: number;
                 threadReadOnlyDays: number;
+                extraKmReviewAboveKmPerDay: number;
             };
             search: {
                 maxTripDays: number;
@@ -16379,6 +16802,11 @@ export interface components {
                     note: string;
                 };
                 verificationServices: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                retentionAndRisk: {
                     /** @enum {string} */
                     status: "PENDING" | "CONFIRMED";
                     note: string;
@@ -16478,6 +16906,7 @@ export interface components {
                 lateReturnGraceMinutes: number;
                 damageReportWindowHours: number;
                 threadReadOnlyDays: number;
+                extraKmReviewAboveKmPerDay: number;
             };
             search?: {
                 maxTripDays: number;
@@ -16570,6 +16999,11 @@ export interface components {
                     note: string;
                 };
                 verificationServices?: {
+                    /** @enum {string} */
+                    status: "PENDING" | "CONFIRMED";
+                    note: string;
+                };
+                retentionAndRisk?: {
                     /** @enum {string} */
                     status: "PENDING" | "CONFIRMED";
                     note: string;
@@ -17360,6 +17794,8 @@ export interface components {
         };
         Attachment: {
             url: string;
+            /** @description A message photo’s smaller copy, to show in the conversation; `url` opens the photo */
+            previewUrl?: string;
             name?: string;
             contentType?: string;
         };
@@ -17500,6 +17936,15 @@ export interface components {
             wofExpiry?: string;
             /** @description YYYY-MM-DD */
             cofExpiry?: string;
+            /** @description On an approved car: later expiry dates the Host entered, waiting for staff to verify a document of that type showing them. Search and booking use the dates above until then */
+            pendingExpiries?: {
+                /** @description YYYY-MM-DD */
+                regoExpiry?: string;
+                /** @description YYYY-MM-DD */
+                wofExpiry?: string;
+                /** @description YYYY-MM-DD */
+                cofExpiry?: string;
+            };
             rucValidToKm?: number;
             ownerIsHost: boolean;
             pricing?: {
@@ -18032,7 +18477,7 @@ export interface components {
             vehicle: components["schemas"]["HostVehicle"];
             /** @description What the Host changed among the plate, VIN, chassis number, make, model and year since the listing was live (plan §3). Empty until they change one; cleared when staff approve or reject the listing. */
             keyChanges: components["schemas"]["KeyChange"][];
-            /** @description While the car is suspended: its pending, confirmed and current bookings, for staff to keep or cancel (plan §8.2) */
+            /** @description While the car is suspended, back for review over its key details, or rejected: its pending, confirmed and current bookings, for staff to keep or cancel (plan §8.2). Rejecting a car back for review leaves them booked */
             upcomingBookings?: components["schemas"]["AdminBookingRow"][];
             host: {
                 id: string;
@@ -18095,6 +18540,7 @@ export interface components {
             licence: {
                 /** @enum {string} */
                 class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
+                /** @description ISO 3166-1 alpha-2 code of the country that issued it */
                 country: string;
                 /** @description The last 3 characters, to recognise it */
                 numberEnding: string;
@@ -18123,7 +18569,10 @@ export interface components {
         DriverLicenceInput: {
             number: string;
             version?: string;
-            /** @default New Zealand */
+            /**
+             * @description Overseas licences: the ISO 3166-1 alpha-2 code of the country that issued it, e.g. AU (an English name like Australia is read as its code). NZ licences are NZ
+             * @default NZ
+             */
             country: string;
             /** @enum {string} */
             class: "NZ_FULL" | "NZ_RESTRICTED" | "NZ_LEARNER" | "OVERSEAS";
@@ -18262,6 +18711,11 @@ export interface components {
                 /** @description The GST included in the commission */
                 commissionGstCents: number;
                 /**
+                 * @description The payout below: the trip’s, or a cancelled booking’s share of the kept fee
+                 * @enum {string}
+                 */
+                type?: "TRIP" | "CANCELLATION_FEE" | "EXTRA_CHARGE";
+                /**
                  * @description Once confirmed: the trip’s payout
                  * @enum {string}
                  */
@@ -18279,6 +18733,43 @@ export interface components {
                 expectedInBankBy?: string;
                 /** @description Everything paid out for the booking so far, less any taken back for refunds */
                 paidCents?: number;
+                /** @description Once confirmed (or cancelled): what the booking earned the Host, as its row on the earnings page and statement */
+                earnings?: {
+                    rentalCents: number;
+                    deliveryCents: number;
+                    extraChargesCents: number;
+                    /** @description Cancelled: the Host’s part of the fee kept, before commission */
+                    keptFeeCents: number;
+                    commissionCents: number;
+                    commissionGstCents: number;
+                    hostFundedRefundsCents: number;
+                    /** @description Less any part waived */
+                    hostCancellationFeeCents: number;
+                    netCents: number;
+                };
+                /** @description What this booking’s payouts settled for other bookings (Host cancellation fees, refunds, payouts already sent): part of what it earned, though not paid out */
+                settled?: {
+                    /** @enum {string} */
+                    type: "HOST_CANCELLATION_FEE" | "HOST_FUNDED_REFUND" | "OTHER";
+                    amountCents: number;
+                    bookingRef?: string;
+                    /** @description A payout already sent for that booking, owed back */
+                    payoutSent?: boolean;
+                }[];
+                /** @description What the Host’s other payouts took off for this booking */
+                settledElsewhere?: {
+                    amountCents: number;
+                    /** @description The booking whose payout it came off */
+                    bookingRef: string;
+                    /** @description A payout already sent for this booking, rather than a refund */
+                    payoutSent?: boolean;
+                }[];
+                /** @description Still owed for this booking, to come off the Host’s next payout */
+                owed?: {
+                    refundsCents: number;
+                    /** @description A trip payout sent before the booking was cancelled, less the Host’s share */
+                    payoutSentCents: number;
+                };
                 /** @description Refunds made to the Guest on the booking and its extra charges, oldest first */
                 refunds?: {
                     amountCents: number;
@@ -18291,6 +18782,8 @@ export interface components {
                     fundedBy: "PLATFORM" | "HOST";
                     /** @description HOST: what the Host pays back for it, their share; Rento Vroom covers its commission */
                     hostCents?: number;
+                    /** @description The cancellation’s own refund, settled by the policy rather than the Host’s payout */
+                    cancellation?: boolean;
                     /** @description A refund of one of the booking’s extra charges */
                     extraCharge?: boolean;
                 }[];
@@ -18356,6 +18849,8 @@ export interface components {
                  */
                 refundStatus?: "PENDING" | "SUCCEEDED" | "FAILED";
                 feeCents?: number;
+                /** @description Refunds made before the cancellation, which came off what it could give back (all of the payment, when the refund is 0 and nothing was kept) */
+                earlierRefundCents?: number;
                 hostShareCents?: number;
                 hostFeeCents?: number;
             } | null;
@@ -18571,6 +19066,8 @@ export interface components {
         };
         CancelBookingRequest: {
             reason?: string;
+            /** @description The refund the preview showed: when the refund worked out now is less, nothing is cancelled (409 REFUND_CHANGED, with the new preview’s message in fields.expectedRefundCents) */
+            expectedRefundCents?: number;
         };
         DeclineBookingRequest: {
             reason?: string;
@@ -18767,6 +19264,8 @@ export interface components {
             stillInReview?: string[];
             /** @description Bookings not confirmed because their car (or its Host) is suspended: confirmed when the suspension is lifted, unless their time runs out first */
             carSuspended?: string[];
+            /** @description Bookings not confirmed because the Guest’s licence no longer meets the rules for that trip (it expires before the trip ends, say): they keep waiting until the Guest updates it, support cancels them or their time runs out */
+            licenceNotEligible?: string[];
         };
         IdentityReviewRequest: {
             /** @enum {string} */
@@ -18775,7 +19274,10 @@ export interface components {
         };
         Threads: {
             threads: components["schemas"]["ThreadSummary"][];
+            /** @description Unread messages in every conversation, not just on this page */
             unreadTotal: number;
+            /** @description Pass as `cursor` for the next page. Left out on the last page */
+            nextCursor?: string;
         };
         ThreadSummary: {
             /** @description The booking's reference; one thread per booking */
@@ -18960,6 +19462,11 @@ export interface components {
              * @description Check-in opens 2 hours before the start
              */
             checkInOpensAt: string;
+            /**
+             * Format: date-time
+             * @description The end time: check-in is closed after it (409 CHECK_IN_CLOSED), and support sorts out the booking
+             */
+            checkInClosesAt: string;
             checkIn: components["schemas"]["ConditionReport"];
             checkOut: components["schemas"]["ConditionReport"];
             /**
@@ -19000,7 +19507,7 @@ export interface components {
             photos: {
                 /** @enum {string} */
                 angle: "FRONT" | "REAR" | "DRIVER_SIDE" | "PASSENGER_SIDE" | "WHEELS" | "WINDSCREEN" | "INTERIOR" | "DASHBOARD" | "DAMAGE";
-                /** @description A private link that works for 10 minutes */
+                /** @description A private link that works for at least 10 minutes */
                 url: string;
                 /** @enum {string} */
                 takenBy: "GUEST" | "HOST" | "STAFF";
@@ -19101,6 +19608,31 @@ export interface components {
              */
             photos: components["schemas"]["InspectionPhotoInput"][];
         };
+        StaffHandoverResponse: {
+            handover: components["schemas"]["Handover"];
+            extraKm?: components["schemas"]["ExtraKmResult"];
+        };
+        ExtraKmResult: {
+            /**
+             * @description CHARGED: a charge (or what more is due) is being collected; UNCHANGED: the charge stands; NONE: nothing to charge; OVERCHARGED: more was paid than is due (refundCents to refund); HELD: above the daily review limit
+             * @enum {string}
+             */
+            outcome: "CHARGED" | "UNCHANGED" | "NONE" | "OVERCHARGED" | "HELD";
+            amountCents?: number;
+            refundCents?: number;
+            message: string;
+        };
+        ReadingCorrectionRequest: {
+            /**
+             * @description Which report: CHECK_IN or CHECK_OUT
+             * @enum {string}
+             */
+            stage: "CHECK_IN" | "CHECK_OUT";
+            odometer?: number;
+            fuelOrBatteryPct?: number;
+            /** @description Why, for the audit log */
+            note: string;
+        };
         HostPayouts: {
             account: components["schemas"]["PayoutAccount"];
             /** @description Payouts still to be sent, soonest first (on the first page only), then paid ones, newest first, a page at a time */
@@ -19123,6 +19655,8 @@ export interface components {
             feesOwedCents: number;
             /** @description Host-funded refunds made after a booking’s payout, still to come off a payout */
             refundsOwedCents: number;
+            /** @description A trip payout sent before its booking was cancelled (a Guest no-show), less the Host’s share of the kept fee: still to come off a payout */
+            payoutsOwedCents: number;
         };
         HostPayout: {
             id: string;
@@ -19144,6 +19678,8 @@ export interface components {
                 amountCents: number;
                 /** @description HOST_FUNDED_REFUND: the booking the refund was made on */
                 bookingRef?: string;
+                /** @description HOST_FUNDED_REFUND: not a refund, but a payout already sent for that booking before it was cancelled, owed back */
+                payoutSent?: boolean;
             }[];
             /** @description Taken back from the transfer for Host-funded refunds after it was paid */
             reversedCents?: number;
@@ -19174,7 +19710,7 @@ export interface components {
                 monthCents: number;
                 previousMonthCents: number;
                 lifetimeCents: number;
-                /** @description Payouts still to be sent, less the deductions already reserved for them */
+                /** @description What the payouts still to be sent will bring, as they are sent: less the deductions reserved for each, or the Host-funded refunds of its own booking, and the Host cancellation fees and refunds the Host owes */
                 upcomingPayoutsCents: number;
                 platformFeesMonthCents: number;
                 platformFeesLifetimeCents: number;
@@ -19185,9 +19721,16 @@ export interface components {
                 month: string;
                 netCents: number;
             }[];
-            /** @description Newest trip first, up to 100 */
+            /** @description Newest trip first: every trip starting in `month`, or the latest 100 without it */
             bookings: components["schemas"]["EarningsRow"][];
+            /** @description Every month with a trip (2026-10), newest first, future ones included */
+            tripMonths: string[];
             gstRegistered: boolean;
+            /** @description GST-registered Hosts: who charges the commission, for their tax invoice, with its GST number once it has one */
+            supplier?: {
+                name: string;
+                gstNumber?: string;
+            };
         };
         EarningsRow: {
             ref: string;
@@ -19348,6 +19891,9 @@ export interface components {
                 bio?: string;
             };
         };
+        UserProfileResponse: {
+            profile: components["schemas"]["PublicProfile"];
+        };
         ModerationReviews: {
             reviews: components["schemas"]["ModerationReview"][];
         };
@@ -19412,6 +19958,8 @@ export interface components {
              * @enum {string}
              */
             role: "GUEST" | "HOST" | "STAFF";
+            /** @description Guest and Host only: support is waiting for the viewer’s answer (the case awaits a response, and support asked them, not only the other party) */
+            awaitingYou?: boolean;
             /** @description Staff only: the support member handling it */
             assignedTo?: string;
             /** @description Staff only: their user id */
@@ -19452,7 +20000,7 @@ export interface components {
         };
         IncidentEvent: {
             id: string;
-            /** @description OPENED, COMMENT, STATUS, ASSIGNED, UNASSIGNED, CHARGE_ADDED */
+            /** @description OPENED, COMMENT, STATUS, ASSIGNED, UNASSIGNED, CHARGE_ADDED, CHARGE_CANCELLED, CHARGE_REFUNDED */
             action: string;
             /** @enum {string} */
             by: "YOU" | "GUEST" | "HOST" | "SUPPORT";
@@ -19500,6 +20048,8 @@ export interface components {
              * @enum {string}
              */
             role: "GUEST" | "HOST" | "STAFF";
+            /** @description Guest and Host only: support is waiting for the viewer’s answer (the case awaits a response, and support asked them, not only the other party) */
+            awaitingYou?: boolean;
             /** @description Staff only: the support member handling it */
             assignedTo?: string;
             /** @description Staff only: their user id */
@@ -19567,7 +20117,7 @@ export interface components {
             /** @enum {string} */
             type: "FUEL" | "CLEANING" | "LATE_RETURN" | "DAMAGE" | "TOLL" | "FINE" | "OTHER";
             description: string;
-            /** @description On a damage, accident or theft case under a protection plan, the case’s charges together stay within the plan’s excess (`chargeLimitCents`; 409 OVER_EXCESS above it) */
+            /** @description On a damage, accident or theft case under a protection plan, the case’s charges together stay within the plan’s excess (`chargeLimitCents`; 409 OVER_EXCESS above it); on any other case, its DAMAGE charges do */
             amountCents: number;
             /** @description A new value (such as a UUID) for each charge the form submits: the same one sent again adds no second charge */
             idempotencyKey?: string;
@@ -19605,7 +20155,10 @@ export interface components {
                 riskFlags: number;
                 /** @description Payments that didn’t go through in the last 30 NZ days, today included: GET /admin/payments?view=failed with `from` 29 days before today */
                 failedPayments: number;
+                /** @description Payouts on hold: GET /admin/payouts?status=HELD */
                 heldPayouts: number;
+                /** @description Payouts whose transfer failed: GET /admin/payouts?status=FAILED */
+                failedPayouts: number;
                 failedJobs: number;
             };
             /** Format: date-time */
@@ -19729,6 +20282,11 @@ export interface components {
         };
         RiskQueue: {
             users: components["schemas"]["RiskUser"][];
+            /** @description People with a flag to review */
+            total: number;
+            page: number;
+            /** @description Set when there are more */
+            nextPage?: number;
         };
         RiskUser: {
             id: string;
@@ -19748,6 +20306,19 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             flags: components["schemas"]["RiskFlag"][];
+        };
+        AdminUserUpdateRequest: {
+            firstName?: string;
+            lastName?: string;
+            /**
+             * Format: date
+             * @description Their date of birth, an NZ calendar date
+             */
+            dob?: string;
+            /** @description Marked unverified, and a link to confirm it is emailed to the new address */
+            email?: string;
+            /** @description Why, e.g. the privacy request’s reference and what was checked */
+            reason: string;
         };
         AdminBookings: {
             bookings: components["schemas"]["AdminBookingRow"][];
@@ -19904,7 +20475,10 @@ export interface components {
                 userId?: string;
             };
             bookingRef?: string;
+            /** @description The name of the staff member handling it */
             assignedTo?: string;
+            /** @description Their user id */
+            assignedToId?: string;
             messages: number;
             /** Format: date-time */
             updatedAt: string;
@@ -19927,7 +20501,10 @@ export interface components {
                 userId?: string;
             };
             bookingRef?: string;
+            /** @description The name of the staff member handling it */
             assignedTo?: string;
+            /** @description Their user id */
+            assignedToId?: string;
             messages: number;
             /** Format: date-time */
             updatedAt: string;
@@ -19967,6 +20544,8 @@ export interface components {
             /** @enum {string} */
             status?: "OPEN" | "PENDING" | "RESOLVED";
             assignToMe?: boolean;
+            /** @description Hand the ticket to an active support member or the admin (from GET /admin/incidents/assignees), or null for nobody. 409 NOT_STAFF for anyone else, OWN_RECORD for someone the ticket is about */
+            assignTo?: string | null;
         };
         AdminReports: {
             reports: components["schemas"]["AdminReport"][];

@@ -223,22 +223,37 @@ export function statusLabel(
 
 /**
  * The refund and the kept part of a cancellation, in a sentence: "Refunded $506.50." A refund Stripe hasn't
- * finished is on its way, and one that failed is with our team (plan §8.1, item 21).
+ * finished is on its way, and one that failed is with our team (plan §8.1, item 21). Refunds made before the
+ * cancellation came off what it gave back: all of the payment may have gone back already.
  */
 export function refundSentence(cancellation: NonNullable<Booking['cancellation']>): string | null {
-  const { refundCents, feeCents, refundStatus } = cancellation;
+  const { refundCents, feeCents, refundStatus, earlierRefundCents } = cancellation;
   if (refundCents === undefined) return null;
-  if (refundCents === 0 && !feeCents) return 'Nothing was charged.';
+  const earlier = earlierRefundCents ? formatNzd(earlierRefundCents) : null;
+  if (refundCents === 0 && !feeCents) {
+    return earlier
+      ? `Already refunded: ${earlier} went back to your card before it was cancelled.`
+      : 'Nothing was charged.';
+  }
+  const before = earlier ? ` ${earlier} was refunded before that.` : '';
   if (refundCents === 0)
-    return `Not refundable under the cancellation policy (${formatNzd(feeCents ?? 0)} kept).`;
-  const refund = `${feeCents ? '' : 'full '}refund of ${formatNzd(refundCents)}`;
+    return `Not refundable under the cancellation policy (${formatNzd(feeCents ?? 0)} kept).${before}`;
+  // After an earlier refund, nothing kept means the rest of the payment, not a full refund.
+  const refund = feeCents
+    ? `refund of ${formatNzd(refundCents)}`
+    : earlier
+      ? `refund of the rest, ${formatNzd(refundCents)},`
+      : `full refund of ${formatNzd(refundCents)}`;
   const kept = feeCents ? ` ${formatNzd(feeCents)} is kept under the cancellation policy.` : '';
   if (refundStatus === 'FAILED')
-    return `Your ${refund} didn’t go through to your card. Our team is sorting it and will be in touch.${kept}`;
+    return `Your ${refund} didn’t go through to your card. Our team is sorting it and will be in touch.${kept}${before}`;
   if (refundStatus === 'PENDING')
-    return `Your ${refund} is on its way: it usually reaches your account within 5–10 working days.${kept}`;
-  if (!feeCents) return `Refunded in full: ${formatNzd(refundCents)}.`;
-  return `Refunded ${formatNzd(refundCents)}; ${formatNzd(feeCents)} kept under the cancellation policy.`;
+    return `Your ${refund} is on its way: it usually reaches your account within 5–10 working days.${kept}${before}`;
+  if (!feeCents)
+    return earlier
+      ? `Refunded the rest of your payment: ${formatNzd(refundCents)}.${before}`
+      : `Refunded in full: ${formatNzd(refundCents)}.`;
+  return `Refunded ${formatNzd(refundCents)}; ${formatNzd(feeCents)} kept under the cancellation policy.${before}`;
 }
 
 /**

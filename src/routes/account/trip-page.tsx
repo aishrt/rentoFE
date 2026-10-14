@@ -28,6 +28,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { toast } from '@/components/ui/toast';
+import { AccountShell } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import {
   bookingQueryKey,
@@ -109,11 +110,49 @@ function Banner({
 /** A booking whose payment went through has a GST receipt, refunded or not. */
 const PAID: NonNullable<Booking['payment']>['status'][] = ['SUCCEEDED', 'REFUNDED', 'PARTIALLY_REFUNDED'];
 
-const CANCELLED_BY: Record<NonNullable<Booking['cancellation']>['by'], (host: string) => string> = {
+type Cancellation = NonNullable<Booking['cancellation']>;
+
+const CANCELLED_BY: Record<Cancellation['by'], (host: string) => string> = {
   GUEST: () => 'You cancelled this trip',
   HOST: (host) => `${host} cancelled this trip`,
   SUPPORT: () => 'Rento Vroom support cancelled this trip',
 };
+
+const HOST_REFUND = 'A host cancellation always gets you a full refund.';
+
+/**
+ * Why a trip was cancelled, in the Guest's words (plan §8.2: each labelled, and the Guest told what is
+ * happening): who cancelled it and, when support did, the reason they gave.
+ */
+function cancelledWords(cancellation: Cancellation, host: string): { title: string; why?: string } {
+  switch (cancellation.reason) {
+    case 'REQUEST_WITHDRAWN':
+      return { title: 'You withdrew this request' };
+    case 'GUEST_NO_SHOW':
+      return {
+        title: 'Cancelled as a no-show',
+        why: 'Rento Vroom support cancelled this trip as a no-show at the pick-up time, so the cancellation policy applies as at that time.',
+      };
+    case 'HOST_NO_SHOW':
+      return {
+        title: `${host} couldn’t provide the car`,
+        why: `Rento Vroom support cancelled this trip because ${host} couldn’t provide the car. ${HOST_REFUND}`,
+      };
+    case 'HOST_CANCELLED':
+      return {
+        title: `${host} cancelled this trip`,
+        why:
+          cancellation.by === 'SUPPORT'
+            ? `Rento Vroom support cancelled it for them. ${HOST_REFUND}`
+            : HOST_REFUND,
+      };
+    default:
+      return {
+        title: CANCELLED_BY[cancellation.by](host),
+        ...(cancellation.by === 'HOST' && { why: HOST_REFUND }),
+      };
+  }
+}
 
 type ExpiryReason = NonNullable<Booking['expiry']>['reason'];
 
@@ -291,25 +330,14 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
     }
     case 'CANCELLED': {
       const cancellation = booking.cancellation;
-      const withdrawn = cancellation?.reason === 'REQUEST_WITHDRAWN';
+      const words = cancellation ? cancelledWords(cancellation, host) : null;
       return (
-        <Banner
-          tone="danger"
-          icon={Undo2}
-          title={
-            withdrawn
-              ? 'You withdrew this request'
-              : cancellation
-                ? CANCELLED_BY[cancellation.by](host)
-                : 'This trip was cancelled'
-          }
-        >
+        <Banner tone="danger" icon={Undo2} title={words?.title ?? 'This trip was cancelled'}>
           {cancellation && (
             <p>
-              {withdrawn
+              {cancellation.reason === 'REQUEST_WITHDRAWN'
                 ? 'Your card authorisation was released. Nothing was charged.'
-                : refundSentence(cancellation)}
-              {cancellation.by === 'HOST' && ' A host cancellation always gets you a full refund.'}
+                : [words?.why, refundSentence(cancellation)].filter(Boolean).join(' ')}
             </p>
           )}
         </Banner>
@@ -421,7 +449,8 @@ function Trip({ tripRef }: { tripRef: string }) {
       <TripStatus booking={booking} onPaid={paid} />
       {booking.status === 'ACTIVE' && <ActiveTripPanel booking={booking} base={`/trips/${booking.ref}`} />}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      {/* Two columns once there's room beside the dashboard's sidebar, as on the Host's booking page. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="grid gap-6">
           <HandoverCard booking={booking} base={`/trips/${booking.ref}`} />
           <DetailCard title="Pick-up and return" icon={CalendarClock}>
@@ -522,7 +551,8 @@ function Trip({ tripRef }: { tripRef: string }) {
 
 /**
  * One trip as the Guest sees it (spec §8): where it stands, when and where to collect and return the car, the
- * host, protection, the cancellation policy and the receipt, and cancelling with the refund shown first.
+ * host, protection, the cancellation policy and the receipt, and cancelling with the refund shown first. In
+ * the Guest's dashboard (plan §12.6); the Host of the booking is sent to its page in the Host area.
  */
 export function TripPage() {
   const { ref = '' } = useParams();
@@ -530,9 +560,11 @@ export function TripPage() {
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={TripRoute} />
       <PageMeta title={ref ? `Trip ${ref}` : 'Trip'} noindex />
-      <RequireSignedIn fallback={<BookingPageSkeleton />}>
-        {() => <Trip key={ref} tripRef={ref} />}
-      </RequireSignedIn>
+      <AccountShell>
+        <RequireSignedIn fallback={<BookingPageSkeleton />}>
+          {() => <Trip key={ref} tripRef={ref} />}
+        </RequireSignedIn>
+      </AccountShell>
     </Container>
   );
 }

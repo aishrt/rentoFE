@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, client, unwrap } from '@/api/client';
 import type { AdminUserDetail } from '@/api/types';
 import { formErrorMessage } from '@/features/account/form-errors';
@@ -54,12 +54,17 @@ export function useAdminUser(id: string) {
   });
 }
 
-/** People with risk flags to review, most flags first. */
+/**
+ * People with risk flags to review, most flags first, a page at a time: `data.pages` holds the pages loaded
+ * so far, and `fetchNextPage` adds the next ("Show more").
+ */
 export function useRiskQueue() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: riskQueueQueryKey,
-    queryFn: ({ signal }) => unwrap(client.GET('/admin/risk', { signal })),
-    select: (data) => data.users,
+    queryFn: ({ pageParam, signal }) =>
+      unwrap(client.GET('/admin/risk', { params: { query: { page: pageParam } }, signal })),
+    initialPageParam: 1,
+    getNextPageParam: (last) => last.nextPage,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
@@ -102,6 +107,35 @@ export async function clearRiskFlagRequest(input: { id: string; flagId: string }
       }),
     )
   ).user;
+}
+
+/** A privacy request to correct their name, date of birth or email; only what changes is sent. */
+export async function correctUserRequest(input: {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  dob?: string;
+  email?: string;
+  reason: string;
+}): Promise<AdminUserDetail> {
+  const { id, ...body } = input;
+  return (await unwrap(client.PATCH('/admin/users/{id}', { ...path(id), body }))).user;
+}
+
+/**
+ * A privacy request for a copy of their information: downloads it as a JSON file. Any staff member; the
+ * API keeps a record of each download.
+ */
+export async function downloadUserData(id: string): Promise<void> {
+  const blob = await unwrap(client.GET('/admin/users/{id}/export', { ...path(id), parseAs: 'blob' }));
+  const url = URL.createObjectURL(blob as Blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `rento-vroom-data-${id}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 /** Admin only. Anonymises the account; refused (409 CLOSURE_BLOCKED) while anything is under way. */
@@ -151,6 +185,7 @@ const USER_ERROR_CODES = [
   'NOT_SUSPENDED',
   'NOTHING_OWED',
   'NOT_FOUND',
+  'EMAIL_TAKEN',
 ];
 
 /** The message an action on a user shows for an API error, or null when it belongs to a form field. */

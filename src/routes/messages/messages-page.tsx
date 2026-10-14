@@ -150,9 +150,12 @@ function Inbox({ isHost, asHost }: { isHost: boolean; asHost: boolean }) {
   } else if (!threads.data) {
     body = <ConversationsSkeleton />;
   } else {
-    const shown = threads.data.threads.filter(
-      (thread) => filter === 'all' || (filter === 'guest' ? thread.role === 'GUEST' : thread.role === 'HOST'),
-    );
+    const shown = threads.data.pages
+      .flatMap((page) => page.threads)
+      .filter(
+        (thread) =>
+          filter === 'all' || (filter === 'guest' ? thread.role === 'GUEST' : thread.role === 'HOST'),
+      );
     body =
       shown.length === 0 ? (
         <EmptyState
@@ -182,7 +185,7 @@ function Inbox({ isHost, asHost }: { isHost: boolean; asHost: boolean }) {
       ) : (
         <ul className="grid grid-cols-1 gap-3">
           {shown.map((thread, index) => (
-            <li key={thread.ref} className="stagger-in" style={staggerIndex(index)}>
+            <li key={thread.ref} className="stagger-in" style={staggerIndex(index % 100)}>
               <ConversationRow thread={thread} opened={opened} />
             </li>
           ))}
@@ -218,6 +221,18 @@ function Inbox({ isHost, asHost }: { isHost: boolean; asHost: boolean }) {
         })}
       >
         {body}
+        {/* The inbox comes 100 conversations at a time. */}
+        {threads.hasNextPage && (
+          <div className="mt-6">
+            <Button
+              variant="secondary"
+              loading={threads.isFetchingNextPage}
+              onClick={() => void threads.fetchNextPage()}
+            >
+              Show more
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { client, unwrap } from '@/api/client';
 import type { Message, Messages, ReportRequest, SendMessageRequest } from '@/api/types';
+import { notificationsQueryKey } from '@/features/notifications/notification-keys';
 import {
   addMessage,
   messagesQueryKey,
@@ -20,11 +21,17 @@ import {
 
 const FALLBACK_REFRESH_MS = 60_000;
 
-/** Every conversation, newest first, with the unread total. */
+/**
+ * The conversations, most recent first, a page at a time (the API's pages hold 100): `fetchNextPage` adds
+ * the next ("Show more"). Each page carries the unread total of every conversation.
+ */
 export function useThreads() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: threadListQueryKey,
-    queryFn: ({ signal }) => unwrap(client.GET('/threads', { signal })),
+    queryFn: ({ pageParam, signal }) =>
+      unwrap(client.GET('/threads', { params: { query: pageParam ? { cursor: pageParam } : {} }, signal })),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor,
     refetchInterval: FALLBACK_REFRESH_MS,
     staleTime: 15_000,
   });
@@ -84,7 +91,7 @@ export function useSendMessage(ref: string) {
   });
 }
 
-/** Marks the conversation read, so its unread count and the badge clear. */
+/** Marks the conversation read, so its unread count, the badge and its notices in the bell clear. */
 export function useReadThread(ref: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -92,6 +99,7 @@ export function useReadThread(ref: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: threadListQueryKey });
       void queryClient.invalidateQueries({ queryKey: unreadMessagesQueryKey });
+      void queryClient.invalidateQueries({ queryKey: notificationsQueryKey });
     },
   });
 }

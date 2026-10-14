@@ -34,6 +34,37 @@ function api(vehicle: HostVehicle, handlers: Parameters<typeof mockApi>[0] = {})
 const body = (init: RequestInit | undefined) => JSON.parse(String(init?.body)) as Record<string, unknown>;
 
 describe('VehicleEditorPage', () => {
+  it('shows a live car’s new expiry date waiting for our check, on the car and on its documents', async () => {
+    const live = sampleVehicle({
+      status: 'ACTIVE',
+      regoExpiry: '2026-12-31',
+      pendingExpiries: { regoExpiry: '2027-12-31' },
+    });
+    api(live);
+    render('/host/vehicles/v1');
+    expect(await screen.findByText(/^New expiry dates waiting for our check/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/The registration date .*2027 applies once we’ve checked the new registration/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Until then, guests can book up to .*31 Dec/)).toBeInTheDocument();
+  });
+
+  it('starts the documents step with the date waiting for our check, and says so', async () => {
+    api(
+      sampleVehicle({
+        status: 'ACTIVE',
+        regoExpiry: '2026-12-31',
+        pendingExpiries: { regoExpiry: '2027-12-31' },
+      }),
+    );
+    render('/host/vehicles/v1/2');
+    expect(
+      await screen.findByText(
+        /Your new date applies once our team has checked the new registration\. Until then, guests can book up to .*31 Dec/,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('saves step 1 with PATCH, including the furthest step, then moves on to documents', async () => {
     let sent: Record<string, unknown> | undefined;
     api(sampleVehicle(), {

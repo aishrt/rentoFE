@@ -22,6 +22,7 @@ import {
   type OverviewMetric,
 } from '@/features/admin/overview-metrics';
 import { useAdminDashboard } from '@/features/admin/use-admin-overview';
+import { handlesMoney } from '@/features/admin/use-money-permission';
 import { useSession } from '@/features/auth/use-session';
 import { formatDateValue } from '@/lib/dates';
 import { formatLongDateNz, formatNumber, formatTimeNz, nzHour } from '@/lib/format';
@@ -89,13 +90,16 @@ function FigureGroup({
 function WaitingCard({
   queues,
   isAdmin,
+  money,
   now,
 }: {
   queues: AdminDashboard['queues'] | undefined;
   isAdmin: boolean;
+  /** Payments and payouts: the admin, and support staff with the refunds permission. */
+  money: boolean;
   now: Date;
 }) {
-  const links = queueLinks.filter((link) => isAdmin || !link.adminOnly);
+  const links = queueLinks.filter((link) => (isAdmin || !link.adminOnly) && (money || !link.money));
   return (
     <Card asChild className="mt-8 p-6 sm:p-8">
       <section aria-labelledby="waiting-heading">
@@ -152,6 +156,7 @@ function WaitingCard({
 export function AdminOverviewPage() {
   const session = useSession();
   const isAdmin = session.data?.roles.includes('ADMIN') ?? false;
+  const money = handlesMoney(session.data);
   const dates = useDateRange();
   const dashboard = useAdminDashboard(dates.range);
   const [now] = useState(() => new Date());
@@ -243,7 +248,7 @@ export function AdminOverviewPage() {
         )}
       </section>
 
-      {!dashboard.isError && <WaitingCard queues={data?.queues} isAdmin={isAdmin} now={now} />}
+      {!dashboard.isError && <WaitingCard queues={data?.queues} isAdmin={isAdmin} money={money} now={now} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/alert';
@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { applyFieldErrors } from '@/features/account/form-errors';
+import { DatePartsField } from '@/features/booking/date-parts-field';
 import { formatNzd } from '@/features/booking/booking-format';
 import { dollarsToCents } from '@/features/admin/ops/admin-labels';
 import { userErrorMessage, waiveFeeErrorMessage } from './users-api';
@@ -173,6 +174,152 @@ function ReasonForm({
         </Field>
       </fieldset>
       <Actions confirmLabel={confirmLabel} tone={tone} pending={confirm.isPending} />
+    </form>
+  );
+}
+
+// Correct details -------------------------------------------------------------------------------------------
+
+/** What a privacy request can correct (PATCH /admin/users/{id}). */
+export interface DetailsCorrection {
+  firstName?: string;
+  lastName?: string;
+  dob?: string;
+  email?: string;
+  reason: string;
+}
+
+const correctSchema = z.object({
+  firstName: z.string().trim().min(1, 'Enter their first name').max(50, 'Use 50 characters or fewer'),
+  lastName: z.string().trim().min(1, 'Enter their last name').max(50, 'Use 50 characters or fewer'),
+  dob: z.string().refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Enter a real date'),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(z.email({ error: 'Enter a valid email address' })),
+  reason: reasonSchema,
+});
+type CorrectValues = z.infer<typeof correctSchema>;
+
+interface CorrectDetailsDialogProps extends Omit<BaseProps, 'title' | 'description'> {
+  current: { firstName: string; lastName: string; dob?: string; email: string };
+  /** Their identity check passed, so the name and date of birth are fixed to their ID. */
+  identityChecked: boolean;
+  /** Saves only what changed. An API error it throws shows in the dialog. */
+  onConfirm: (input: DetailsCorrection) => Promise<void>;
+}
+
+/**
+ * Corrects someone's name, date of birth or email when they ask (a privacy request, plan §14), once staff have
+ * checked them, e.g. against their ID. A new email has to be confirmed from the link sent to it.
+ */
+export function CorrectDetailsDialog({ open, onOpenChange, ...form }: CorrectDetailsDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title="Correct their details"
+        description="When they’ve asked us to, after checking the details, for example against their ID. They can change their mobile and password themselves."
+      >
+        <CorrectForm {...form} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const CORRECT_FIELDS = ['firstName', 'lastName', 'dob', 'email', 'reason'] as const;
+
+function CorrectForm({
+  current,
+  identityChecked,
+  onConfirm,
+}: Omit<CorrectDetailsDialogProps, keyof BaseProps>) {
+  const confirm = useMutation({ mutationFn: onConfirm });
+  const {
+    register,
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<CorrectValues>({
+    resolver: zodResolver(correctSchema),
+    defaultValues: {
+      firstName: current.firstName,
+      lastName: current.lastName,
+      dob: current.dob ?? '',
+      email: current.email,
+      reason: '',
+    },
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
+    const changes: DetailsCorrection = {
+      ...(values.firstName !== current.firstName && { firstName: values.firstName }),
+      ...(values.lastName !== current.lastName && { lastName: values.lastName }),
+      ...(values.dob && values.dob !== current.dob && { dob: values.dob }),
+      ...(values.email !== current.email && { email: values.email }),
+      reason: values.reason,
+    };
+    if (Object.keys(changes).length === 1) {
+      setError('firstName', { message: 'Change at least one detail' }, { shouldFocus: true });
+      return;
+    }
+    try {
+      await confirm.mutateAsync(changes);
+    } catch (error) {
+      applyFieldErrors(error, CORRECT_FIELDS, setError);
+    }
+  });
+
+  return (
+    <form noValidate onSubmit={onSubmit} className="grid gap-5">
+      {identityChecked && (
+        <Alert>
+          Their identity check has passed: correct the name and date of birth only to match their ID. The
+          audit log notes it.
+        </Alert>
+      )}
+      <ErrorAlert message={confirm.isError ? userErrorMessage(confirm.error) : null} />
+      <fieldset disabled={confirm.isPending} className="grid min-w-0 gap-4">
+        <legend className="sr-only">Their details</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="First name" error={errors.firstName?.message}>
+            <Input autoComplete="off" {...register('firstName')} />
+          </Field>
+          <Field label="Last name" error={errors.lastName?.message}>
+            <Input autoComplete="off" {...register('lastName')} />
+          </Field>
+        </div>
+        <Controller
+          control={control}
+          name="dob"
+          render={({ field }) => (
+            <DatePartsField
+              ref={field.ref}
+              legend="Date of birth"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              error={errors.dob?.message}
+            />
+          )}
+        />
+        <Field
+          label="Email"
+          description="A new address is unconfirmed until they open the link we email to it. We tell the old address."
+          error={errors.email?.message}
+        >
+          <Input type="email" autoComplete="off" {...register('email')} />
+        </Field>
+        <Field
+          label="Reason"
+          description="For the audit log: their request’s reference and what you checked."
+          error={errors.reason?.message}
+        >
+          <Textarea maxLength={REASON_MAX} {...register('reason')} />
+        </Field>
+      </fieldset>
+      <Actions confirmLabel="Save details" tone="primary" pending={confirm.isPending} />
     </form>
   );
 }

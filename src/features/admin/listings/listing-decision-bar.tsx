@@ -106,8 +106,16 @@ const DIALOGS: Record<
   },
 };
 
-/** `payoutsReady`: the Host has set up payouts, so an approved listing goes live at once (plan §8.2). */
-function dialogDescription(decision: ListingDecision, live: boolean, payoutsReady: boolean): string {
+/**
+ * `payoutsReady`: the Host has set up payouts, so an approved listing goes live at once (plan §8.2).
+ * `upcoming`: the bookings of a car back for review, which a rejection leaves booked.
+ */
+function dialogDescription(
+  decision: ListingDecision,
+  live: boolean,
+  payoutsReady: boolean,
+  upcoming = 0,
+): string {
   if (decision === 'approve') {
     if (live) return 'They go on the live listing straight away.';
     return payoutsReady
@@ -116,6 +124,10 @@ function dialogDescription(decision: ListingDecision, live: boolean, payoutsRead
   }
   if (decision === 'request-changes') {
     return "It goes back to the Host, and can't be booked until they submit it again and it's approved.";
+  }
+  if (upcoming > 0) {
+    const these = upcoming === 1 ? 'This booking stays' : `These ${upcoming} bookings stay`;
+    return `It won't go live, and we'll email the Host your note. ${these} booked: cancel ${upcoming === 1 ? 'it' : 'them'} for the Host from each booking if the car can't be used.`;
   }
   return "It won't go live. We'll email the Host your note.";
 }
@@ -241,7 +253,12 @@ export function ListingDecisionBar({ listing }: { listing: AdminVehicle }) {
         open={open}
         onOpenChange={setOpen}
         title={decision === 'approve' && live ? 'Approve the new photos and documents?' : dialog.title}
-        description={dialogDescription(decision, live, host.payoutsEnabled)}
+        description={dialogDescription(
+          decision,
+          live,
+          host.payoutsEnabled,
+          listing.upcomingBookings?.length ?? 0,
+        )}
         confirmLabel={decision === 'approve' && live ? 'Approve' : dialog.confirmLabel}
         tone={dialog.tone}
         notes={decision === 'approve' ? 'optional' : 'required'}

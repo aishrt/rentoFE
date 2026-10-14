@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { StatusBadge } from '@/features/booking/booking-parts';
 import { dollarsToCents } from '@/features/admin/ops/admin-labels';
+import { useHandlesMoney } from '@/features/admin/use-money-permission';
 import { formatNzd } from '@/features/booking/booking-format';
 import { useIncidentCharge } from './operations-api';
 import {
@@ -194,6 +195,7 @@ function ChargeForm({ incident }: { incident: Incident }) {
  */
 export function IncidentCharges({ incident }: { incident: Incident }) {
   const resolved = incident.status === 'RESOLVED';
+  const money = useHandlesMoney();
   return (
     <Card asChild className="p-5 sm:p-6">
       <section aria-labelledby="case-charges-title">
@@ -231,7 +233,11 @@ export function IncidentCharges({ incident }: { incident: Incident }) {
                 ' For damage, an accident or theft, the case’s charges stay within it.'}
             </p>
           )}
-          {resolved ? (
+          {resolved && !money ? (
+            <p className="text-sm text-muted">
+              Charging the Guest needs the refunds permission. Ask an admin to add it, or to make the charge.
+            </p>
+          ) : resolved ? (
             <>
               <p className="mb-4 text-sm text-muted">
                 Charged to the Guest’s saved card, and the Host’s share is paid on to them as its own payout.

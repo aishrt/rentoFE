@@ -99,6 +99,19 @@ const withMessage = (
 
 const details = () => within(screen.getByRole('complementary', { name: 'Ticket details' }));
 
+// Who a ticket can be handed to; the signed-in staff member is Aroha.
+const team = {
+  'GET /admin/incidents/assignees': {
+    status: 200,
+    body: {
+      assignees: [
+        { id: 'u1', name: 'Aroha Admin', you: true },
+        { id: 'u3', name: 'Tama Tester', you: false },
+      ],
+    },
+  },
+};
+
 describe('AdminTicketPage', () => {
   it('shows the conversation, with internal notes marked, and who and what it’s about', async () => {
     mockApi({ 'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } } });
@@ -129,7 +142,7 @@ describe('AdminTicketPage', () => {
       'href',
       '/admin/bookings/RV-7K2M9Q/thread?context=TICKET:ST-ABC123',
     );
-    expect(panel.getByText('Nobody yet')).toBeInTheDocument();
+    expect(panel.getByRole('button', { name: 'Handled by Nobody yet' })).toBeInTheDocument();
     expect(panel.getByRole('button', { name: /^Status/ })).toHaveTextContent('Open');
   });
 
@@ -339,10 +352,14 @@ describe('AdminTicketPage', () => {
   it('assigns the ticket to me', async () => {
     let sent: unknown;
     mockApi({
+      ...team,
       'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } },
       'PATCH /admin/support/tickets/ST-ABC123': (init) => {
         sent = JSON.parse(String(init?.body));
-        return { status: 200, body: { ticket: { ...ticket, assignedTo: 'Aroha Admin' } } };
+        return {
+          status: 200,
+          body: { ticket: { ...ticket, assignedTo: 'Aroha Admin', assignedToId: 'u1' } },
+        };
       },
     });
     render();
@@ -351,8 +368,73 @@ describe('AdminTicketPage', () => {
 
     expect(await screen.findByText('Assigned to you')).toBeInTheDocument();
     expect(sent).toEqual({ assignToMe: true });
-    expect(details().getByText('Aroha Admin')).toBeInTheDocument();
-    expect(details().queryByText('Nobody yet')).not.toBeInTheDocument();
+    expect(
+      await details().findByRole('button', { name: 'Handled by Aroha Admin (you)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hands the ticket to someone else on the team, or to nobody', async () => {
+    const sent: unknown[] = [];
+    mockApi({
+      ...team,
+      'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } },
+      'PATCH /admin/support/tickets/ST-ABC123': (init) => {
+        const body = JSON.parse(String(init?.body)) as { assignTo: string | null };
+        sent.push(body);
+        return {
+          status: 200,
+          body: {
+            ticket: body.assignTo
+              ? { ...ticket, assignedTo: 'Tama Tester', assignedToId: body.assignTo }
+              : ticket,
+          },
+        };
+      },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(await details().findByRole('button', { name: 'Handled by Nobody yet' }));
+    const list = within(await screen.findByRole('listbox', { name: 'Support team' }));
+    expect(list.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Nobody yet',
+      'Aroha Admin (you)',
+      'Tama Tester',
+    ]);
+    await userEvent.click(list.getByRole('option', { name: 'Tama Tester' }));
+
+    expect(await screen.findByText('Assigned to Tama Tester')).toBeInTheDocument();
+    expect(screen.getByText('We’ve let them know.')).toBeInTheDocument();
+    await userEvent.click(details().getByRole('button', { name: 'Handled by Tama Tester' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Nobody yet' }));
+    expect(await screen.findByText('Nobody has the ticket now')).toBeInTheDocument();
+    expect(sent).toEqual([{ assignTo: 'u3' }, { assignTo: null }]);
+  });
+
+  it('says why a ticket can’t go to someone it’s about', async () => {
+    mockApi({
+      ...team,
+      'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket } },
+      'PATCH /admin/support/tickets/ST-ABC123': {
+        status: 409,
+        body: {
+          error: {
+            code: 'OWN_RECORD',
+            message: 'Choose someone else: this request is about their own account.',
+            fields: { assignTo: 'This request is about their own account' },
+          },
+        },
+      },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(await details().findByRole('button', { name: 'Handled by Nobody yet' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Tama Tester' }));
+
+    expect(await details().findByRole('alert')).toHaveTextContent(
+      'Choose someone else: this request is about their own account.',
+    );
   });
 
   it('changes the status', async () => {

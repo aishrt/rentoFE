@@ -230,9 +230,12 @@ describe('CheckoutPage: signing in midway', () => {
         (request) => (request.body as { protectionPlanCode: string }).protectionPlanCode === 'PREMIUM',
       ),
     ).toBe(true);
-    // The licence is checked against the trip's end.
+    // The licence is checked against the trip's end, and age against its start.
     expect(sent.find((request) => request.path === '/me/checkout')?.query.get('end')).toBe(
       '2026-12-09T10:00',
+    );
+    expect(sent.find((request) => request.path === '/me/checkout')?.query.get('start')).toBe(
+      '2026-12-01T10:00',
     );
   });
 });
@@ -292,7 +295,7 @@ describe('CheckoutPage: verification', () => {
       class: 'NZ_FULL',
       number: 'AB123456',
       version: '123',
-      country: 'New Zealand',
+      country: 'NZ',
       notInEnglish: false,
       issuedAt: '2012-02-04',
       expiry: '2032-02-04',

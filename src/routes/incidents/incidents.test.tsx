@@ -49,6 +49,7 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
     },
   ],
   canReply: true,
+  awaitingYou: true,
   extraCharges: [],
   ...overrides,
 });
@@ -140,7 +141,78 @@ describe('NewIncidentPage', () => {
   });
 });
 
+describe('NewIncidentPage evidence', () => {
+  it('asks for the notice of a toll before sending, and shows what the API says about the files', async () => {
+    const sent = mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'POST /incidents':
+          return {
+            status: 400,
+            body: {
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Some details need fixing.',
+                fields: { attachments: 'Up to 10 files' },
+              },
+            },
+          };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter(
+      [{ path: '/incidents/new', element: <NewIncidentPage /> }],
+      '/incidents/new?booking=RV-7K2Q9M&type=TOLL',
+    );
+
+    await userEvent.type(
+      await screen.findByLabelText('Tell us what happened'),
+      'A toll notice for the Northern Gateway came in the post.',
+    );
+    expect(screen.getByText('A photo or PDF of the toll notice.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(screen.getByText('Attach a photo or PDF of the notice')).toBeInTheDocument();
+    expect(sent.some((request) => request.path === '/incidents')).toBe(false);
+
+    // Something else: the API's word on the files shows under them.
+    await userEvent.click(screen.getByRole('radio', { name: /Something else/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByText('Up to 10 files')).toBeInTheDocument();
+    expect(screen.getByText('Some details need fixing.')).toBeInTheDocument();
+  });
+});
+
 describe('NewIncidentPage trip choice', () => {
+  it('says when the trips couldn’t load, and tries again', async () => {
+    let down = true;
+    mockRoutes((request) => {
+      if (request.method === 'POST' && request.path === '/auth/session') {
+        return { status: 200, body: { user: guestUser } };
+      }
+      if (request.method === 'GET' && request.path === '/bookings') {
+        if (down) {
+          return { status: 503, body: { error: { code: 'UNAVAILABLE', message: 'Please try again.' } } };
+        }
+        const mine = request.query.get('role') === 'guest' && request.query.get('group') === 'completed';
+        return {
+          status: 200,
+          body: { bookings: mine ? [summary({ status: 'COMPLETED', ref: 'RV-OLD001' })] : [] },
+        };
+      }
+      return undefined;
+    });
+    renderWithRouter([{ path: '/incidents/new', element: <NewIncidentPage /> }], '/incidents/new');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t load your trips');
+    expect(screen.queryByText('No trips to report on')).not.toBeInTheDocument();
+    down = false;
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('group', { name: 'Which trip is it about?' })).toBeInTheDocument();
+  });
+
   /** 15 finished trips as Guest, the oldest a car whose toll notice came weeks later. */
   const finished = Array.from({ length: 15 }, (_, index) =>
     summary({
@@ -241,5 +313,28 @@ describe('IncidentPage', () => {
 
     expect(await screen.findByText('Only our support team sees it.')).toBeInTheDocument();
     expect(screen.getByText('(only you and our support team see this)')).toBeInTheDocument();
+  });
+
+  it('doesn’t say it’s waiting for the side support didn’t ask', async () => {
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /incidents/IN-4F7K2Q':
+          return {
+            status: 200,
+            body: {
+              incident: incident({ role: 'HOST', awaitingYou: false, events: [incident().events[0]!] }),
+            },
+          };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter([{ path: '/incidents/:ref', element: <IncidentPage /> }], '/incidents/IN-4F7K2Q');
+
+    expect(await screen.findByText('With our team')).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for you')).not.toBeInTheDocument();
+    expect(screen.queryByText('Our team is waiting for you')).not.toBeInTheDocument();
   });
 });

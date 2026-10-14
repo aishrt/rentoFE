@@ -31,6 +31,8 @@ import { useReportIncident } from '@/features/incidents/incidents-api';
 import { cn } from '@/lib/cn';
 
 const REPORTABLE: BookingSummary['status'][] = ['CONFIRMED', 'ACTIVE', 'COMPLETED'];
+/** Reported with the notice itself (plan §8.2, tolls and fines), as the API requires. */
+const NEEDS_NOTICE: readonly IncidentType[] = ['TOLL', 'FINE'];
 
 /**
  * Emergency help first, for an accident, theft or breakdown (plan §9, Days 20–21): 111, then the roadside
@@ -87,7 +89,9 @@ function BookingChoice({ onChoose }: { onChoose: (ref: string) => void }) {
   const guestDone = useBookings('guest', 'completed');
   const host = useBookings('host', 'current');
   const hostDone = useBookings('host', 'completed');
-  const loading = [guest, guestDone, host, hostDone].some((query) => query.isPending);
+  const queries = [guest, guestDone, host, hostDone];
+  const failed = queries.filter((query) => query.isError);
+  const loading = queries.some((query) => query.isPending);
   const finished = [guestDone, hostDone]
     .flatMap((query) => query.data ?? [])
     .sort((a, b) => b.end.localeCompare(a.end));
@@ -98,6 +102,28 @@ function BookingChoice({ onChoose }: { onChoose: (ref: string) => void }) {
   const matching = bookings.filter((booking) => words.every((word) => tripText(booking).includes(word)));
   const visible = matching.slice(0, shown);
 
+  // A list that couldn't load isn't an empty one: say so, and offer to try again.
+  if (failed.length > 0) {
+    return (
+      <Alert
+        variant="danger"
+        role="alert"
+        title="We couldn’t load your trips"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={failed.some((query) => query.isFetching)}
+            onClick={() => failed.forEach((query) => void query.refetch())}
+          >
+            Try again
+          </Button>
+        }
+      >
+        {failed[0]!.error?.message}
+      </Alert>
+    );
+  }
   if (loading) return <Skeleton aria-hidden="true" className="h-40 rounded-card" />;
   if (bookings.length === 0) {
     return (
@@ -190,9 +216,11 @@ function Report() {
   }
 
   const fields = report.error instanceof ApiError ? (report.error.fields ?? {}) : {};
+  const needsNotice = type !== '' && NEEDS_NOTICE.includes(type);
+  const noticeMissing = needsNotice && evidence.attachments.length === 0;
   const send = () => {
     setTried(true);
-    if (!type || description.trim().length < 10) return;
+    if (!type || description.trim().length < 10 || noticeMissing) return;
     report.mutate(
       { bookingRef, type, description: description.trim(), attachments: evidence.attachments },
       {
@@ -238,11 +266,20 @@ function Report() {
         />
       </Field>
       <div className="grid gap-2">
-        <p className="text-sm font-medium text-ink">Photos and documents (optional)</p>
+        <p className="text-sm font-medium text-ink">
+          {needsNotice ? 'The notice' : 'Photos and documents (optional)'}
+        </p>
         <p className="text-sm text-muted">
-          Photos of the damage, a police report, a toll or infringement notice, receipts.
+          {needsNotice
+            ? `A photo or PDF of the ${type === 'TOLL' ? 'toll' : 'infringement'} notice.`
+            : 'Photos of the damage, a police report, a toll or infringement notice, receipts.'}
         </p>
         <EvidencePicker evidence={evidence} />
+        {((tried && noticeMissing) || fields.attachments) && (
+          <p role="alert" className="text-sm text-danger">
+            {tried && noticeMissing ? 'Attach a photo or PDF of the notice' : fields.attachments}
+          </p>
+        )}
       </div>
       {report.isError && (
         <Alert variant="danger" role="alert">

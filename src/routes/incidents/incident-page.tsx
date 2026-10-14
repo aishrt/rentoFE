@@ -20,7 +20,11 @@ import { StatusBadge } from '@/features/booking/booking-parts';
 import { formatNzDateTime, formatNzd } from '@/features/booking/booking-format';
 import { EvidencePicker } from '@/features/incidents/evidence-picker';
 import { useEvidence } from '@/features/incidents/use-evidence';
-import { INCIDENT_STATUS_LABELS, incidentTypeLabel } from '@/features/incidents/incident-labels';
+import {
+  INCIDENT_STATUS_LABELS,
+  incidentStatusLabel,
+  incidentTypeLabel,
+} from '@/features/incidents/incident-labels';
 import { useIncident, useReplyToIncident } from '@/features/incidents/incidents-api';
 import { cn } from '@/lib/cn';
 
@@ -164,7 +168,7 @@ function Case({ caseRef }: { caseRef: string }) {
         <p className="eyebrow mt-4 text-primary">Case {data.caseRef}</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="headline text-title-3 font-medium">{incidentTypeLabel(data.type)}</h1>
-          <StatusBadge status={INCIDENT_STATUS_LABELS[data.status]} />
+          <StatusBadge status={incidentStatusLabel(data.status, data.awaitingYou)} />
         </div>
         <p className="mt-2 text-muted">
           <Link to={bookingPath} className="link-underline text-primary">
@@ -174,7 +178,8 @@ function Case({ caseRef }: { caseRef: string }) {
         </p>
       </div>
 
-      {data.status === 'AWAITING_RESPONSE' && (
+      {/* Only the side support asked: a question for the other party alone isn't for them to answer. */}
+      {data.status === 'AWAITING_RESPONSE' && data.awaitingYou && (
         <Alert variant="info" title="Our team is waiting for you">
           Please read the latest update and reply below.
         </Alert>

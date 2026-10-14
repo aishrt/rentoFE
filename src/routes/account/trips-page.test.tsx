@@ -102,6 +102,29 @@ describe('TripsPage', () => {
     expect(sent.at(-1)?.query.get('group')).toBe('cancelled');
   });
 
+  it('shows more trips a page at a time', async () => {
+    const pages = [] as (string | null)[];
+    mockRoutes((request) => {
+      if (request.path === '/auth/session') return { status: 200, body: { user: guestUser } };
+      if (request.path === '/policies') return { status: 200, body: policies };
+      if (request.path !== '/bookings') return undefined;
+      if (request.query.get('group') !== 'completed') return { status: 200, body: { bookings: [] } };
+      const page = request.query.get('page');
+      pages.push(page);
+      return page === '2'
+        ? { status: 200, body: { bookings: [summary({ id: 'bk2', ref: 'RV-OLDER', status: 'COMPLETED' })] } }
+        : { status: 200, body: { bookings: [summary({ status: 'COMPLETED' })], nextPage: 2 } };
+    });
+    render('/trips?tab=completed');
+
+    expect(await screen.findAllByRole('link', { name: /Toyota/ })).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(await screen.findAllByRole('link', { name: /Toyota/ })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    expect(pages).toEqual([null, '2']);
+  });
+
   it('opens on the tab in the link', async () => {
     mockTrips({ completed: [summary({ status: 'COMPLETED' })] });
     render('/trips?tab=completed');

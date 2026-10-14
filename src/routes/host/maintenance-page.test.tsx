@@ -95,6 +95,56 @@ describe('MaintenancePage', () => {
     expect(screen.getByRole('button', { name: 'Save reminders' })).toBeDisabled();
   });
 
+  it('checks the kilometres before sending, and shows the API’s messages beside their fields', async () => {
+    const user = userEvent.setup();
+    const sent = mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: hostUser } };
+        case 'GET /host/vehicles/v1':
+          return { status: 200, body: { vehicle: car } };
+        case 'GET /host/vehicles/v1/maintenance-reminders':
+          return { status: 200, body: { reminders: [], latestOdometer: 42350 } };
+        case 'PUT /host/vehicles/v1/maintenance-reminders':
+          return {
+            status: 400,
+            body: {
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Some details need fixing.',
+                fields: {
+                  'reminders.0.notes': 'Keep it under 500 characters',
+                  'reminders.0.dueOdometer': 'Enter 2,000,000 km or less',
+                },
+              },
+            },
+          };
+        default:
+          return undefined;
+      }
+    });
+    render();
+
+    await user.click(await screen.findByRole('button', { name: 'Add a reminder' }));
+    await user.type(screen.getByLabelText('What’s due'), 'Service');
+    await user.type(screen.getByLabelText('Or at (km)'), 'abc');
+    await user.click(screen.getByRole('button', { name: 'Save reminders' }));
+    expect(await screen.findByText('Enter whole kilometres, like 45,000')).toBeInTheDocument();
+    expect(sent.some((request) => request.method === 'PUT')).toBe(false);
+
+    await user.clear(screen.getByLabelText('Or at (km)'));
+    await user.type(screen.getByLabelText('Or at (km)'), '45,000');
+    await user.type(screen.getByLabelText('Notes (optional)'), 'Front tyres');
+    await user.click(screen.getByRole('button', { name: 'Save reminders' }));
+
+    expect(await screen.findByText('Keep it under 500 characters')).toBeInTheDocument();
+    expect(screen.getByText('Enter 2,000,000 km or less')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Some details need fixing.');
+    expect(sent.find((request) => request.method === 'PUT')?.body).toEqual({
+      reminders: [{ title: 'Service', dueOdometer: 45000, notes: 'Front tyres', done: false }],
+    });
+  });
+
   it('saves only once something changes, including removing every reminder', async () => {
     const user = userEvent.setup();
     const sent = api([service]);

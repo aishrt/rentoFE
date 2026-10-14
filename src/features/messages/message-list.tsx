@@ -17,8 +17,10 @@ function Photos({ message, mine }: { message: Message; mine: boolean }) {
   if (message.attachments.length === 0) return null;
   return (
     <ul className={cn('grid gap-1.5', message.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+      {/* By position: a photo's link changes now and then, the photo doesn't. */}
       {message.attachments.map((photo, index) => (
-        <li key={photo.url}>
+        <li key={index}>
+          {/* The smaller copy here; tapping opens the photo itself. */}
           <a
             href={photo.url}
             target="_blank"
@@ -29,7 +31,7 @@ function Photos({ message, mine }: { message: Message; mine: boolean }) {
             )}
           >
             <img
-              src={photo.url}
+              src={photo.previewUrl ?? photo.url}
               alt={photo.name ?? `Photo ${index + 1}`}
               loading="lazy"
               className="aspect-4/3 w-full max-w-64 bg-canvas object-cover"

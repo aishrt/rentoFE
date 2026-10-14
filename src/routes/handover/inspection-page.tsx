@@ -28,7 +28,15 @@ import { sessionQueryKey, useSession } from '@/features/auth/use-session';
 import { formatNzDateTime } from '@/features/booking/booking-format';
 import { ANGLE_LABELS } from '@/features/handover/angles';
 import { DamageEditor, type EditablePin } from '@/features/handover/damage-editor';
-import { useHandover, useSubmitInspection, type HandoverState } from '@/features/handover/handover-api';
+import {
+  checkInClosed,
+  supportPath,
+  UPLOADING_AGAIN,
+  uploadsGone,
+  useHandover,
+  useSubmitInspection,
+  type HandoverState,
+} from '@/features/handover/handover-api';
 import { PhotoCapture, PhotoStatusBadge } from '@/features/handover/photo-capture';
 import { useDeviceLocation } from '@/features/handover/use-device-location';
 import {
@@ -56,10 +64,14 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
   let title = `${STAGE_WORDS[stage].title} isn’t open`;
   let description = 'This trip isn’t at that point.';
   let icon = <Hourglass />;
+  const closed = checkInClosed(handover);
   if (done) {
     title = `${STAGE_WORDS[stage].title} is done`;
     description = `Recorded ${formatNzDateTime(done.submittedAt)} (NZ time). You can see the photos and readings on the handover.`;
     icon = <CircleCheck />;
+  } else if (stage === 'CHECK_IN' && closed) {
+    title = 'Check-in has closed';
+    description = 'The trip’s end time has passed. Please contact support and we’ll sort out the booking.';
   } else if (stage === 'CHECK_IN' && handover.bookingStatus === 'CONFIRMED') {
     title = 'Check-in opens 2 hours before the trip';
     description = `Come back from ${formatNzDateTime(handover.checkInOpensAt)} (NZ time).`;
@@ -74,11 +86,17 @@ function NotReady({ handover, stage }: { handover: Handover; stage: InspectionSt
       title={title}
       description={description}
       actions={
-        <Button asChild>
-          <Link to={done ? handoverPath(handover) : bookingPath(handover)}>
-            {done ? 'See the handover' : 'Back to the booking'}
-          </Link>
-        </Button>
+        stage === 'CHECK_IN' && closed && !done ? (
+          <Button asChild>
+            <Link to={supportPath(handover)}>Contact support</Link>
+          </Button>
+        ) : (
+          <Button asChild>
+            <Link to={done ? handoverPath(handover) : bookingPath(handover)}>
+              {done ? 'See the handover' : 'Back to the booking'}
+            </Link>
+          </Button>
+        )
       }
     />
   );
@@ -279,6 +297,10 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
             ...(newDamage && { state: { checkOutDamage: true } satisfies HandoverState }),
           });
         },
+        onError: (error) => {
+          // Each upload is attached once, and a refused report attached none: send them all again.
+          if (uploadsGone(error)) void store.uploadAgain();
+        },
       },
     );
 
@@ -463,13 +485,38 @@ function Flow({ handover, stage }: { handover: Handover; stage: InspectionStage 
               checked={accurate}
               onChange={(event) => setAccurate(event.target.checked)}
             />
-            {submit.isError && (
-              <Alert variant="danger" role="alert">
+            {submit.error instanceof ApiError && submit.error.code === 'LICENCE_NOT_ELIGIBLE' ? (
+              // The Guest's licence doesn't cover the trip (plan §3): it can't start until that's sorted out.
+              <Alert
+                variant="danger"
+                role="alert"
+                title={
+                  handover.role === 'GUEST'
+                    ? 'Your licence can’t be used for this trip'
+                    : 'The guest’s licence can’t be used for this trip'
+                }
+                action={
+                  <Button asChild size="sm" variant="secondary">
+                    {handover.role === 'GUEST' ? (
+                      <Link to="/account">Update your licence</Link>
+                    ) : (
+                      <Link to={`/contact?booking=${handover.ref}`}>Contact support</Link>
+                    )}
+                  </Button>
+                }
+              >
                 {submit.error.message}
-                {submit.error instanceof ApiError &&
-                  submit.error.fields &&
-                  Object.values(submit.error.fields).map((message) => <p key={message}>{message}</p>)}
               </Alert>
+            ) : (
+              submit.isError && (
+                <Alert variant="danger" role="alert">
+                  {uploadsGone(submit.error) ? UPLOADING_AGAIN : submit.error.message}
+                  {!uploadsGone(submit.error) &&
+                    submit.error instanceof ApiError &&
+                    submit.error.fields &&
+                    Object.values(submit.error.fields).map((message) => <p key={message}>{message}</p>)}
+                </Alert>
+              )
             )}
           </div>
         )}

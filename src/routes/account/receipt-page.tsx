@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { AccountShell } from '@/features/account/account-shell';
 import { downloadReceiptPdf, useReceipt } from '@/features/account/dashboard-api';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import {
@@ -272,17 +273,22 @@ function ReceiptView({ tripRef }: { tripRef: string }) {
 
 /**
  * A paid trip's GST receipt (spec §17; plan §8.1, item 18): a page to print, and a PDF to download, with
- * every line, the GST included, how it was paid and any refunds.
+ * every line, the GST included, how it was paid and any refunds. In the Guest's dashboard (plan §12.6),
+ * which isn't printed.
  */
 export function ReceiptPage() {
   const { ref = '' } = useParams();
   return (
-    <Container className="max-w-3xl py-8 sm:py-12 print:max-w-none print:p-0">
+    <Container className="py-8 sm:py-12 print:max-w-none print:p-0">
       <PageBackdrop art={TripRoute} />
       <PageMeta title={`Receipt ${ref}`} noindex />
-      <RequireSignedIn fallback={<Skeleton aria-hidden="true" className="h-[36rem] rounded-card" />}>
-        {() => <ReceiptView key={ref} tripRef={ref} />}
-      </RequireSignedIn>
+      <AccountShell>
+        <div className="max-w-3xl print:max-w-none">
+          <RequireSignedIn fallback={<Skeleton aria-hidden="true" className="h-[36rem] rounded-card" />}>
+            {() => <ReceiptView key={ref} tripRef={ref} />}
+          </RequireSignedIn>
+        </div>
+      </AccountShell>
     </Container>
   );
 }

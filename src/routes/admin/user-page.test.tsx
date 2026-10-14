@@ -430,6 +430,97 @@ describe('AdminUserPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('corrects their details on a privacy request, sending only what changed', async () => {
+    let sent: unknown;
+    mockApi({
+      'POST /auth/session': session(supportUser),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+      'PATCH /admin/users/u10': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { user: { ...aroha, lastName: 'Ngātahi', dob: '1990-03-15' } } };
+      },
+    });
+    render();
+
+    await userEvent.click(
+      await (await region('Privacy requests')).findByRole('button', { name: 'Correct details' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Correct their details' }));
+    expect(dialog.getByText(/Their identity check has passed/)).toBeInTheDocument();
+    expect(dialog.getByLabelText('First name')).toHaveValue('Aroha');
+    await userEvent.clear(dialog.getByLabelText('Last name'));
+    await userEvent.type(dialog.getByLabelText('Last name'), 'Ngātahi');
+    await userEvent.clear(dialog.getByLabelText('Day'));
+    await userEvent.type(dialog.getByLabelText('Day'), '15');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save details' }));
+    expect(await dialog.findByText('Add a short note saying why')).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await userEvent.type(dialog.getByLabelText('Reason'), 'ST-ABC123, checked against her passport');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save details' }));
+
+    expect(await screen.findByText('Details corrected')).toBeInTheDocument();
+    expect(sent).toEqual({
+      lastName: 'Ngātahi',
+      dob: '1990-03-15',
+      reason: 'ST-ABC123, checked against her passport',
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows an email already in use next to the email field', async () => {
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+      'PATCH /admin/users/u10': {
+        status: 409,
+        body: {
+          error: {
+            code: 'EMAIL_TAKEN',
+            message: 'That email address already has an account.',
+            fields: { email: 'That email address already has a Rento Vroom account' },
+          },
+        },
+      },
+    });
+    render();
+
+    await userEvent.click(
+      await (await region('Privacy requests')).findByRole('button', { name: 'Correct details' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Correct their details' }));
+    await userEvent.clear(dialog.getByLabelText('Email'));
+    await userEvent.type(dialog.getByLabelText('Email'), 'taken@example.co.nz');
+    await userEvent.type(dialog.getByLabelText('Reason'), 'Their new address');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save details' }));
+
+    expect(
+      await dialog.findByText('That email address already has a Rento Vroom account'),
+    ).toBeInTheDocument();
+  });
+
+  it('downloads a copy of their information', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/session': session(supportUser),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+      'GET /admin/users/u10/export': { status: 200, body: { account: { firstName: 'Aroha' } } },
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:data');
+    URL.revokeObjectURL = vi.fn();
+    render();
+
+    await userEvent.click(
+      await (await region('Privacy requests')).findByRole('button', { name: 'Download their data' }),
+    );
+
+    expect(await screen.findByText('Their information is downloading')).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String((input as Request).url).endsWith('/admin/users/u10/export'),
+      ),
+    ).toBe(true);
+  });
+
   it("shows why an account can't be closed yet", async () => {
     mockApi({
       'POST /auth/session': session(),
@@ -461,6 +552,11 @@ describe('AdminUserPage', () => {
     });
     render('u30');
 
+    // Only the admin corrects a staff account.
+    const privacy = await region('Privacy requests');
+    await vi.waitFor(() =>
+      expect(privacy.queryByRole('button', { name: 'Correct details' })).not.toBeInTheDocument(),
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Suspend' }));
     expect(screen.queryByRole('region', { name: 'Close account' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Support team' })).not.toBeInTheDocument();

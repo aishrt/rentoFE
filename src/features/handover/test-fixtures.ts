@@ -21,6 +21,8 @@ export function handover(overrides: Partial<Handover> = {}): Handover {
     fuelPolicy: 'SAME_LEVEL',
     requiredAngles: [...ANGLES],
     checkInOpensAt: '2026-10-11T19:00:00.000Z',
+    // Far off, so the tests never find check-in closed by the real clock.
+    checkInClosesAt: '2036-10-14T21:00:00.000Z',
     checkIn: null,
     checkOut: null,
     emailVerificationNeeded: false,

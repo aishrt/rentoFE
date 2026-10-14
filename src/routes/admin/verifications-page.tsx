@@ -42,6 +42,9 @@ function decidedToast({ item, decision }: Decision, outcome: VerificationOutcome
           // A suspended car takes no new bookings: confirmed once the suspension is lifted.
           outcome.carSuspended.length > 0 &&
             `${joinRefs(outcome.carSuspended)} waits: its car is suspended, so it’s confirmed only if the suspension is lifted in time.`,
+          // The licence doesn't cover that trip (plan §3): it waits for the Guest to update it, or a cancellation.
+          outcome.licenceNotEligible.length > 0 &&
+            `${joinRefs(outcome.licenceNotEligible)} isn’t confirmed: the licence doesn’t cover that trip. Cancel it from the booking if it can’t go ahead.`,
         ]
       : [
           outcome.released.length > 0 &&

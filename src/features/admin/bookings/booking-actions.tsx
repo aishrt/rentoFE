@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client';
 import type { AdminBookingDetail, AdminCancelRequest, AdminRefundRequest } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
+import { useHandlesMoney } from '@/features/admin/use-money-permission';
 import { formatNzd } from '@/features/booking/booking-format';
 import {
   adminBookingListsQueryKey,
@@ -51,6 +52,8 @@ const STALE_CODES = [
  */
 export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetail; queryRef: string }) {
   const queryClient = useQueryClient();
+  // Refunds need the refunds permission (plan §6.2): hidden from support staff without it.
+  const money = useHandlesMoney();
   const { booking } = detail;
   const [open, setOpen] = useState<Action | null>(null);
   // Kept while its dialog closes, so the dialog's text doesn't change as it animates out.
@@ -128,7 +131,7 @@ export function BookingActions({ detail, queryRef }: { detail: AdminBookingDetai
           {available.button}
         </Button>
       )}
-      {(detail.refundableCents > 0 || detail.refundableCharges.length > 0) && (
+      {money && (detail.refundableCents > 0 || detail.refundableCharges.length > 0) && (
         <Button variant="secondary" onClick={() => setOpen('refund')}>
           <Undo2 aria-hidden="true" />
           Refund

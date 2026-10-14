@@ -399,6 +399,68 @@ describe('AdminVehicleReviewPage: photos and documents', () => {
   });
 });
 
+describe('AdminVehicleReviewPage: a car back for review', () => {
+  const reReview = (extra: Partial<HostVehicle> = {}) =>
+    listing(
+      { regoPlate: 'QRS456', ...extra },
+      {},
+      {
+        keyChanges: [
+          { field: 'regoPlate', before: 'ABC123', after: 'QRS456', changedAt: '2026-10-07T21:00:00.000Z' },
+        ],
+        upcomingBookings: [
+          bookingRow({ id: 'bk9', ref: 'RV-9P4L2C', guest: { id: 'u7', name: 'Sam Rewi' } }),
+          bookingRow({ id: 'bk8', ref: 'RV-8K3M1D', guest: { id: 'u8', name: 'Mere Tane' } }),
+        ],
+      },
+    );
+
+  it('lists its bookings, and warns that rejecting it leaves them booked', async () => {
+    mockApi({ ...baseHandlers, 'GET /admin/vehicles/v1': reReview() });
+    render();
+
+    const bookings = await section('Upcoming bookings');
+    expect(bookings.getByText(/Rejecting the listing doesn’t cancel them/)).toBeInTheDocument();
+    expect(bookings.getByRole('link', { name: 'RV-9P4L2C' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-9P4L2C',
+    );
+
+    await userEvent.click((await decisionBar()).getByRole('button', { name: 'Reject' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Reject this listing?' }));
+    expect(
+      dialog.getByText(/These 2 bookings stay booked: cancel them for the Host from each booking/),
+    ).toBeInTheDocument();
+  });
+
+  it('says what verifying a new registration does to the car’s date', async () => {
+    mockApi({
+      ...baseHandlers,
+      'GET /admin/vehicles/v1': reReview({
+        regoExpiry: '2026-12-31',
+        pendingExpiries: { regoExpiry: '2027-12-31' },
+        documents: [
+          {
+            id: 'd1',
+            type: 'REGO',
+            status: 'PENDING',
+            expiry: '2027-12-31',
+            link: 'https://files.test/rego?s=1',
+          },
+        ],
+      }),
+    });
+    render();
+
+    const documents = await section('Documents');
+    expect(
+      within(documents.getByRole('listitem', { name: 'Registration' })).getByText(
+        /The Host entered .* as the new date\. Verifying moves the car’s date to .*2027 \(now .*2026\)/,
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('AdminVehicleReviewPage: the decision', () => {
   it("shows why a listing can't be approved when the Host isn't approved after all", async () => {
     const fetchMock = mockApi({
