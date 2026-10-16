@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { client, unwrap } from '@/api/client';
 import type { HostProfile } from '@/api/types';
-import { GST_NUMBER } from './application-schema';
+import { gstNumberProblem } from './application-schema';
 import { getHostProfileRequest, hostKeys } from './host-api';
 
 /** The Host's own profile (spec §9): how guests see them, and their GST details. */
@@ -29,20 +29,22 @@ export function useSaveHostProfile() {
   });
 }
 
-/** The API's own checks, for instant feedback. */
-export const hostProfileSchema = z
-  .object({
-    bio: z.string().trim().max(1000, 'Keep it under 1,000 characters'),
-    gstRegistered: z.boolean(),
-    gstNumber: z.string().trim(),
-  })
-  .superRefine((values, context) => {
-    if (!values.gstRegistered) return;
-    if (!values.gstNumber) {
-      context.addIssue({ code: 'custom', path: ['gstNumber'], message: 'Enter your GST number' });
-    } else if (!GST_NUMBER.test(values.gstNumber)) {
-      context.addIssue({ code: 'custom', path: ['gstNumber'], message: 'GST numbers look like 123-456-789' });
-    }
-  });
+/**
+ * The API's own checks, for instant feedback. Like the API, the check digit is checked only on a changed
+ * GST number, so one saved before that check doesn't stop the Host saving their bio.
+ */
+export const hostProfileSchema = (savedGstNumber = '') =>
+  z
+    .object({
+      bio: z.string().trim().max(1000, 'Keep it under 1,000 characters'),
+      gstRegistered: z.boolean(),
+      gstNumber: z.string().trim(),
+    })
+    .superRefine((values, context) => {
+      const problem = values.gstRegistered
+        ? gstNumberProblem(values.gstNumber, { checkDigit: values.gstNumber !== savedGstNumber })
+        : undefined;
+      if (problem) context.addIssue({ code: 'custom', path: ['gstNumber'], message: problem });
+    });
 
-export type HostProfileValues = z.infer<typeof hostProfileSchema>;
+export type HostProfileValues = z.infer<ReturnType<typeof hostProfileSchema>>;

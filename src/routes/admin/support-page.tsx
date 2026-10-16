@@ -42,6 +42,26 @@ const EMPTY: Record<Tab, { title: string; description: string }> = {
   RESOLVED: { title: 'No resolved tickets', description: 'Resolved tickets show here, the latest first.' },
 };
 
+const SEARCH_HINT = 'Try another search, or clear the category and “Assigned to me”.';
+
+/**
+ * What an empty list says. One member's requests (from a link on their record) may all be under another
+ * tab: To answer leaves out resolved ones, such as a privacy request already dealt with.
+ */
+function emptyList(filters: InboxFilters, tab: Tab): { title: string; description: string } {
+  const searched = Boolean(filters.q || filters.category || filters.mine);
+  const hint = (more: string) => [searched && SEARCH_HINT, more].filter(Boolean).join(' ');
+  if (filters.user && tab === 'TO_ANSWER') {
+    return {
+      title: 'No open requests from this member',
+      description: hint('Their resolved ones are under Resolved, or show everyone’s.'),
+    };
+  }
+  if (filters.user)
+    return { title: 'No tickets match', description: hint('Try another tab, or show everyone’s.') };
+  return searched ? { title: 'No tickets match', description: SEARCH_HINT } : EMPTY[tab];
+}
+
 /**
  * The support inbox (plan §12.6): requests from the Contact form, a booking's Contact support link and
  * privacy requests. Tabs, search, category and "Assigned to me" are all in the address.
@@ -67,12 +87,7 @@ export function AdminSupportPage() {
   const data = inbox.data;
   // While another tab or page loads, the last table stays, faded; an empty one gives way to grey rows.
   const loading = inbox.isPending || (inbox.isPlaceholderData && data?.tickets.length === 0);
-  const empty = isFiltered(filters)
-    ? {
-        title: 'No tickets match',
-        description: 'Try another search, or clear the category and “Assigned to me”.',
-      }
-    : EMPTY[tab];
+  const empty = emptyList(filters, tab);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -103,6 +118,18 @@ export function AdminSupportPage() {
           />
         </div>
         <InboxToolbar filters={filters} onChange={change} />
+        {filters.user && (
+          <p className="-mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+            Showing the requests one member sent while signed in.
+            <button
+              type="button"
+              className="link-underline font-medium text-primary"
+              onClick={() => change({ user: undefined })}
+            >
+              Show everyone’s
+            </button>
+          </p>
+        )}
       </div>
 
       <div

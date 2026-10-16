@@ -144,6 +144,54 @@ describe('AdminTicketPage', () => {
     );
     expect(panel.getByRole('button', { name: 'Handled by Nobody yet' })).toBeInTheDocument();
     expect(panel.getByRole('button', { name: /^Status/ })).toHaveTextContent('Open');
+    // Only a privacy request downloads their information.
+    expect(panel.queryByRole('button', { name: 'Download their data' })).not.toBeInTheDocument();
+  });
+
+  it('downloads the information a privacy request asks for, from the request itself', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/support/tickets/ST-ABC123': {
+        status: 200,
+        body: { ticket: { ...ticket, category: 'PRIVACY', subject: 'A copy of my information' } },
+      },
+      'GET /admin/users/u2/export': { status: 200, body: { account: { firstName: 'Kiri' } } },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(details().getByRole('button', { name: 'Download their data' }));
+
+    expect(await screen.findByText('Their information is downloading')).toBeInTheDocument();
+    const sent = fetchMock.mock.calls
+      .map(([input]) => new URL((input as Request).url))
+      .find((url) => url.pathname.endsWith('/admin/users/u2/export'));
+    expect(sent?.searchParams.get('ticket')).toBe('ST-ABC123');
+  });
+
+  it('says why their information can’t be downloaded from this request', async () => {
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': {
+        status: 200,
+        body: { ticket: { ...ticket, category: 'PRIVACY' } },
+      },
+      'GET /admin/users/u2/export': {
+        status: 403,
+        body: {
+          error: {
+            code: 'OWN_RECORD',
+            message: "Another team member needs to handle this, as it's about your own account.",
+          },
+        },
+      },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(details().getByRole('button', { name: 'Download their data' }));
+
+    expect(
+      await screen.findByText("Another team member needs to handle this, as it's about your own account."),
+    ).toBeInTheDocument();
   });
 
   it('sends a reply, leaving the ticket waiting on them', async () => {

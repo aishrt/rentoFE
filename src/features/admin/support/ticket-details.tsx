@@ -1,4 +1,5 @@
-import { CircleDot, MessagesSquare, UserCheck, UserRound } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { CircleDot, FileDown, MessagesSquare, UserCheck, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { StaffTicket } from '@/api/types';
@@ -12,6 +13,7 @@ import { threadPath } from '@/features/admin/bookings/bookings-api';
 import { TICKET_CATEGORY, TICKET_STATUS } from '@/features/admin/ops/admin-labels';
 import { useIncidentAssignees } from '@/features/admin/operations/operations-api';
 import { EmailAddress } from '@/features/admin/ops/email-address';
+import { downloadUserData, userErrorMessage } from '@/features/admin/users/users-api';
 import { formatNzDateTime, formatRelativeTime } from '@/features/booking/booking-format';
 import { TICKET_STATUSES, useUpdateTicket } from './support-api';
 
@@ -32,10 +34,30 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
+ * A privacy request from a member asking for a copy of their information (plan §14): the download is here,
+ * on the request it answers, and the API records it against this ticket. It refuses a support member's own.
+ */
+function DownloadTheirData({ userId, ticketRef }: { userId: string; ticketRef: string }) {
+  const download = useMutation({
+    mutationFn: () => downloadUserData(userId, ticketRef),
+    onSuccess: () => toast('Their information is downloading', { description: 'Send it to them securely.' }),
+    onError: (error) => toast(userErrorMessage(error) ?? 'We couldn’t download it', { tone: 'danger' }),
+  });
+  return (
+    <div className="mt-4">
+      <Button variant="secondary" size="sm" loading={download.isPending} onClick={() => download.mutate()}>
+        <FileDown aria-hidden="true" />
+        Download their data
+      </Button>
+    </div>
+  );
+}
+
+/**
  * Who wrote, what it's about, and the controls: the ticket's status, and who handles it (anyone on the
  * support team, the admin or nobody, as for a case), with "Assign to me" for the quick way. Each change
  * applies straight away and is in the audit log; whoever is handed it is told. The API refuses to hand it to
- * someone it's about.
+ * someone it's about. A privacy request from a member also has the download of their information.
  */
 export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; ticketRef: string }) {
   const update = useUpdateTicket(ticketRef);
@@ -159,6 +181,9 @@ export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; tick
             </p>
           )}
         </div>
+        {ticket.category === 'PRIVACY' && ticket.from.userId && (
+          <DownloadTheirData userId={ticket.from.userId} ticketRef={ticket.ref} />
+        )}
 
         <dl className="mt-5 grid gap-4 border-t border-line pt-5">
           <Detail label="Category">{TICKET_CATEGORY[ticket.category]}</Detail>

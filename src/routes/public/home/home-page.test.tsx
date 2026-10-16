@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DestinationSummary, VehicleCard } from '@/api/types';
+import type { DestinationSummary, Faq, VehicleCard } from '@/api/types';
 import { carCard, mockRoutes } from '@/features/vehicles/test-fixtures';
 import { renderWithProviders } from '@/test/utils';
 import { HomePage } from './home-page';
@@ -32,27 +32,33 @@ const tile = (
 });
 
 /**
- * The homepage's requests: the session, featured cars and reviews, the headline and the destination tiles.
- * Without a headline or tiles, those requests fail and the homepage shows its original ones.
+ * The homepage's requests: the session, featured cars and reviews, the headline, the destination tiles and
+ * the FAQs picked for it. Without a headline, tiles or FAQs, those requests fail and the homepage shows its
+ * original ones.
  */
 function mockHome({
   featured = { status: 200, body: { vehicles: [carCard()] } },
   reviews = { show: false, reviews: [] as (typeof REVIEW)[] },
   hero,
   destinations,
+  faqs,
 }: {
   featured?: { status: number; body?: { vehicles: VehicleCard[] } };
   reviews?: object;
   hero?: { headline: string; subheading: string };
   destinations?: DestinationSummary[];
+  faqs?: Faq[];
 } = {}) {
-  return mockRoutes(({ method, path }) => {
+  return mockRoutes(({ method, path, query }) => {
     if (method === 'POST' && path === '/auth/session') return { status: 200, body: { user: null } };
     if (path === '/vehicles/featured') return featured;
     if (path === '/reviews/featured') return { status: 200, body: reviews };
     if (path === '/cms/home.hero') return hero ? { status: 200, body: { hero } } : { status: 503 };
     if (path === '/destinations') {
       return destinations ? { status: 200, body: { destinations } } : { status: 503 };
+    }
+    if (path === '/faqs' && query.get('home') === 'true') {
+      return faqs ? { status: 200, body: { faqs } } : { status: 503 };
     }
     return undefined;
   });
@@ -207,5 +213,47 @@ describe('HomePage', () => {
       expect(screen.queryByRole('region', { name: 'Where will you drive next?' })).not.toBeInTheDocument(),
     );
     expect(screen.getByRole('button', { name: 'Search Cars' })).toBeInTheDocument();
+  });
+
+  it('shows the FAQs staff picked for the homepage, and the original ones until they load', async () => {
+    const sent = mockHome({
+      faqs: [
+        {
+          id: 'f1',
+          question: 'Can I take the car on the ferry?',
+          answer: 'Yes, if the host allows it.',
+          category: 'Trips',
+          audience: 'GUEST',
+        },
+      ],
+    });
+    renderWithProviders(<HomePage />);
+
+    const section = screen.getByRole('region', { name: 'Questions, answered' });
+    expect(within(section).getByText('Who can rent a car?')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(section).getByText('Can I take the car on the ferry?')).toBeInTheDocument(),
+    );
+    expect(within(section).queryByText('Who can rent a car?')).not.toBeInTheDocument();
+    expect(sent.some((request) => request.path === '/faqs' && request.query.get('home') === 'true')).toBe(
+      true,
+    );
+  });
+
+  it('keeps the original FAQs when none is picked or they can’t load', async () => {
+    mockHome({ faqs: [] });
+    const empty = renderWithProviders(<HomePage />);
+    await featuredSettled(empty.container);
+    expect(
+      screen.getByRole('region', { name: 'Questions, answered' }).querySelectorAll('details'),
+    ).toHaveLength(5);
+    empty.unmount();
+
+    mockHome();
+    const failed = renderWithProviders(<HomePage />);
+    await featuredSettled(failed.container);
+    expect(
+      within(screen.getByRole('region', { name: 'Questions, answered' })).getByText('Who can rent a car?'),
+    ).toBeInTheDocument();
   });
 });

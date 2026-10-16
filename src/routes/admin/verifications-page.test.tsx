@@ -219,6 +219,30 @@ describe('AdminVerificationsPage', () => {
     expect(sent).toEqual({ decision: 'APPROVE' });
   });
 
+  it('shows a confirmed trip waiting on a licence check, which the decision neither confirms nor releases', async () => {
+    const heldSam: VerificationQueueItem = {
+      ...sam,
+      waitingBookings: [
+        // 10 am on 2 November in New Zealand.
+        { ref: 'RV-9P3L6T', vehicleTitle: '2020 Honda Jazz', startsAt: '2026-11-01T21:00:00.000Z' },
+      ],
+    };
+    mockApi({ 'GET /admin/verifications': { status: 200, body: { items: [heldSam] } } });
+    render();
+
+    const held = await card('Sam Lee');
+    expect(held.getByRole('link', { name: 'RV-9P3L6T' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-9P3L6T',
+    );
+    expect(held.getByText(/Confirmed, starts Mon, 2 Nov.*: check-in waits for this/)).toBeInTheDocument();
+
+    await userEvent.click(held.getByRole('button', { name: 'Reject Sam Lee’s licence' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Reject Sam Lee’s licence?' }));
+    expect(dialog.getByText(/Their confirmed trips still can’t start/)).toBeInTheDocument();
+    expect(dialog.queryByText(/released with their card authorisations/)).not.toBeInTheDocument();
+  });
+
   it('says when a booking still waits for the licence after the identity check is approved', async () => {
     mockApi({
       'GET /admin/verifications': { status: 200, body: { items: [kiri] } },

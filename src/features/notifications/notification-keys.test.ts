@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
+import { refreshHostDashboard } from '@/features/host/host-api';
 import { applyNotificationEvent, notificationsQueryKey } from './notification-keys';
 
 function setup() {
@@ -9,8 +10,15 @@ function setup() {
   return { queryClient, invalidated };
 }
 
+/** The keys refreshHostDashboard refreshes after a Host's own change to a booking. */
+function hostDashboardKeys() {
+  const { queryClient, invalidated } = setup();
+  refreshHostDashboard(queryClient);
+  return invalidated();
+}
+
 describe('applyNotificationEvent', () => {
-  it('refreshes the bell, and the booking, its lists, handover and payments for booking news', () => {
+  it('refreshes the bell, the booking, its lists, handover, payments and Host dashboard for booking news', () => {
     for (const type of ['BOOKING_CANCELLED', 'BOOKING_CONFIRMED', 'REFUND_ISSUED', 'REQUEST_WITHDRAWN']) {
       const { queryClient, invalidated } = setup();
       applyNotificationEvent(queryClient, { id: 'n1', type, title: 'News' });
@@ -20,6 +28,8 @@ describe('applyNotificationEvent', () => {
         ['bookings'],
         ['handover'],
         ['me', 'payments'],
+        // What refreshHostDashboard refreshes, written out.
+        ...hostDashboardKeys(),
       ]);
     }
   });

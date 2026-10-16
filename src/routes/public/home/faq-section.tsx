@@ -3,11 +3,20 @@ import { Link } from 'react-router';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal } from '@/components/motion/reveal';
+import { useHomeFaqs } from '@/features/content/content-api';
 import { motion } from '@/styles/tokens';
-import { faqs } from './home-content';
+import { faqs as originalFaqs } from './home-content';
 
-/** Native <details> keeps the FAQ accessible and usable before any JavaScript loads. */
+/**
+ * The questions staff picked for the homepage. The original ones show while they load, or if they can't,
+ * or if none is picked, so the section is never empty. Native <details> keeps the FAQ accessible and usable
+ * before any JavaScript loads.
+ */
 export function FaqSection() {
+  const picked = useHomeFaqs().data;
+  const faqs: { id?: string; question: string; answer: string }[] =
+    picked && picked.length > 0 ? picked : originalFaqs;
+
   return (
     <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-20 py-16 sm:py-24 lg:py-28">
       <Container className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
@@ -31,7 +40,8 @@ export function FaqSection() {
         <Reveal delay={motion.stagger * 2}>
           <div className="divide-y divide-line border-y border-line">
             {faqs.map((faq) => (
-              <details key={faq.question} className="group">
+              // Staff FAQs can share a question across audiences; their ids can't.
+              <details key={faq.id ?? faq.question} className="group">
                 <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-6 py-5 text-left text-lg font-medium transition-colors duration-120 hover:text-primary [&::-webkit-details-marker]:hidden">
                   {faq.question}
                   <span

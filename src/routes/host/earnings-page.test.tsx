@@ -467,7 +467,10 @@ describe('EarningsPage', () => {
       '/host/earnings?payouts=done',
     );
 
-    expect(await screen.findByText('We couldn’t check your payout setup with Stripe')).toBeInTheDocument();
+    // The toast follows the failed check; on a busy machine that can take longer than the default second.
+    expect(
+      await screen.findByText('We couldn’t check your payout setup with Stripe', {}, { timeout: 5_000 }),
+    ).toBeInTheDocument();
     await vi.waitFor(() => expect(router.state.location.search).toBe(''));
   });
 

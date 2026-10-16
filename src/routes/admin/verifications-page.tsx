@@ -158,7 +158,9 @@ export function AdminVerificationsPage() {
   const name = current ? personName(current) : '';
   const rejecting = decision?.decision === 'REJECT';
   const identity = current?.kind !== 'LICENCE';
-  const waiting = current?.waitingBookings.length ?? 0;
+  // Requests and bookings the decision confirms or releases; a confirmed trip (startsAt) only waits at check-in.
+  const waiting = current?.waitingBookings.filter((booking) => !booking.startsAt).length ?? 0;
+  const confirmedTrips = current?.waitingBookings.filter((booking) => booking.startsAt).length ?? 0;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -236,8 +238,8 @@ export function AdminVerificationsPage() {
               ? `They won’t be able to book.${waiting > 0 ? ' Bookings waiting on this check are released with their card authorisations, so nothing is charged.' : ''} We’ll email them.`
               : `They’ll be verified.${waiting > 0 ? ' Bookings waiting on this check are confirmed; requests still go to their Host.' : ''} We’ll email them.`
             : rejecting
-              ? `They won’t be able to book until their licence details are fixed.${waiting > 0 ? ' Bookings waiting on this licence are released with their card authorisations, so nothing is charged.' : ''} We’ll email them your note, so write it for them.`
-              : `Their licence details are accepted.${waiting > 0 ? ' Bookings waiting on this licence are confirmed; requests still go to their Host.' : ''} We’ll email them.`
+              ? `They won’t be able to book until their licence details are fixed.${waiting > 0 ? ' Bookings waiting on this licence are released with their card authorisations, so nothing is charged.' : ''}${confirmedTrips > 0 ? ' Their confirmed trips still can’t start, and the team is alerted to each.' : ''} We’ll email them your note, so write it for them.`
+              : `Their licence details are accepted.${waiting > 0 ? ' Bookings waiting on this licence are confirmed; requests still go to their Host.' : ''}${confirmedTrips > 0 ? ' Their confirmed trips can be checked in.' : ''} We’ll email them.`
         }
         confirmLabel={rejecting ? 'Reject' : 'Approve'}
         tone={rejecting ? 'danger' : 'primary'}

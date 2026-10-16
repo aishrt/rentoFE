@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { z } from 'zod';
 import type { PlatformSettings } from '@/api/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LICENCE_CLASS_LABELS, type LicenceClass } from '@/features/booking/booking-format';
+import { isValidGstNumber } from '@/lib/gst-number';
 import { RECORDED_ONLY, decimalField, textField, timeField, wholeField } from './field-rules';
 import { NumberField, SwitchField, TextInputField } from './fields';
 import { SettingsForm } from './settings-form';
@@ -111,6 +113,7 @@ const reviewsAndTripsSchema = z
     damageReportWindowHours: wholeField(1, 720, ' hours'),
     lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
     threadReadOnlyDays: wholeField(0, 365, ' days'),
+    extraKmReviewAboveKmPerDay: wholeField(1, 10_000, ' km'),
     quietHoursStart: timeField(),
     quietHoursEnd: timeField(),
   })
@@ -135,6 +138,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
         damageReportWindowHours: String(trips.damageReportWindowHours),
         lateReturnGraceMinutes: String(trips.lateReturnGraceMinutes),
         threadReadOnlyDays: String(trips.threadReadOnlyDays),
+        extraKmReviewAboveKmPerDay: String(trips.extraKmReviewAboveKmPerDay),
         quietHoursStart: sms.quietHoursStart,
         quietHoursEnd: sms.quietHoursEnd,
       })}
@@ -149,6 +153,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
           damageReportWindowHours: Number(values.damageReportWindowHours),
           lateReturnGraceMinutes: Number(values.lateReturnGraceMinutes),
           threadReadOnlyDays: Number(values.threadReadOnlyDays),
+          extraKmReviewAboveKmPerDay: Number(values.extraKmReviewAboveKmPerDay),
         },
         sms: { quietHoursStart: values.quietHoursStart, quietHoursEnd: values.quietHoursEnd },
       })}
@@ -184,6 +189,12 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
             unit="days"
             description="After the trip ends or is cancelled, while no case on it is open. Then the conversation can be read but not added to."
           />
+          <NumberField
+            name="extraKmReviewAboveKmPerDay"
+            label="Check extra kilometres above"
+            unit="km a day"
+            description="Our team checks the odometer readings before charging more than this a day, in case one was typed wrong."
+          />
           <div className="sm:col-span-2">
             <SwitchField
               name="revealTogether"
@@ -207,29 +218,39 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
   );
 }
 
-const companySchema = z.object({
-  legalName: textField('legal name', 120),
-  gstNumber: z
-    .string()
-    .trim()
-    .regex(/^(\d{2,3}-\d{3}-\d{3})?$/, 'Use the format 123-456-789, or leave it empty'),
-  supportEmail: z
-    .string()
-    .trim()
-    .pipe(z.email({ error: 'Enter a valid email address' })),
-  finalLogoSupplied: z.boolean(),
-  trademarkSearchDone: z.boolean(),
-  companyNameCheckDone: z.boolean(),
-});
+/**
+ * The check digit is checked only on a changed GST number, as the API does: one saved before the check
+ * (a placeholder) doesn't stop staff saving the rest of the card.
+ */
+const companySchema = (savedGstNumber: string) =>
+  z.object({
+    legalName: textField('legal name', 120),
+    gstNumber: z
+      .string()
+      .trim()
+      .regex(/^(\d{2,3}-\d{3}-\d{3})?$/, 'Use the format 123-456-789, or leave it empty')
+      .refine((value) => !value || value === savedGstNumber || isValidGstNumber(value), {
+        message: 'That isn’t a valid GST number. Check it on the IRD registration.',
+      }),
+    supportEmail: z
+      .string()
+      .trim()
+      .pipe(z.email({ error: 'Enter a valid email address' })),
+    finalLogoSupplied: z.boolean(),
+    trademarkSearchDone: z.boolean(),
+    companyNameCheckDone: z.boolean(),
+  });
 
 export function CompanySection({ settings }: { settings: PlatformSettings }) {
+  const savedGstNumber = settings.business.gstNumber;
+  const schema = useMemo(() => companySchema(savedGstNumber), [savedGstNumber]);
   return (
     <SettingsForm
       decision="company"
       title="Company and brand"
       description="Who issues receipts, and the checks on the name and logo. The legal name and GST number appear on receipts now."
       settings={settings}
-      schema={companySchema}
+      schema={schema}
       toValues={({ business, brandChecks }) => ({
         legalName: business.legalName,
         gstNumber: business.gstNumber,

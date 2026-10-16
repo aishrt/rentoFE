@@ -614,6 +614,12 @@ describe('AdminBookingPage: handover', () => {
           kilometres: { driven: 800, allowance: 750, extra: 50, extraChargeCents: 1_750 },
           // Far off, so the real clock never finds the window closed.
           damageWindowEndsAt: '2036-10-16T21:00:00.000Z',
+          extraKmStatus: {
+            status: 'WAITING',
+            amountCents: 1_750,
+            chargeAt: '2036-10-16T21:00:00.000Z',
+            waitingFor: 'HOST',
+          },
           fuelShortfall: true,
           actions: NO_ACTIONS,
         }),
@@ -626,7 +632,7 @@ describe('AdminBookingPage: handover', () => {
     // Only the Guest confirmed the check-out, so the extra kilometres wait for the Host or the window's end.
     expect(
       card.getByText(
-        /^50 extra km: \$17\.50, not charged yet\. It’s charged once the other party confirms the check-out, or when the damage-report window closes/,
+        /^50 extra km: \$17\.50, not charged yet\. It’s charged once the Host confirms the check-out, or when the damage-report window closes \(.*2036.*\)\.$/,
       ),
     ).toBeInTheDocument();
     expect(card.getByText('Returned with less fuel than the policy asks.')).toBeInTheDocument();
@@ -691,6 +697,13 @@ describe('AdminBookingPage: handover', () => {
               confirmedByHostAt: undefined,
             }),
             kilometres: { driven: 800, allowance: 750, extra: 50, extraChargeCents: 1_750 },
+            // Like any check-out: charged once the Guest confirms the readings, or when the window closes.
+            extraKmStatus: {
+              status: 'WAITING',
+              amountCents: 1_750,
+              chargeAt: '2036-10-16T21:00:00.000Z',
+              waitingFor: 'GUEST',
+            },
             actions: NO_ACTIONS,
           }),
         });
@@ -717,7 +730,11 @@ describe('AdminBookingPage: handover', () => {
     await userEvent.click(form.getByRole('button', { name: 'Complete the trip' }));
 
     expect(await screen.findByText('Trip completed')).toBeInTheDocument();
-    expect(screen.getByText(/50 extra km: \$17.50 is charged to the Guest’s saved card/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /50 extra km \(\$17\.50\) will be charged to the Guest’s saved card on .+ unless a reading is corrected, or sooner if the Guest confirms the readings\./,
+      ),
+    ).toBeInTheDocument();
     expect(sent).toEqual({
       odometer: 46_010,
       fuelOrBatteryPct: 60,

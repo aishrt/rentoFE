@@ -11,7 +11,7 @@ import { TimePicker } from '@/components/ui/time-picker';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 import { formatInstantRange } from './calendar-time';
-import { hostKeys, setRecurringRulesRequest } from './host-api';
+import { hostKeys, refreshCalendars, setRecurringRulesRequest } from './host-api';
 import { hostErrorMessage } from './use-step-save';
 
 /** Monday first, as NZ calendars are; the API counts from Sunday = 0. */
@@ -168,7 +168,7 @@ export function RecurringRulesEditor({ vehicle }: { vehicle: HostVehicle }) {
       }),
     onSuccess: (saved) => {
       setResult(saved);
-      void queryClient.invalidateQueries({ queryKey: hostKeys.calendar(vehicle.id) });
+      refreshCalendars(queryClient, vehicle.id);
       void queryClient.invalidateQueries({ queryKey: hostKeys.vehicle(vehicle.id), exact: true });
     },
   });

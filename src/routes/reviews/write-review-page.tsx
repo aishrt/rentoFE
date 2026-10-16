@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { useBookingDetail } from '@/features/booking/booking-api';
+import { usePolicies } from '@/features/content/content-api';
 import { formatNzDate, formatTripSpan } from '@/features/booking/booking-format';
 import { useMyReviews, useSubmitReview } from '@/features/reviews/reviews-api';
 import { StarInput } from '@/features/reviews/star-input';
@@ -29,6 +30,8 @@ function ReviewForm({ booking }: { booking: Booking }) {
   const other = guest ? booking.host.firstName : booking.guest.firstName;
   const submit = useSubmitReview();
   const reviews = useMyReviews();
+  // Staff can turn off waiting for both reviews (Platform settings); it's on until the policies say otherwise.
+  const together = usePolicies().data?.reviews.revealTogether ?? true;
   const [scores, setScores] = useState<Scores>({ overall: 0, communication: 0, pickupReturn: 0, detail: 0 });
   const [body, setBody] = useState('');
   const [tried, setTried] = useState(false);
@@ -38,7 +41,9 @@ function ReviewForm({ booking }: { booking: Booking }) {
   const waiting = reviews.data?.toWrite.find((item) => item.bookingRef === booking.ref);
 
   if (submit.isSuccess || already) {
-    const review = submit.data ?? already!;
+    const review = submit.data?.review ?? already!;
+    // Known only straight after sending: theirs may not be written yet, or be held or hidden.
+    const otherPublished = submit.data?.otherPublished ?? false;
     return (
       <EmptyState
         className="mx-auto py-10"
@@ -53,7 +58,9 @@ function ReviewForm({ booking }: { booking: Booking }) {
           review.moderation === 'HELD'
             ? 'Our team checks it before it’s published, as it may include contact details, a link or strong language.'
             : review.status === 'PUBLISHED'
-              ? `It’s published, together with ${other}’s review of you.`
+              ? otherPublished
+                ? `It’s published, and so is ${other}’s review of you.`
+                : 'It’s published.'
               : `It’s published once ${other} reviews you too${review.revealAt ? `, or on ${formatNzDate(review.revealAt)}` : ''}, so neither of you sees the other’s first.`
         }
         actions={
@@ -143,8 +150,14 @@ function ReviewForm({ booking }: { booking: Booking }) {
         <Textarea rows={5} maxLength={1000} value={body} onChange={(event) => setBody(event.target.value)} />
       </Field>
       <p className="text-sm text-muted">
-        {other} can’t see your review until they’ve written theirs, or the time to review runs out
-        {waiting ? ` on ${formatNzDate(waiting.closesAt)}` : ''}.
+        {together ? (
+          <>
+            {other} can’t see your review until they’ve written theirs, or the time to review runs out
+            {waiting ? ` on ${formatNzDate(waiting.closesAt)}` : ''}.
+          </>
+        ) : (
+          'Your review is published as soon as you send it, unless our team needs to check it first.'
+        )}
       </p>
       {submit.isError && (
         <Alert variant="danger" role="alert">

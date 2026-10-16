@@ -178,9 +178,12 @@ export function VerificationCard({ item, onApprove, onReject, className, style }
                       </Link>
                       <span>{booking.vehicleTitle}</span>
                       <span className="text-muted">
-                        {booking.expiresAt
-                          ? `· Expires ${formatNzDateTime(booking.expiresAt)}`
-                          : '· No expiry set'}
+                        {/* A confirmed trip: its check-in waits for this licence check (plan §8.2). */}
+                        {booking.startsAt
+                          ? `· Confirmed, starts ${formatNzDateTime(booking.startsAt)}: check-in waits for this`
+                          : booking.expiresAt
+                            ? `· Expires ${formatNzDateTime(booking.expiresAt)}`
+                            : '· No expiry set'}
                       </span>
                     </li>
                   ))}

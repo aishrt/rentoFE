@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { TimePicker } from '@/components/ui/time-picker';
 import { toast } from '@/components/ui/toast';
 import { addDays, formatDayRange } from './calendar-time';
-import { addBlockRequest, hostKeys } from './host-api';
+import { addBlockRequest, refreshCalendars } from './host-api';
 import { hostErrorMessage } from './use-step-save';
 
 /** Whole days (from the month view) or a time range (from the week view), in NZ time. */
@@ -120,7 +120,7 @@ export function BlockDialog({
   const block = useMutation({
     mutationFn: (input: BlockInput) => addBlockRequest(vehicleId, input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: hostKeys.calendar(vehicleId) });
+      refreshCalendars(queryClient, vehicleId);
       toast('Blocked', { description: 'Guests can’t book those times.' });
       onBlocked();
     },

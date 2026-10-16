@@ -104,7 +104,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
         icon: Percent,
         value: (report) => report.money.platformFeesCents,
         format: formatNzd,
-        hint: 'Service fees, commission and the platform’s share of fees kept and extra charges',
+        hint: 'Service fees, commission, Host cancellation fees and the platform’s share of fees kept and extra charges',
       },
       {
         label: 'Paid to Hosts',
@@ -155,6 +155,13 @@ export const REPORT_GROUPS: ReportGroup[] = [
         value: (report) => report.fees.cancellationFeesShareCents,
         format: formatNzd,
         hint: 'The platform’s part of fees kept on these days, after the Host’s share',
+      },
+      {
+        label: 'Host cancellation fees',
+        icon: CalendarX,
+        value: (report) => report.fees.hostCancellationFeesCents,
+        format: formatNzd,
+        hint: 'Charged to Hosts who cancelled on these days, less any waived',
       },
       {
         label: 'Extra-charge commission',

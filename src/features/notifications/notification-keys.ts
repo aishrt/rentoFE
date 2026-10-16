@@ -8,11 +8,22 @@ const BOOKING_NEWS = /^(BOOKING|REQUEST|REFUND|PAYMENT|TRIP|EXTRA_CHARGE)(_|$)/;
 
 /*
  * What booking news refreshes, by the start of each query's key: a booking (booking-api.ts) with its receipt,
- * the trips and bookings lists, a handover (handover-api.ts) and the Guest's payment history
- * (dashboard-api.ts). Written out here so the always-loaded realtime connection doesn't pull those pages'
- * code into every page.
+ * the trips and bookings lists, a handover (handover-api.ts), the Guest's payment history (dashboard-api.ts),
+ * and the Host's dashboard as refreshHostDashboard (host-api.ts) refreshes it: the to-do list, earnings,
+ * payouts, cars and the all-cars calendar. Written out here so the always-loaded realtime connection doesn't
+ * pull those pages' code into every page.
  */
-const BOOKING_QUERIES: QueryKey[] = [['booking'], ['bookings'], ['handover'], ['me', 'payments']];
+const BOOKING_QUERIES: QueryKey[] = [
+  ['booking'],
+  ['bookings'],
+  ['handover'],
+  ['me', 'payments'],
+  ['host', 'todo'],
+  ['host', 'earnings'],
+  ['host', 'payouts'],
+  ['host', 'vehicles'],
+  ['host', 'calendar'],
+];
 /** The user's support requests (support-api.ts), which a reply from support changes. */
 const TICKETS_QUERY: QueryKey = ['support', 'tickets'];
 

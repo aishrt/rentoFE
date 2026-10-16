@@ -2,7 +2,9 @@ import {
   Archive,
   Banknote,
   Building2,
+  Calculator,
   CalendarX2,
+  CarFront,
   IdCard,
   ListChecks,
   Percent,
@@ -16,6 +18,7 @@ import type { ReactNode } from 'react';
 import type { DecisionKey, PlatformSettings } from '@/api/types';
 import { formatNzdFromCents } from '@/lib/format';
 import { CancellationSection } from './cancellation-section';
+import { HostEstimatorSection, ListingsAndSearchSection } from './listings-section';
 import { FeesSection, GstSection, SecurityDepositSection } from './money-sections';
 import { ProtectionSection } from './protection-section';
 import { RetentionAndRiskSection } from './retention-section';
@@ -121,12 +124,27 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     Section: BookingRulesSection,
   },
   {
+    key: 'listingsAndSearch',
+    label: 'Listings and search',
+    icon: CarFront,
+    summary: ({ vehicles, search }) =>
+      `${plural(vehicles.requiredPhotoAngles.length, 'photo')} and ${plural(vehicles.requiredDocuments.length, 'document')} a listing, trips up to ${plural(search.maxTripDays, 'day')}`,
+    Section: ListingsAndSearchSection,
+  },
+  {
     key: 'verificationServices',
     label: 'Licence and plate checks',
     icon: ScanSearch,
     summary: ({ verificationServices }) =>
       `Licence check ${onOff(verificationServices.nzLicenceCheck)}, plate lookup ${onOff(verificationServices.plateLookup)}`,
     Section: VerificationServicesSection,
+  },
+  {
+    key: 'hostEstimator',
+    label: 'Become a Host estimator',
+    icon: Calculator,
+    summary: ({ hostEstimator }) => `${plural(hostEstimator.bookedDaysPerMonth, 'day')} booked a month`,
+    Section: HostEstimatorSection,
   },
   {
     key: 'retentionAndRisk',

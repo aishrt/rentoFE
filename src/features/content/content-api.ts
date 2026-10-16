@@ -31,6 +31,16 @@ export function useFaqs(audience?: FaqAudience) {
   });
 }
 
+/** The FAQs staff picked for the homepage (`showOnHome` in the staff portal), in order. */
+export function useHomeFaqs() {
+  return useQuery({
+    queryKey: ['faqs', 'home'],
+    queryFn: async ({ signal }) =>
+      (await unwrap(client.GET('/faqs', { params: { query: { home: true } }, signal }))).faqs,
+    staleTime: 10 * 60_000,
+  });
+}
+
 /** One legal document in Markdown, with its version and last update. */
 export function useLegalDocument(key: LegalKey) {
   return useQuery({

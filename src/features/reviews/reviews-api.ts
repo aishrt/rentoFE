@@ -25,11 +25,12 @@ export function useMemberProfile(id: string) {
   });
 }
 
+/** The review saved, and whether the other side's review of the writer is published now. */
 export function useSubmitReview() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: ReviewRequest): Promise<Review> =>
-      (await unwrap(client.POST('/reviews', { body }))).review,
+    mutationFn: async (body: ReviewRequest): Promise<{ review: Review; otherPublished: boolean }> =>
+      unwrap(client.POST('/reviews', { body })),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: myReviewsQueryKey }),
   });
 }

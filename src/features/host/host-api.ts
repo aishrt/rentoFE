@@ -15,6 +15,7 @@ import type {
   RecurringRulesInput,
   VehiclePatch,
 } from '@/api/types';
+import { earningsQueryKey, hostTodoQueryKey, payoutsQueryKey } from './earnings-api';
 
 /*
  * The Host's side of the API (plan §11): the application, My Vehicles, onboarding saves, uploads'
@@ -30,7 +31,32 @@ export const hostKeys = {
   calendarRange: (id: string, from: string, to: string) =>
     ['host', 'vehicles', id, 'calendar', from, to] as const,
   allCarsCalendar: (from: string, to: string) => ['host', 'calendar', from, to] as const,
+  /** Every window of the all-cars timeline. */
+  allCarsCalendars: ['host', 'calendar'] as const,
 };
+
+/** A car's calendar changed (a block, its weekly hours, its rules): the all-cars timeline shows it too. */
+export function refreshCalendars(queryClient: QueryClient, vehicleId: string) {
+  void queryClient.invalidateQueries({ queryKey: hostKeys.calendar(vehicleId) });
+  void queryClient.invalidateQueries({ queryKey: hostKeys.allCarsCalendars });
+}
+
+/**
+ * A booking changed (answered, cancelled, checked in or out): the Host's to-do list, earnings and payouts,
+ * and the cars with their calendars may all show it. A Guest's session has none of these loaded, so there it
+ * costs nothing.
+ */
+export function refreshHostDashboard(queryClient: QueryClient) {
+  for (const queryKey of [
+    hostTodoQueryKey,
+    earningsQueryKey,
+    payoutsQueryKey,
+    hostKeys.vehicles,
+    hostKeys.allCarsCalendars,
+  ]) {
+    void queryClient.invalidateQueries({ queryKey });
+  }
+}
 
 /** The Calendar tab across all the Host's cars: each car with its blocks (GET /host/calendar). */
 export type AllCarsCalendar = components['schemas']['AllCarsCalendar'];

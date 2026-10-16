@@ -36,6 +36,8 @@ export interface InboxFilters {
   q?: string;
   /** Only tickets assigned to the signed-in staff member. */
   mine: boolean;
+  /** Only tickets one member sent while signed in (a link from their record). */
+  user?: string;
   page: number;
 }
 
@@ -61,6 +63,7 @@ export function useInbox(filters: InboxFilters) {
               category: filters.category,
               q: filters.q || undefined,
               mine: filters.mine ? 'true' : undefined,
+              user: filters.user,
               page: filters.page,
             },
           },

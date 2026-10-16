@@ -1,4 +1,4 @@
-import { HandCoins } from 'lucide-react';
+import { HandCoins, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AdminBookingRow, AdminUserDetail } from '@/api/types';
@@ -9,7 +9,12 @@ import { formatDateNz, formatDayValue } from '@/features/admin/listings/listing-
 import { HostStatusBadge } from '@/features/admin/listings/review-badge';
 import { Fact, FactList, ReviewSection } from '@/features/admin/listings/review-section';
 import { VerifiedMark } from '@/features/admin/listings/verified-mark';
-import { BOOKING_STATUS, ROLE_LABELS, VERIFICATION_LABELS } from '@/features/admin/ops/admin-labels';
+import {
+  BOOKING_STATUS,
+  ROLE_LABELS,
+  USER_STATUS,
+  VERIFICATION_LABELS,
+} from '@/features/admin/ops/admin-labels';
 import { DataTable, Td, Th, Tr } from '@/features/admin/ops/admin-table';
 import { EmailAddress } from '@/features/admin/ops/email-address';
 import {
@@ -30,7 +35,14 @@ import { licenceClassLabel, licenceStatusLabel } from './user-format';
 // The facts sit in a narrow side column on a desktop: two to a row at most.
 const SIDE_FACTS = 'sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2';
 
-export function AccountSection({ user }: { user: AdminUserDetail }) {
+export function AccountSection({
+  user,
+  onAllowIdentityRetry,
+}: {
+  user: AdminUserDetail;
+  /** Set when their identity check was turned down and this staff member can reopen it. */
+  onAllowIdentityRetry?: () => void;
+}) {
   const problem = user.emailProblem;
   return (
     <ReviewSection id="account" title="Account">
@@ -87,6 +99,12 @@ export function AccountSection({ user }: { user: AdminUserDetail }) {
         </Fact>
         <Fact term="Joined">{formatDateNz(user.createdAt)}</Fact>
       </FactList>
+      {onAllowIdentityRetry && (
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onAllowIdentityRetry}>
+          <RotateCcw aria-hidden="true" />
+          Allow another identity check
+        </Button>
+      )}
     </ReviewSection>
   );
 }
@@ -95,7 +113,14 @@ export function AccountSection({ user }: { user: AdminUserDetail }) {
  * The licence and what to check it against (spec §22): its details, the date of birth on the account and
  * how the ID in the identity check compared. The full number only on request, logged each time (plan §14).
  */
-export function LicenceSection({ user }: { user: AdminUserDetail }) {
+export function LicenceSection({
+  user,
+  onAllowRetry,
+}: {
+  user: AdminUserDetail;
+  /** Set when the licence was turned down and this staff member can send it back for another check. */
+  onAllowRetry?: () => void;
+}) {
   const { licence, identityDocument: document } = user;
   const english = licence ? englishFact(licence) : null;
   return (
@@ -128,6 +153,46 @@ export function LicenceSection({ user }: { user: AdminUserDetail }) {
       ) : (
         <p className="text-sm text-muted">No licence added yet.</p>
       )}
+      {licence && onAllowRetry && (
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onAllowRetry}>
+          <RotateCcw aria-hidden="true" />
+          Allow another licence check
+        </Button>
+      )}
+    </ReviewSection>
+  );
+}
+
+/**
+ * The other accounts with the same licence number (plan §3: the same person on several accounts), entered or
+ * read from their ID: what a duplicate licence flag is about. Each links to that person's record.
+ */
+export function SameLicenceSection({ accounts }: { accounts: NonNullable<AdminUserDetail['sameLicence']> }) {
+  return (
+    <ReviewSection
+      id="same-licence"
+      title="Accounts with the same licence"
+      description="The same licence number is on these accounts, entered or read from their ID."
+    >
+      <ul aria-label="Accounts with the same licence" className="divide-y divide-line">
+        {accounts.map((account) => (
+          <li
+            key={account.id}
+            className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-3 first:pt-0 last:pb-0"
+          >
+            <Link
+              to={`/admin/users/${account.id}`}
+              className="rounded-inner font-medium text-primary hover:underline"
+            >
+              {account.name}
+            </Link>
+            <span className="text-sm text-muted">
+              {account.closed ? 'Closed' : USER_STATUS[account.status].label} · Joined{' '}
+              {formatDateNz(account.createdAt)}
+            </span>
+          </li>
+        ))}
+      </ul>
     </ReviewSection>
   );
 }

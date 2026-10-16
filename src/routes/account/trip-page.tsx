@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarClock,
   CarFront,
@@ -124,34 +124,36 @@ const HOST_REFUND = 'A host cancellation always gets you a full refund.';
 
 /**
  * Why a trip was cancelled, in the Guest's words (plan §8.2: each labelled, and the Guest told what is
- * happening): who cancelled it and, when support did, the reason they gave.
+ * happening): who cancelled it and, when support did, the reason they gave. During a card dispute the bank
+ * decides the money, so there's no refund promise or cancellation policy to quote (plan §8.1, item 12).
  */
 function cancelledWords(cancellation: Cancellation, host: string): { title: string; why?: string } {
+  const disputed = cancellation.disputed === true;
+  const hostRefund = disputed ? '' : ` ${HOST_REFUND}`;
   switch (cancellation.reason) {
     case 'REQUEST_WITHDRAWN':
       return { title: 'You withdrew this request' };
     case 'GUEST_NO_SHOW':
       return {
         title: 'Cancelled as a no-show',
-        why: 'Rento Vroom support cancelled this trip as a no-show at the pick-up time, so the cancellation policy applies as at that time.',
+        why: `Rento Vroom support cancelled this trip as a no-show at the pick-up time${disputed ? '.' : ', so the cancellation policy applies as at that time.'}`,
       };
     case 'HOST_NO_SHOW':
       return {
         title: `${host} couldn’t provide the car`,
-        why: `Rento Vroom support cancelled this trip because ${host} couldn’t provide the car. ${HOST_REFUND}`,
+        why: `Rento Vroom support cancelled this trip because ${host} couldn’t provide the car.${hostRefund}`,
       };
     case 'HOST_CANCELLED':
       return {
         title: `${host} cancelled this trip`,
-        why:
-          cancellation.by === 'SUPPORT'
-            ? `Rento Vroom support cancelled it for them. ${HOST_REFUND}`
-            : HOST_REFUND,
+        ...(cancellation.by === 'SUPPORT'
+          ? { why: `Rento Vroom support cancelled it for them.${hostRefund}` }
+          : !disputed && { why: HOST_REFUND }),
       };
     default:
       return {
         title: CANCELLED_BY[cancellation.by](host),
-        ...(cancellation.by === 'HOST' && { why: HOST_REFUND }),
+        ...(cancellation.by === 'HOST' && !disputed && { why: HOST_REFUND }),
       };
   }
 }
@@ -209,8 +211,17 @@ function expiredWords(booking: Booking): { reason: ExpiryReason; money: string }
 /** Where the trip stands, in the Guest's words (plan §8.2), with what to do next. */
 function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: PaidBooking) => void }) {
   const host = booking.host.firstName;
+  const queryClient = useQueryClient();
   const [expired, setExpired] = useState(false);
+  const refetching = useIsFetching({ queryKey: bookingQueryKey(booking.ref), exact: true }) > 0;
   const now = useNow();
+
+  // The API says a payment is still at the bank (paymentProcessing) only once the hold has passed, so the
+  // booking is fetched again to tell a processing payment from released dates.
+  const holdExpired = () => {
+    setExpired(true);
+    void queryClient.invalidateQueries({ queryKey: bookingQueryKey(booking.ref), exact: true });
+  };
 
   switch (booking.status) {
     case 'PAYMENT_PENDING':
@@ -230,9 +241,22 @@ function TripStatus({ booking, onPaid }: { booking: Booking; onPaid: (paid: Paid
                 {booking.payment.failureReason} Try again, or use another card.
               </Alert>
             )}
-            <HoldNotice expiresAt={booking.holdExpiresAt} onExpired={() => setExpired(true)} />
-            <PayBooking booking={booking} onPaid={onPaid} onHoldExpired={() => setExpired(true)} />
+            <HoldNotice expiresAt={booking.holdExpiresAt} onExpired={holdExpired} />
+            <PayBooking booking={booking} onPaid={onPaid} onHoldExpired={holdExpired} />
           </Card>
+        );
+      }
+      if (expired && refetching)
+        return <Banner tone="info" icon={Hourglass} title="Checking your payment…" />;
+      // The 30 minutes ran out with the payment still at the bank: the dates are held until it's settled.
+      if (booking.paymentProcessing) {
+        return (
+          <Banner tone="info" icon={Hourglass} title="Your payment is processing">
+            <p>
+              Your bank is still processing your payment. We’re holding the dates until it’s done; we’ll email
+              you either way.
+            </p>
+          </Banner>
         );
       }
       return (

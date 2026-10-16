@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MyReviews, Review } from '@/api/types';
 import { confirmedBooking } from '@/features/booking/test-fixtures';
+import { policiesFixture } from '@/features/content/test-fixtures';
 import { mockRoutes } from '@/features/vehicles/test-fixtures';
 import { ReviewsPage } from '@/routes/account/reviews-page';
 import { guestUser, renderWithRouter } from '@/test/utils';
@@ -29,13 +30,31 @@ const review = (overrides: Partial<Review> = {}): Review => ({
   ...overrides,
 });
 
-function mockReviews(mine: MyReviews) {
+const waitingReview = review({
+  direction: 'GUEST_TO_HOST',
+  status: 'AWAITING_REVEAL',
+  moderation: 'CLEAR',
+  revealAt: '2026-10-20T01:00:00.000Z',
+});
+
+function mockReviews(
+  mine: MyReviews,
+  {
+    revealTogether = true,
+    submitted = { review: waitingReview, otherPublished: false },
+  }: { revealTogether?: boolean; submitted?: { review: Review; otherPublished: boolean } } = {},
+) {
   const booking = { ...confirmedBooking(), status: 'COMPLETED' as const };
   // The booking fixture's Host is Liam.
   return mockRoutes((request) => {
     switch (`${request.method} ${request.path}`) {
       case 'POST /auth/session':
         return { status: 200, body: { user: guestUser } };
+      case 'GET /policies':
+        return {
+          status: 200,
+          body: { ...policiesFixture, reviews: { ...policiesFixture.reviews, revealTogether } },
+        };
       case 'GET /me/reviews':
         return { status: 200, body: mine };
       case `GET /bookings/${booking.ref}`:
@@ -43,17 +62,7 @@ function mockReviews(mine: MyReviews) {
       case 'POST /reports':
         return { status: 201, body: { id: 'rep1', status: 'OPEN' } };
       case 'POST /reviews':
-        return {
-          status: 201,
-          body: {
-            review: review({
-              direction: 'GUEST_TO_HOST',
-              status: 'AWAITING_REVEAL',
-              moderation: 'CLEAR',
-              revealAt: '2026-10-20T01:00:00.000Z',
-            }),
-          },
-        };
+        return { status: 201, body: submitted };
       default:
         return undefined;
     }
@@ -155,5 +164,74 @@ describe('WriteReviewPage', () => {
       cleanliness: 5,
       body: 'Spotless car.',
     });
+  });
+
+  const renderWrite = () =>
+    renderWithRouter(
+      [{ path: '/trips/:ref/review', element: <WriteReviewPage /> }],
+      '/trips/RV-7K2Q9M/review',
+    );
+  async function rateAndPublish() {
+    for (const group of [
+      'Overall, how was the trip?',
+      'Communication',
+      'Pick-up and return',
+      'Cleanliness and condition of the car',
+    ]) {
+      await userEvent.click(
+        within(await screen.findByRole('group', { name: group })).getByRole('radio', { name: /^5 stars/ }),
+      );
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Publish review' }));
+    await screen.findByRole('heading', { name: 'Thanks for your review' });
+  }
+  const published = review({ direction: 'GUEST_TO_HOST', status: 'PUBLISHED', moderation: 'CLEAR' });
+
+  it('says the other review is out too only when it is', async () => {
+    mockReviews(
+      { toWrite: [toWrite], written: [], received: [] },
+      { submitted: { review: published, otherPublished: true } },
+    );
+    renderWrite();
+    await rateAndPublish();
+    expect(screen.getByText('It’s published, and so is Liam’s review of you.')).toBeInTheDocument();
+  });
+
+  it('doesn’t claim the other review is out when it’s held or not written', async () => {
+    mockReviews(
+      { toWrite: [toWrite], written: [], received: [] },
+      { submitted: { review: published, otherPublished: false } },
+    );
+    renderWrite();
+    await rateAndPublish();
+    expect(screen.getByText('It’s published.')).toBeInTheDocument();
+    expect(screen.queryByText(/Liam’s review of you/)).not.toBeInTheDocument();
+  });
+
+  it('says a review is published straight away when reviews aren’t revealed together', async () => {
+    mockReviews({ toWrite: [toWrite], written: [], received: [] }, { revealTogether: false });
+    renderWrite();
+
+    expect(
+      await screen.findByText(
+        'Your review is published as soon as you send it, unless our team needs to check it first.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/can’t see your review until/)).not.toBeInTheDocument();
+  });
+});
+
+describe('ReviewsPage when reviews aren’t revealed together', () => {
+  it('doesn’t say they wait for both sides', async () => {
+    mockReviews({ toWrite: [], written: [], received: [] }, { revealTogether: false });
+    renderWithRouter([{ path: '/account/reviews', element: <ReviewsPage /> }], '/account/reviews');
+
+    expect(
+      await screen.findByText(
+        'Reviews are published as soon as they’re written, unless our team needs to check them first.',
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Reviews show here once they’re published.')).toBeInTheDocument();
+    expect(screen.queryByText(/after both sides have written one/)).not.toBeInTheDocument();
   });
 });

@@ -199,7 +199,8 @@ describe('HostBookingPage', () => {
           return undefined;
       }
     });
-    renderWithRouter(routes, `/host/bookings/${REF}`);
+    const { queryClient } = renderWithRouter(routes, `/host/bookings/${REF}`);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Kiri’s trip in the 2022 Toyota RAV4' }),
@@ -225,6 +226,17 @@ describe('HostBookingPage', () => {
     expect(screen.getByRole('link', { name: '+64220001111' })).toHaveAttribute('href', 'tel:+64220001111');
     expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
     expect(sent.filter((entry) => entry.path.endsWith('/accept'))).toHaveLength(1);
+    // The rest of the Host's dashboard catches up too: the to-do list, earnings, payouts and calendars.
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
+      expect.arrayContaining([
+        ['bookings'],
+        ['host', 'todo'],
+        ['host', 'earnings'],
+        ['host', 'payouts'],
+        ['host', 'vehicles'],
+        ['host', 'calendar'],
+      ]),
+    );
   });
 
   it('shows the Guest’s full refund and the Host fee before a Host cancels', async () => {
@@ -429,6 +441,43 @@ describe('HostBookingPage', () => {
     expect(screen.getByText('Guest being verified')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Accept request' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+  });
+
+  it('says why a request can’t be accepted while the Guest’s account is on hold', async () => {
+    const sent = mockHost((sentRequest) => {
+      switch (`${sentRequest.method} ${sentRequest.path}`) {
+        case `GET /bookings/${REF}`:
+          return { status: 200, body: { booking: hostRequest() } };
+        case `POST /bookings/${REF}/accept`:
+          return {
+            status: 409,
+            body: {
+              error: {
+                code: 'GUEST_SUSPENDED',
+                message:
+                  "This guest's account is on hold, so the request can't be accepted. Our team will be in touch.",
+              },
+            },
+          };
+        case 'GET /bookings':
+          return { status: 200, body: { bookings: [] } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter(routes, `/host/bookings/${REF}`);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Accept request' }));
+
+    expect(await screen.findByText('We couldn’t accept this request')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This guest's account is on hold, so the request can't be accepted. Our team will be in touch.",
+      ),
+    ).toBeInTheDocument();
+    // Still a request: nothing was charged or confirmed.
+    expect(screen.getByRole('heading', { name: 'Kiri would like to book your car' })).toBeInTheDocument();
+    expect(sent.filter((entry) => entry.path.endsWith('/accept'))).toHaveLength(1);
   });
 
   it('shows an Instant Book that waits for the Guest’s identity check, with nothing to answer', async () => {

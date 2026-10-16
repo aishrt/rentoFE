@@ -123,11 +123,17 @@ export async function correctUserRequest(input: {
 }
 
 /**
- * A privacy request for a copy of their information: downloads it as a JSON file. Any staff member; the
- * API keeps a record of each download.
+ * A privacy request for a copy of their information: downloads it as a JSON file. Only from the PRIVACY ticket
+ * they raised (403 NO_PRIVACY_REQUEST otherwise). Any staff member; the API records each download with the
+ * ticket.
  */
-export async function downloadUserData(id: string): Promise<void> {
-  const blob = await unwrap(client.GET('/admin/users/{id}/export', { ...path(id), parseAs: 'blob' }));
+export async function downloadUserData(id: string, ticket: string): Promise<void> {
+  const blob = await unwrap(
+    client.GET('/admin/users/{id}/export', {
+      params: { path: { id }, query: { ticket } },
+      parseAs: 'blob',
+    }),
+  );
   const url = URL.createObjectURL(blob as Blob);
   const link = document.createElement('a');
   link.href = url;
@@ -154,6 +160,25 @@ export async function waiveHostFeeRequest(input: {
       client.POST('/admin/users/{id}/waive-host-fee', {
         ...path(input.id),
         body: { amountCents: input.amountCents, reason: input.reason },
+      }),
+    )
+  ).user;
+}
+
+/**
+ * Another try after a turned-down identity check (they can start a new one) or licence (back to the queue
+ * for another check). The reason goes to the audit log; the member is emailed.
+ */
+export async function allowVerificationRetryRequest(input: {
+  id: string;
+  kind: 'IDENTITY' | 'LICENCE';
+  reason: string;
+}): Promise<AdminUserDetail> {
+  return (
+    await unwrap(
+      client.POST('/admin/users/{id}/verification-reset', {
+        ...path(input.id),
+        body: { kind: input.kind, reason: input.reason },
       }),
     )
   ).user;
@@ -186,6 +211,7 @@ const USER_ERROR_CODES = [
   'NOTHING_OWED',
   'NOT_FOUND',
   'EMAIL_TAKEN',
+  'NOT_REJECTED',
 ];
 
 /** The message an action on a user shows for an API error, or null when it belongs to a form field. */

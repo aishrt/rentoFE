@@ -51,8 +51,9 @@ const report = (overrides: Partial<PlatformReport['bookings']> = {}): PlatformRe
   },
   fees: {
     serviceFeesCents: 92000,
-    hostCommissionCents: 84000,
+    hostCommissionCents: 79000,
     cancellationFeesShareCents: 6600,
+    hostCancellationFeesCents: 5000,
     extraChargeCommissionCents: 2400,
     totalCents: 185000,
   },
@@ -111,7 +112,12 @@ describe('AdminReportsPage', () => {
     expect(screen.getByRole('heading', { name: 'Platform fees' })).toBeInTheDocument();
     expect((await figure('Extra-charge commission')).getByText('$24')).toBeInTheDocument();
     expect((await figure('Share of cancellation fees')).getByText('$66')).toBeInTheDocument();
-    expect((await figure('Host commission')).getByText('$840')).toBeInTheDocument();
+    expect((await figure('Host commission')).getByText('$790')).toBeInTheDocument();
+    const hostFees = await figure('Host cancellation fees');
+    expect(hostFees.getByText('$50')).toBeInTheDocument();
+    expect(
+      hostFees.getByText('Charged to Hosts who cancelled on these days, less any waived'),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/Trip money counts by the trip’s start date, as Hosts’ earnings do/),
     ).toBeInTheDocument();
