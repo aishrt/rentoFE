@@ -400,6 +400,23 @@ describe('EarningsPage', () => {
     expect(sent.some((request) => request.path === '/host/connect/onboarding-link')).toBe(true);
   });
 
+  it('says Stripe is checking when the setup has nothing left to send, and what’s needed when it has', async () => {
+    mockEarnings({ connected: true });
+    const { unmount } = renderWithRouter(
+      [{ path: '/host/earnings', element: <EarningsPage /> }],
+      '/host/earnings',
+    );
+    expect(await screen.findByText('Stripe is checking your details')).toBeInTheDocument();
+    expect(screen.getByText(/this page updates on its own when it’s done/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue payout setup' })).toBeInTheDocument();
+    unmount();
+
+    mockEarnings({ connected: true, requirements: ['your bank account'] });
+    renderWithRouter([{ path: '/host/earnings', element: <EarningsPage /> }], '/host/earnings');
+    expect(await screen.findByText('Finish your payout setup')).toBeInTheDocument();
+    expect(screen.getByText('Still needed: your bank account.')).toBeInTheDocument();
+  });
+
   it('opens Stripe’s dashboard in a tab opened on the click, and says why when it can’t', async () => {
     const tab = { opener: {}, location: { href: '' }, close: vi.fn() };
     const open = vi.fn(() => tab);

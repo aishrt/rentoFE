@@ -164,6 +164,8 @@ export function AdminVerificationsPage() {
   // Requests and bookings the decision confirms or releases; a confirmed trip (startsAt) only waits at check-in.
   const waiting = current?.waitingBookings.filter((booking) => !booking.startsAt).length ?? 0;
   const confirmedTrips = current?.waitingBookings.filter((booking) => booking.startsAt).length ?? 0;
+  // Approving the ID leaves a licence it didn't confirm with the team: its bookings wait for that check too.
+  const licenceWaits = identity && current?.licence?.status === 'PENDING';
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -211,7 +213,7 @@ export function AdminVerificationsPage() {
 
         <Section
           title="Identity checks"
-          description="Compare their ID with the details they entered. Approving confirms the bookings waiting on it; rejecting releases them."
+          description="Compare their ID with the details they entered. Approving confirms the bookings waiting on it, once their licence is accepted too; rejecting releases them."
           items={identities}
           start={start}
         />
@@ -239,7 +241,7 @@ export function AdminVerificationsPage() {
           identity
             ? rejecting
               ? `They won’t be able to book.${waiting > 0 ? ' Bookings waiting on this check are released with their card authorisations, so nothing is charged.' : ''} Any trip of theirs already confirmed stays booked, and the team is alerted to it. We’ll email them.`
-              : `They’ll be verified.${waiting > 0 ? ' Bookings waiting on this check are confirmed; requests still go to their Host.' : ''} We’ll email them.`
+              : `They’ll be verified.${waiting > 0 ? (licenceWaits ? ' Bookings waiting on this check still wait for their licence, which then appears under “Licences to check by hand”.' : ' Bookings waiting on this check are confirmed; requests still go to their Host.') : ''} We’ll email them.`
             : rejecting
               ? `They won’t be able to book until their licence details are fixed.${waiting > 0 ? ' Bookings waiting on this licence are released with their card authorisations, so nothing is charged.' : ''}${confirmedTrips > 0 ? ' Their confirmed trips still can’t start, and the team is alerted to each.' : ''} We’ll email them your note, so write it for them.`
               : `Their licence details are accepted.${waiting > 0 ? ' Bookings waiting on this licence are confirmed; requests still go to their Host.' : ''}${confirmedTrips > 0 ? ' Their confirmed trips can be checked in.' : ''} We’ll email them.`

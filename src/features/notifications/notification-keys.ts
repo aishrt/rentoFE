@@ -3,8 +3,11 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query';
 /** Every notification query starts with this, so one invalidation refreshes the bell and the page alike. */
 export const notificationsQueryKey = ['notifications'] as const;
 
-/** News about a booking: requested, accepted, declined, cancelled, refunded, paid, the trip under way. */
-const BOOKING_NEWS = /^(BOOKING|REQUEST|REFUND|PAYMENT|TRIP|EXTRA_CHARGE)(_|$)/;
+/**
+ * News about a booking: requested, accepted, declined, cancelled, refunded, paid, a check-in or check-out to
+ * review, the trip under way, and the Host's payouts (sent, or payout setup done).
+ */
+const BOOKING_NEWS = /^(BOOKING|REQUEST|REFUND|PAYMENT|CHECK|TRIP|EXTRA_CHARGE|PAYOUT)(_|$)/;
 
 /*
  * What booking news refreshes, by the start of each query's key: a booking (booking-api.ts) with its receipt,
@@ -26,6 +29,8 @@ const BOOKING_QUERIES: QueryKey[] = [
 ];
 /** The user's support requests (support-api.ts), which a reply from support changes. */
 const TICKETS_QUERY: QueryKey = ['support', 'tickets'];
+/** The user's incident cases and each case page (incidents-api.ts), which a report or a staff update changes. */
+const INCIDENTS_QUERY: QueryKey = ['incidents'];
 
 /**
  * A live `notification` event (plan §7): the bell refreshes, and so does whatever on screen the news is
@@ -39,6 +44,8 @@ export function applyNotificationEvent(queryClient: QueryClient, payload: unknow
     ? BOOKING_QUERIES
     : type.startsWith('SUPPORT_')
       ? [TICKETS_QUERY]
-      : [];
+      : type.startsWith('INCIDENT_')
+        ? [INCIDENTS_QUERY]
+        : [];
   for (const queryKey of refresh) void queryClient.invalidateQueries({ queryKey });
 }

@@ -108,20 +108,34 @@ function PayoutSetup({ account }: { account: PayoutAccount }) {
       </Card>
     );
   }
+  // Set up with nothing left to send: Stripe is still checking what the Host gave it, often for a minute or
+  // two after they come back. Its message turns payouts on, and the live notification refreshes this page.
+  const checking = account.connected && account.requirements.length === 0;
   return (
     <Alert
       variant="info"
-      title={account.connected ? 'Finish your payout setup' : 'Set up payouts to get paid'}
+      title={
+        checking
+          ? 'Stripe is checking your details'
+          : account.connected
+            ? 'Finish your payout setup'
+            : 'Set up payouts to get paid'
+      }
       action={
-        <Button loading={start.isPending} onClick={() => start.mutate()}>
+        <Button
+          variant={checking ? 'secondary' : 'primary'}
+          loading={start.isPending}
+          onClick={() => start.mutate()}
+        >
           <Landmark aria-hidden="true" />
           {account.connected ? 'Continue payout setup' : 'Set up payouts'}
         </Button>
       }
     >
       <p>
-        Stripe, our payments partner, pays your earnings into your bank account. It takes a few minutes: your
-        bank details and a quick identity check. Approved listings go live once it’s done.
+        {checking
+          ? 'This usually takes a few minutes, and this page updates on its own when it’s done. Approved listings go live then. If it’s still here after an hour, continue your payout setup to see what Stripe needs.'
+          : 'Stripe, our payments partner, pays your earnings into your bank account. It takes a few minutes: your bank details and a quick identity check. Approved listings go live once it’s done.'}
       </p>
       {account.requirements.length > 0 && (
         <p className="mt-2">Still needed: {account.requirements.join(', ')}.</p>

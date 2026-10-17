@@ -107,8 +107,12 @@ describe('AdminVerificationsPage', () => {
   it('approves an identity check, which confirms the booking waiting on it', async () => {
     let sent: unknown;
     let decided = false;
+    const licenceAccepted = { ...kiri, licence: { ...kiri.licence!, status: 'APPROVED' as const } };
     mockApi({
-      'GET /admin/verifications': () => ({ status: 200, body: { items: decided ? [sam] : [kiri, sam] } }),
+      'GET /admin/verifications': () => ({
+        status: 200,
+        body: { items: decided ? [sam] : [licenceAccepted, sam] },
+      }),
       'POST /admin/users/u20/identity-review': (init) => {
         sent = JSON.parse(String(init?.body));
         decided = true;
@@ -133,6 +137,20 @@ describe('AdminVerificationsPage', () => {
     expect(sent).toEqual({ decision: 'APPROVE', note: 'Matches the passport.' });
     expect(screen.queryByRole('listitem', { name: 'Kiri Smith' })).not.toBeInTheDocument();
     expect(await screen.findByText('1 check waiting')).toBeInTheDocument();
+  });
+
+  it('says a booking still waits for the licence when the ID is approved before it', async () => {
+    mockApi({ 'GET /admin/verifications': { status: 200, body: { items: [kiri, sam] } } });
+    render();
+
+    await userEvent.click(
+      (await card('Kiri Smith')).getByRole('button', { name: 'Approve Kiri Smith’s identity check' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Kiri Smith’s identity?' }));
+    expect(
+      dialog.getByText(/still wait for their licence, which then appears under “Licences to check by hand”/),
+    ).toBeInTheDocument();
+    expect(dialog.queryByText(/are confirmed/)).not.toBeInTheDocument();
   });
 
   it('rejects an identity check without a note, releasing the booking and keeping a confirmed trip', async () => {

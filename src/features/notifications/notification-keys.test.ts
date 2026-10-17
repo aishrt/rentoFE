@@ -19,7 +19,17 @@ function hostDashboardKeys() {
 
 describe('applyNotificationEvent', () => {
   it('refreshes the bell, the booking, its lists, handover, payments and Host dashboard for booking news', () => {
-    for (const type of ['BOOKING_CANCELLED', 'BOOKING_CONFIRMED', 'REFUND_ISSUED', 'REQUEST_WITHDRAWN']) {
+    for (const type of [
+      'BOOKING_CANCELLED',
+      'BOOKING_CONFIRMED',
+      'REFUND_ISSUED',
+      'REQUEST_WITHDRAWN',
+      // The other party's check-in or check-out to review, and the Host's payouts.
+      'CHECK_IN_DONE',
+      'CHECK_OUT_DONE',
+      'PAYOUT_PAID',
+      'PAYOUT_SETUP_DONE',
+    ]) {
       const { queryClient, invalidated } = setup();
       applyNotificationEvent(queryClient, { id: 'n1', type, title: 'News' });
       expect(invalidated()).toEqual([
@@ -38,6 +48,14 @@ describe('applyNotificationEvent', () => {
     const { queryClient, invalidated } = setup();
     applyNotificationEvent(queryClient, { type: 'SUPPORT_TICKET_REPLY', title: 'Support replied' });
     expect(invalidated()).toEqual([notificationsQueryKey, ['support', 'tickets']]);
+  });
+
+  it('refreshes the incident cases for a new report or a staff update', () => {
+    for (const type of ['INCIDENT_OPENED', 'INCIDENT_UPDATE']) {
+      const { queryClient, invalidated } = setup();
+      applyNotificationEvent(queryClient, { type, title: 'Case news' });
+      expect(invalidated()).toEqual([notificationsQueryKey, ['incidents']]);
+    }
   });
 
   it('refreshes only the bell for anything else', () => {
