@@ -12,7 +12,9 @@ const DECISIONS: DecisionKey[] = [
   'reviewsAndTrips',
   'company',
   'bookingRules',
+  'listingsAndSearch',
   'verificationServices',
+  'hostEstimator',
   'retentionAndRisk',
 ];
 

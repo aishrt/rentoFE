@@ -68,7 +68,7 @@ export const samplePolicies: PublicPolicies = {
   },
   search: { maxTripDays: 90, radiusKm: { min: 5, default: 25, max: 300 } },
   hostEstimator: { bookedDaysPerMonth: 10, dailyCentsByBodyType: { HATCHBACK: 6000 } },
-  reviews: { windowDays: 14 },
+  reviews: { windowDays: 14, revealTogether: true },
   trips: { lateReturnGraceMinutes: 30 },
 };
 

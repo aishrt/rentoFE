@@ -125,7 +125,8 @@ describe('VehicleCalendarPage', () => {
         };
       },
     });
-    render();
+    const { queryClient } = render();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     await userEvent.click(await day('Monday, 12 October 2026: free'));
     await userEvent.click(await day(/^Wednesday, 14 October 2026/));
@@ -140,6 +141,13 @@ describe('VehicleCalendarPage', () => {
       expect(sent).toEqual({ start: '2026-10-12', end: '2026-10-15', note: 'Family trip' }),
     );
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // The car's calendar and the all-cars timeline both fetch the change.
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
+      expect.arrayContaining([
+        ['host', 'vehicles', 'v1', 'calendar'],
+        ['host', 'calendar'],
+      ]),
+    );
   });
 
   it('says when the dates clash with a trip, as the API refuses them', async () => {
@@ -162,7 +170,8 @@ describe('VehicleCalendarPage', () => {
   it('removes one of your own blocks', async () => {
     const remove = vi.fn();
     api({ 'DELETE /host/vehicles/v1/blocks/b4': () => (remove(), { status: 204 }) });
-    render();
+    const { queryClient } = render();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     await userEvent.click(await day(/^Thursday, 22 October 2026/));
     const details = within(screen.getByRole('region', { name: 'Thursday, 22 October 2026' }));
@@ -170,6 +179,14 @@ describe('VehicleCalendarPage', () => {
     await userEvent.click(details.getByRole('button', { name: 'Yes, unblock' }));
 
     await vi.waitFor(() => expect(remove).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
+        expect.arrayContaining([
+          ['host', 'vehicles', 'v1', 'calendar'],
+          ['host', 'calendar'],
+        ]),
+      ),
+    );
   });
 
   it('blocks a time range from the week view', async () => {

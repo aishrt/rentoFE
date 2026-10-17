@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
+import { refreshHostDashboard } from '@/features/host/host-api';
 import { applyNotificationEvent, notificationsQueryKey } from './notification-keys';
 
 function setup() {
@@ -9,9 +10,26 @@ function setup() {
   return { queryClient, invalidated };
 }
 
+/** The keys refreshHostDashboard refreshes after a Host's own change to a booking. */
+function hostDashboardKeys() {
+  const { queryClient, invalidated } = setup();
+  refreshHostDashboard(queryClient);
+  return invalidated();
+}
+
 describe('applyNotificationEvent', () => {
-  it('refreshes the bell, and the booking, its lists, handover and payments for booking news', () => {
-    for (const type of ['BOOKING_CANCELLED', 'BOOKING_CONFIRMED', 'REFUND_ISSUED', 'REQUEST_WITHDRAWN']) {
+  it('refreshes the bell, the booking, its lists, handover, payments and Host dashboard for booking news', () => {
+    for (const type of [
+      'BOOKING_CANCELLED',
+      'BOOKING_CONFIRMED',
+      'REFUND_ISSUED',
+      'REQUEST_WITHDRAWN',
+      // The other party's check-in or check-out to review, and the Host's payouts.
+      'CHECK_IN_DONE',
+      'CHECK_OUT_DONE',
+      'PAYOUT_PAID',
+      'PAYOUT_SETUP_DONE',
+    ]) {
       const { queryClient, invalidated } = setup();
       applyNotificationEvent(queryClient, { id: 'n1', type, title: 'News' });
       expect(invalidated()).toEqual([
@@ -20,6 +38,8 @@ describe('applyNotificationEvent', () => {
         ['bookings'],
         ['handover'],
         ['me', 'payments'],
+        // What refreshHostDashboard refreshes, written out.
+        ...hostDashboardKeys(),
       ]);
     }
   });
@@ -28,6 +48,14 @@ describe('applyNotificationEvent', () => {
     const { queryClient, invalidated } = setup();
     applyNotificationEvent(queryClient, { type: 'SUPPORT_TICKET_REPLY', title: 'Support replied' });
     expect(invalidated()).toEqual([notificationsQueryKey, ['support', 'tickets']]);
+  });
+
+  it('refreshes the incident cases for a new report or a staff update', () => {
+    for (const type of ['INCIDENT_OPENED', 'INCIDENT_UPDATE']) {
+      const { queryClient, invalidated } = setup();
+      applyNotificationEvent(queryClient, { type, title: 'Case news' });
+      expect(invalidated()).toEqual([notificationsQueryKey, ['incidents']]);
+    }
   });
 
   it('refreshes only the bell for anything else', () => {

@@ -107,8 +107,12 @@ describe('AdminVerificationsPage', () => {
   it('approves an identity check, which confirms the booking waiting on it', async () => {
     let sent: unknown;
     let decided = false;
+    const licenceAccepted = { ...kiri, licence: { ...kiri.licence!, status: 'APPROVED' as const } };
     mockApi({
-      'GET /admin/verifications': () => ({ status: 200, body: { items: decided ? [sam] : [kiri, sam] } }),
+      'GET /admin/verifications': () => ({
+        status: 200,
+        body: { items: decided ? [sam] : [licenceAccepted, sam] },
+      }),
       'POST /admin/users/u20/identity-review': (init) => {
         sent = JSON.parse(String(init?.body));
         decided = true;
@@ -135,7 +139,21 @@ describe('AdminVerificationsPage', () => {
     expect(await screen.findByText('1 check waiting')).toBeInTheDocument();
   });
 
-  it('rejects an identity check without a note, releasing the booking', async () => {
+  it('says a booking still waits for the licence when the ID is approved before it', async () => {
+    mockApi({ 'GET /admin/verifications': { status: 200, body: { items: [kiri, sam] } } });
+    render();
+
+    await userEvent.click(
+      (await card('Kiri Smith')).getByRole('button', { name: 'Approve Kiri Smith’s identity check' }),
+    );
+    const dialog = within(await screen.findByRole('dialog', { name: 'Approve Kiri Smith’s identity?' }));
+    expect(
+      dialog.getByText(/still wait for their licence, which then appears under “Licences to check by hand”/),
+    ).toBeInTheDocument();
+    expect(dialog.queryByText(/are confirmed/)).not.toBeInTheDocument();
+  });
+
+  it('rejects an identity check without a note, releasing the booking and keeping a confirmed trip', async () => {
     let sent: unknown;
     mockApi({
       'GET /admin/verifications': { status: 200, body: { items: [kiri] } },
@@ -143,7 +161,13 @@ describe('AdminVerificationsPage', () => {
         sent = JSON.parse(String(init?.body));
         return {
           status: 200,
-          body: { identityStatus: 'REJECTED', confirmed: [], waitingForHost: [], released: ['RV-7K2Q9M'] },
+          body: {
+            identityStatus: 'REJECTED',
+            confirmed: [],
+            waitingForHost: [],
+            released: ['RV-7K2Q9M'],
+            stillBooked: ['RV-3H8T2W'],
+          },
         };
       },
     });
@@ -153,10 +177,12 @@ describe('AdminVerificationsPage', () => {
       (await card('Kiri Smith')).getByRole('button', { name: 'Reject Kiri Smith’s identity check' }),
     );
     const dialog = within(await screen.findByRole('dialog', { name: 'Reject Kiri Smith’s identity check?' }));
+    expect(dialog.getByText(/Any trip of theirs already confirmed stays booked/)).toBeInTheDocument();
     await userEvent.click(dialog.getByRole('button', { name: 'Reject' }));
 
     expect(await screen.findByText('Kiri Smith’s identity check was rejected')).toBeInTheDocument();
     expect(screen.getByText(/Released RV-7K2Q9M and the card authorisation/)).toBeInTheDocument();
+    expect(screen.getByText(/RV-3H8T2W is still booked: the team is alerted/)).toBeInTheDocument();
     expect(sent).toEqual({ decision: 'REJECT' });
   });
 
@@ -217,6 +243,30 @@ describe('AdminVerificationsPage', () => {
     expect(await screen.findByText('Sam Lee’s licence is approved')).toBeInTheDocument();
     expect(screen.getByText('We’ve emailed them. Confirmed RV-4H8J2K.')).toBeInTheDocument();
     expect(sent).toEqual({ decision: 'APPROVE' });
+  });
+
+  it('shows a confirmed trip waiting on a licence check, which the decision neither confirms nor releases', async () => {
+    const heldSam: VerificationQueueItem = {
+      ...sam,
+      waitingBookings: [
+        // 10 am on 2 November in New Zealand.
+        { ref: 'RV-9P3L6T', vehicleTitle: '2020 Honda Jazz', startsAt: '2026-11-01T21:00:00.000Z' },
+      ],
+    };
+    mockApi({ 'GET /admin/verifications': { status: 200, body: { items: [heldSam] } } });
+    render();
+
+    const held = await card('Sam Lee');
+    expect(held.getByRole('link', { name: 'RV-9P3L6T' })).toHaveAttribute(
+      'href',
+      '/admin/bookings/RV-9P3L6T',
+    );
+    expect(held.getByText(/Confirmed, starts Mon, 2 Nov.*: check-in waits for this/)).toBeInTheDocument();
+
+    await userEvent.click(held.getByRole('button', { name: 'Reject Sam Lee’s licence' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Reject Sam Lee’s licence?' }));
+    expect(dialog.getByText(/Their confirmed trips still can’t start/)).toBeInTheDocument();
+    expect(dialog.queryByText(/released with their card authorisations/)).not.toBeInTheDocument();
   });
 
   it('says when a booking still waits for the licence after the identity check is approved', async () => {

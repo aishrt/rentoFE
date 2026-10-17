@@ -99,7 +99,7 @@ export const policiesFixture: PublicPolicies = {
       CONVERTIBLE: 13_000,
     },
   },
-  reviews: { windowDays: 14 },
+  reviews: { windowDays: 14, revealTogether: true },
   trips: { lateReturnGraceMinutes: 30 },
 };
 

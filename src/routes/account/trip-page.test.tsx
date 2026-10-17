@@ -450,6 +450,51 @@ describe('TripPage', () => {
     expect(hostNoShow).not.toHaveTextContent(/Nothing was charged/);
   });
 
+  it('says the card dispute decides the money on a trip support cancelled during one, not that nothing was charged', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'CANCELLED',
+        cancellation: {
+          at: new Date().toISOString(),
+          by: 'SUPPORT',
+          reason: 'PLATFORM',
+          refundCents: 0,
+          feeCents: 0,
+          disputed: true,
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+    const banner = (await screen.findByText(/The card payment went to a dispute with your bank/)).closest(
+      '[role="status"]',
+    );
+    expect(banner).not.toHaveTextContent(/Nothing was charged/);
+  });
+
+  it('doesn’t promise a host cancellation’s full refund on a trip cancelled during a card dispute', async () => {
+    mockTrip(
+      confirmedBooking({
+        status: 'CANCELLED',
+        cancellation: {
+          at: new Date().toISOString(),
+          by: 'SUPPORT',
+          reason: 'HOST_NO_SHOW',
+          refundCents: 0,
+          feeCents: 0,
+          disputed: true,
+        },
+        actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+      }),
+    );
+    render();
+    const banner = (await screen.findByText('Liam couldn’t provide the car')).closest('[role="status"]');
+    expect(banner).toHaveTextContent(
+      'Rento Vroom support cancelled this trip because Liam couldn’t provide the car. The card payment went to a dispute with your bank, which decides what goes back to your card, so there’s no separate refund from us.',
+    );
+    expect(banner).not.toHaveTextContent(/full refund/);
+  });
+
   it('doesn’t promise an address or a mobile number on a booking that has ended', async () => {
     mockTrip(
       bookingFixture({
@@ -538,6 +583,54 @@ describe('TripPage', () => {
     expect(dialog.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('says a payment still at the bank after the 30 minutes is holding the dates, not that they were released', async () => {
+    const processing = bookingFixture({
+      holdExpiresAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+      paymentProcessing: true,
+      actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+    });
+    mockTrip(processing, (request) =>
+      request.path === `/bookings/${REF}/payment/sync`
+        ? { status: 200, body: { booking: processing } }
+        : undefined,
+    );
+    render();
+
+    expect(await screen.findByText('Your payment is processing')).toBeInTheDocument();
+    expect(screen.getByText(/Your bank is still processing your payment\./)).toBeInTheDocument();
+    expect(screen.queryByText('These dates were released')).not.toBeInTheDocument();
+  });
+
+  it('asks again when the 30 minutes run out on the page, and says a payment at the bank is processing', async () => {
+    // A second left to pay; the API says the payment is processing only once the hold has passed.
+    const holding = bookingFixture({ holdExpiresAt: new Date(Date.now() + 1_000).toISOString() });
+    const processing = bookingFixture({
+      holdExpiresAt: holding.holdExpiresAt,
+      paymentProcessing: true,
+      actions: { pay: false, cancel: false, withdraw: false, accept: false, decline: false },
+    });
+    let fetches = 0;
+    const sent = mockTrip(holding, (request) => {
+      if (request.path === `/bookings/${REF}/payment/sync`)
+        return { status: 200, body: { booking: holding } };
+      if (request.method === 'GET' && request.path === `/bookings/${REF}`) {
+        fetches += 1;
+        return { status: 200, body: { booking: fetches === 1 ? holding : processing } };
+      }
+      return undefined;
+    });
+    render();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Finish paying to book this trip' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Your payment is processing', {}, { timeout: 4_000 })).toBeInTheDocument();
+    expect(screen.queryByText('These dates were released')).not.toBeInTheDocument();
+    expect(
+      sent.filter((request) => request.method === 'GET' && request.path === `/bookings/${REF}`),
+    ).toHaveLength(2);
+  });
+
   it('lists charges after the trip, with a way to pay one the saved card didn’t cover', async () => {
     mockTrip(
       confirmedBooking({
@@ -573,7 +666,7 @@ describe('TripPage', () => {
     expect(charges.getByText('Paid')).toBeInTheDocument();
     expect(charges.getByText('Cleaning')).toBeInTheDocument();
     expect(charges.getByText('Not paid yet')).toBeInTheDocument();
-    expect(charges.getByText(/Your saved card didn’t go through/)).toBeInTheDocument();
+    expect(charges.getByText(/We couldn’t charge it to a saved card/)).toBeInTheDocument();
     expect(charges.getByRole('link', { name: 'Pay $60' })).toHaveAttribute('href', '/pay/pay123');
   });
 

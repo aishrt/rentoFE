@@ -150,8 +150,8 @@ function Pay({ paymentId }: { paymentId: string }) {
           </Alert>
         ) : (
           data.failureReason && (
-            <Alert variant="danger" title="Your saved card didn’t go through">
-              {data.failureReason} Pay with another card, Apple Pay or Google Pay.
+            <Alert variant="danger" title="We couldn’t charge a saved card">
+              {data.failureReason} Pay with a card, Apple Pay or Google Pay below.
             </Alert>
           )
         )}

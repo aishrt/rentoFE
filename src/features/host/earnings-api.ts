@@ -8,6 +8,7 @@ import { client, unwrap } from '@/api/client';
 
 export const earningsQueryKey = ['host', 'earnings'] as const;
 export const payoutsQueryKey = ['host', 'payouts'] as const;
+export const hostTodoQueryKey = ['host', 'todo'] as const;
 
 export function useEarnings() {
   return useQuery({
@@ -110,7 +111,7 @@ export async function downloadStatement(period: string): Promise<void> {
 /** The to-do list on the Host's dashboard (spec §9), urgent items first. */
 export function useHostTodo(enabled = true) {
   return useQuery({
-    queryKey: ['host', 'todo'],
+    queryKey: hostTodoQueryKey,
     queryFn: async ({ signal }) => (await unwrap(client.GET('/host/todo', { signal }))).items,
     enabled,
     staleTime: 60_000,

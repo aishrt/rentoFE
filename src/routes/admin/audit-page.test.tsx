@@ -100,6 +100,25 @@ describe('AdminAuditPage', () => {
     expect(router.state.location.search).toBe('');
   });
 
+  it('filters by content changes and message removals too', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/audit': { status: 200, body: { entries: [held], total: 1, page: 1 } },
+    });
+    const { router } = render();
+
+    await row(/payout\.held/);
+    await userEvent.click(screen.getByRole('button', { name: /^Record/ }));
+    for (const name of ['Homepage and legal content', 'Destination pages', 'FAQs', 'Messages']) {
+      expect(await screen.findByRole('option', { name })).toBeInTheDocument();
+    }
+    await userEvent.click(screen.getByRole('option', { name: 'Help articles' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Filter' }));
+
+    await vi.waitFor(() => expect(queries(fetchMock)).toHaveLength(2));
+    expect(queries(fetchMock)[1]?.get('entity')).toBe('helpArticle');
+    expect(new URLSearchParams(router.state.location.search).get('entity')).toBe('helpArticle');
+  });
+
   it('shows only one person’s changes, and everyone’s again', async () => {
     const fetchMock = mockApi({
       'GET /admin/audit': { status: 200, body: { entries: [held], total: 1, page: 1 } },

@@ -16,6 +16,7 @@ import type {
   QuoteRequest,
 } from '@/api/types';
 import { paymentHistoryQueryKey } from '@/features/account/dashboard-api';
+import { refreshHostDashboard } from '@/features/host/host-api';
 
 /*
  * The booking flow's requests (plan §9, Days 11–14): the live quote, the Guest's checkout readiness,
@@ -173,12 +174,16 @@ export function useCancellationPreview(ref: string, enabled: boolean) {
   });
 }
 
-/** Puts a changed booking in the cache and refreshes every list it may have moved between. */
+/**
+ * Puts a changed booking in the cache and refreshes every list it may have moved between, and the Host's
+ * dashboard: its to-do list, earnings, payouts and calendars.
+ */
 function useBookingChanged() {
   const queryClient = useQueryClient();
   return (booking: Booking) => {
     queryClient.setQueryData(bookingQueryKey(booking.ref), booking);
     void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
+    refreshHostDashboard(queryClient);
   };
 }
 

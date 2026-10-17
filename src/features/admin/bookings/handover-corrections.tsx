@@ -43,9 +43,10 @@ function useSettled(bookingRef: string) {
 }
 
 /**
- * Where the extra kilometres stand: charged (the charge is under Extra charges), waiting for the other party to
- * confirm the check-out or the damage-report window to close, or held for a check by staff because the
- * distance is more than is charged without one. Staff can charge them now.
+ * Where the extra kilometres stand (the handover's extraKmStatus): charged (the charge is under Extra charges),
+ * waiting for the other party to confirm the check-out (the Guest, when support completed the trip) or the
+ * damage-report window to close, or held for a check by staff because the distance is more than is charged
+ * without one. Staff can charge them now.
  */
 export function ExtraKmStatus({
   handover,
@@ -72,22 +73,24 @@ export function ExtraKmStatus({
   }
   if (handover.bookingStatus !== 'COMPLETED') return <p>{amount}.</p>;
 
-  const checkOut = handover.checkOut;
-  const windowEnds = handover.damageWindowEndsAt;
-  const waiting =
-    !checkOut?.completedBySupport &&
-    !(checkOut?.confirmedByGuestAt && checkOut.confirmedByHostAt) &&
-    windowEnds !== undefined &&
-    new Date(windowEnds) > new Date();
+  const standing = handover.extraKmStatus;
   const error = charge.isError ? actionErrorMessage(charge.error, { needsRefunds: true }) : null;
 
   return (
     <div className="grid gap-2">
       <p>
-        {amount}, not charged yet.{' '}
-        {waiting
-          ? `It’s charged once the other party confirms the check-out, or when the damage-report window closes (${formatNzDateTimeWithYear(windowEnds!)}).`
-          : 'It’s waiting for a check by staff: the distance is more than is charged without one. Check the dashboard photos, then charge it or correct the reading.'}
+        {standing?.status === 'NOT_CHARGED' ? (
+          `${amount}, not charged: the charge was cancelled.`
+        ) : (
+          <>
+            {amount}, not charged yet.{' '}
+            {standing?.status === 'WAITING' && standing.chargeAt
+              ? standing.waitingFor
+                ? `It’s charged once the ${standing.waitingFor === 'GUEST' ? 'Guest' : 'Host'} confirms the check-out, or when the damage-report window closes (${formatNzDateTimeWithYear(standing.chargeAt)}).`
+                : 'The check-out readings are confirmed, so it’s being charged now.'
+              : 'It’s waiting for a check by staff: the distance is more than is charged without one. Check the dashboard photos, then charge it or correct the reading.'}
+          </>
+        )}
       </p>
       <Button variant="secondary" size="sm" className="justify-self-start" onClick={() => setOpen(true)}>
         Charge extra kilometres now

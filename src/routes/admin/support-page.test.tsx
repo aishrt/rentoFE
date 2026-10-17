@@ -102,6 +102,23 @@ describe('AdminSupportPage', () => {
     expect(query.get('mine')).toBe('true');
   });
 
+  it('shows one member’s requests from a link on their record, with a way back to everyone’s', async () => {
+    const member = '64b7f0c2a1b2c3d4e5f60718';
+    const fetchMock = mockApi({
+      'GET /admin/support/tickets': { status: 200, body: inbox([visitor]) },
+    });
+    render(`/admin/support?category=privacy&user=${member}`);
+
+    expect(await screen.findByRole('link', { name: /ST-XYZ789/ })).toBeInTheDocument();
+    expect(lastQuery(fetchMock).get('user')).toBe(member);
+    expect(screen.getByText(/Showing the requests one member sent/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show everyone’s' }));
+    await vi.waitFor(() => expect(lastQuery(fetchMock).get('user')).toBeNull());
+    expect(lastQuery(fetchMock).get('category')).toBe('PRIVACY');
+    expect(screen.queryByText(/Showing the requests one member sent/)).not.toBeInTheDocument();
+  });
+
   it('keeps the tab, search, category and "Assigned to me" in the address', async () => {
     const fetchMock = mockApi({
       'GET /admin/support/tickets': { status: 200, body: inbox([kiri]) },
@@ -171,6 +188,18 @@ describe('AdminSupportPage', () => {
 
     render('/admin/support?q=nothing');
     expect(await screen.findByText('No tickets match')).toBeInTheDocument();
+  });
+
+  it('points to the Resolved tab when a member has nothing to answer', async () => {
+    mockApi({ 'GET /admin/support/tickets': { status: 200, body: inbox([]) } });
+    render('/admin/support?user=64b7f0c2a1b2c3d4e5f60718');
+
+    expect(await screen.findByText('No open requests from this member')).toBeInTheDocument();
+    expect(
+      screen.getByText('Their resolved ones are under Resolved, or show everyone’s.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Try another search/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show everyone’s' })).toBeInTheDocument();
   });
 
   it('shows an error with a way to try again', async () => {

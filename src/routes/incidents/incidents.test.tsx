@@ -315,6 +315,70 @@ describe('IncidentPage', () => {
     expect(screen.getByText('(only you and our support team see this)')).toBeInTheDocument();
   });
 
+  it('shows where each charge from the case stands, and says in the history what support did', async () => {
+    const charged = incident({
+      status: 'RESOLVED',
+      awaitingYou: false,
+      canReply: false,
+      extraCharges: [
+        { type: 'CLEANING', description: 'Valet', amountCents: 8_000, status: 'CANCELLED' },
+        {
+          type: 'FUEL',
+          description: 'Refuel',
+          amountCents: 5_000,
+          status: 'SUCCEEDED',
+          refundedCents: 2_000,
+        },
+        {
+          type: 'TOLL',
+          description: 'Harbour Bridge toll',
+          amountCents: 400,
+          status: 'SUCCEEDED',
+          refundedCents: 400,
+        },
+        { type: 'DAMAGE', description: 'Bumper repair', amountCents: 9_000, status: 'PENDING' },
+      ],
+      events: [
+        incident().events[0]!,
+        ...(['CHARGE_CANCELLED', 'CHARGE_REFUNDED'] as const).map((action, index) => ({
+          id: String(index + 3),
+          action,
+          by: 'SUPPORT' as const,
+          byName: 'Rento Vroom support',
+          note:
+            action === 'CHARGE_CANCELLED' ? 'The $80.00 valet was taken off.' : '$20.00 of the refuel back.',
+          attachments: [],
+          visibility: 'BOTH' as const,
+          createdAt: '2026-10-07T01:00:00.000Z',
+        })),
+      ],
+    });
+    mockRoutes((request) => {
+      switch (`${request.method} ${request.path}`) {
+        case 'POST /auth/session':
+          return { status: 200, body: { user: guestUser } };
+        case 'GET /incidents/IN-4F7K2Q':
+          return { status: 200, body: { incident: charged } };
+        default:
+          return undefined;
+      }
+    });
+    renderWithRouter([{ path: '/incidents/:ref', element: <IncidentPage /> }], '/incidents/IN-4F7K2Q');
+
+    const charges = within((await screen.findByText('Charges from this case')).parentElement!);
+    const status = (description: string) => within(charges.getByText(description).closest('li')!);
+    expect(status('Valet').getByText('Cancelled')).toBeInTheDocument();
+    expect(status('Refuel').getByText('Paid')).toBeInTheDocument();
+    expect(status('Refuel').getByText(/of it was refunded/)).toHaveTextContent('$20 of it was refunded');
+    expect(status('Harbour Bridge toll').getByText('Refunded')).toBeInTheDocument();
+    expect(status('Bumper repair').getByText('Waiting for payment')).toBeInTheDocument();
+
+    const history = within(screen.getByRole('heading', { name: 'History' }).parentElement!);
+    expect(history.getByText(/cancelled a charge/)).toBeInTheDocument();
+    expect(history.getByText(/refunded a charge/)).toBeInTheDocument();
+    expect(history.queryByText(/updated the case/)).not.toBeInTheDocument();
+  });
+
   it('doesn’t say it’s waiting for the side support didn’t ask', async () => {
     mockRoutes((request) => {
       switch (`${request.method} ${request.path}`) {

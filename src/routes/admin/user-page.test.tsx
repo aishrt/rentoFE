@@ -499,26 +499,23 @@ describe('AdminUserPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('downloads a copy of their information', async () => {
-    const fetchMock = mockApi({
+  it('sends staff to their privacy request for a copy of their information', async () => {
+    mockApi({
       'POST /auth/session': session(supportUser),
       'GET /admin/users/u10': { status: 200, body: { user: aroha } },
-      'GET /admin/users/u10/export': { status: 200, body: { account: { firstName: 'Aroha' } } },
     });
-    URL.createObjectURL = vi.fn(() => 'blob:data');
-    URL.revokeObjectURL = vi.fn();
     render();
 
-    await userEvent.click(
-      await (await region('Privacy requests')).findByRole('button', { name: 'Download their data' }),
+    const privacy = await region('Privacy requests');
+    expect(await privacy.findByRole('link', { name: 'Privacy requests' })).toHaveAttribute(
+      'href',
+      '/admin/support?category=privacy&user=u10',
     );
-
-    expect(await screen.findByText('Their information is downloading')).toBeInTheDocument();
     expect(
-      fetchMock.mock.calls.some(([input]) =>
-        String((input as Request).url).endsWith('/admin/users/u10/export'),
-      ),
-    ).toBe(true);
+      privacy.getByText(/open the privacy request they sent us: the download is there/),
+    ).toBeInTheDocument();
+    // The download answers a request, so it isn't here on its own.
+    expect(privacy.queryByRole('button', { name: 'Download their data' })).not.toBeInTheDocument();
   });
 
   it("shows why an account can't be closed yet", async () => {
@@ -603,6 +600,126 @@ describe('AdminUserPage', () => {
     expect(reset).toHaveBeenCalledOnce();
   });
 
+  it('allows another identity check after one was turned down, with a reason for the audit log', async () => {
+    let sent: unknown;
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': { status: 200, body: { user: { ...aroha, identityStatus: 'REJECTED' } } },
+      'POST /admin/users/u10/verification-reset': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return { status: 200, body: { user: { ...aroha, identityStatus: 'NONE' } } };
+      },
+    });
+    render();
+
+    const account = await region('Account');
+    await userEvent.click(account.getByRole('button', { name: 'Allow another identity check' }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Allow Aroha Ngata another identity check?' }),
+    );
+    await userEvent.click(dialog.getByRole('button', { name: 'Allow another check' }));
+    expect(await dialog.findByText('Add a short note saying why')).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await userEvent.type(dialog.getByLabelText('Reason'), 'The selfie was too dark.');
+    await userEvent.click(dialog.getByRole('button', { name: 'Allow another check' }));
+
+    expect(await screen.findByText('Aroha can do their identity check again')).toBeInTheDocument();
+    expect(sent).toEqual({ kind: 'IDENTITY', reason: 'The selfie was too dark.' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(account.queryByRole('button', { name: 'Allow another identity check' })).not.toBeInTheDocument();
+  });
+
+  it('sends a turned-down licence back for another check, and says when it can’t', async () => {
+    let sent: unknown;
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': {
+        status: 200,
+        body: { user: { ...aroha, licence: { ...aroha.licence!, status: 'REJECTED' } } },
+      },
+      'POST /admin/users/u10/verification-reset': (init) => {
+        sent = JSON.parse(String(init?.body));
+        return {
+          status: 409,
+          body: {
+            error: {
+              code: 'NOT_REJECTED',
+              message: "This person's licence wasn't turned down, so there's nothing to reopen.",
+            },
+          },
+        };
+      },
+    });
+    render();
+
+    const licence = await region('Driver licence');
+    // Nothing to reopen on their identity check.
+    expect(
+      (await region('Account')).queryByRole('button', { name: 'Allow another identity check' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(licence.getByRole('button', { name: 'Allow another licence check' }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Allow another check of Aroha Ngata’s licence?' }),
+    );
+    expect(dialog.getByText(/goes back to the verification queue/)).toBeInTheDocument();
+    await userEvent.type(dialog.getByLabelText('Reason'), 'They sent a clearer photo.');
+    await userEvent.click(dialog.getByRole('button', { name: 'Allow another check' }));
+
+    expect(
+      await dialog.findByText("This person's licence wasn't turned down, so there's nothing to reopen."),
+    ).toBeInTheDocument();
+    expect(sent).toEqual({ kind: 'LICENCE', reason: 'They sent a clearer photo.' });
+  });
+
+  it('lists the other accounts with the same licence, each linking to their record', async () => {
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': {
+        status: 200,
+        body: {
+          user: {
+            ...aroha,
+            sameLicence: [
+              {
+                id: 'u44',
+                name: 'Aroha Smith',
+                status: 'SUSPENDED',
+                closed: false,
+                createdAt: '2026-06-01T00:00:00.000Z',
+              },
+              {
+                id: 'u45',
+                name: 'Former member',
+                status: 'SUSPENDED',
+                closed: true,
+                createdAt: '2025-01-10T00:00:00.000Z',
+              },
+            ],
+          },
+        },
+      },
+    });
+    render();
+
+    const same = await region('Accounts with the same licence');
+    expect(same.getByRole('link', { name: 'Aroha Smith' })).toHaveAttribute('href', '/admin/users/u44');
+    expect(same.getByText('Suspended · Joined Mon, 1 Jun 2026')).toBeInTheDocument();
+    expect(same.getByRole('link', { name: 'Former member' })).toHaveAttribute('href', '/admin/users/u45');
+    expect(same.getByText('Closed · Joined Fri, 10 Jan 2025')).toBeInTheDocument();
+  });
+
+  it('shows no same-licence list when no other account has it', async () => {
+    mockApi({
+      'POST /auth/session': session(),
+      'GET /admin/users/u10': { status: 200, body: { user: aroha } },
+    });
+    render();
+
+    expect(await region('Driver licence')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Accounts with the same licence' })).not.toBeInTheDocument();
+  });
+
   it('says when nobody has that id', async () => {
     mockApi({
       'POST /auth/session': session(),
@@ -636,5 +753,34 @@ describe('AdminUserPage: a support member’s own record', () => {
     await vi.waitFor(() =>
       expect(flags.queryByRole('button', { name: /Clear flag/ })).not.toBeInTheDocument(),
     );
+  });
+
+  it('leaves reopening their own turned-down checks to another team member', async () => {
+    mockApi({
+      'POST /auth/session': session(supportUser),
+      'GET /admin/users/u3': {
+        status: 200,
+        body: {
+          user: {
+            ...aroha,
+            id: 'u3',
+            firstName: 'Sam',
+            roles: ['GUEST', 'SUPPORT'],
+            identityStatus: 'REJECTED',
+            licence: { ...aroha.licence!, status: 'REJECTED' },
+          },
+        },
+      },
+    });
+    const { queryClient } = render('u3');
+
+    const account = await region('Account');
+    await vi.waitFor(() => expect(queryClient.getQueryData(sessionQueryKey)).toBeTruthy());
+    await vi.waitFor(() =>
+      expect(account.queryByRole('button', { name: 'Allow another identity check' })).not.toBeInTheDocument(),
+    );
+    expect(
+      (await region('Driver licence')).queryByRole('button', { name: 'Allow another licence check' }),
+    ).not.toBeInTheDocument();
   });
 });

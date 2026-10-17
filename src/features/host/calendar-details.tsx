@@ -5,7 +5,7 @@ import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
 import { BLOCK_TONES, isCheckout, isRemovable, isVerifying, reasonLabel } from './calendar-blocks';
 import { formatInstant, formatInstantRange } from './calendar-time';
-import { hostKeys, removeBlockRequest } from './host-api';
+import { refreshCalendars, removeBlockRequest } from './host-api';
 import { InlineConfirm } from './inline-confirm';
 import { hostErrorMessage } from './use-step-save';
 
@@ -14,7 +14,7 @@ function BlockItem({ vehicleId, block }: { vehicleId: string; block: CalendarBlo
   const remove = useMutation({
     mutationFn: () => removeBlockRequest(vehicleId, block.id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: hostKeys.calendar(vehicleId) });
+      refreshCalendars(queryClient, vehicleId);
       toast('Unblocked', { description: 'Guests can book those times again.' });
     },
     onError: (error) =>

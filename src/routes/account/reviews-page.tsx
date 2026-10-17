@@ -17,6 +17,7 @@ import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { AccountPageHeader } from '@/features/account/account-shell';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { formatNzDate } from '@/features/booking/booking-format';
+import { usePolicies } from '@/features/content/content-api';
 import { HostPageHeader } from '@/features/host/host-nav';
 import { openedAsHost } from '@/features/host/host-links';
 import { AreaShell } from '@/features/host/area-shell';
@@ -31,8 +32,12 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
+/** Whether reviews wait for both sides (Platform settings): on until the policies say otherwise. */
+const useRevealTogether = () => usePolicies().data?.reviews.revealTogether ?? true;
+
 function Reviews() {
   const reviews = useMyReviews();
+  const together = useRevealTogether();
   const [params, setParams] = useSearchParams();
   const tab: Tab = params.get('tab') === 'written' ? 'written' : 'received';
 
@@ -136,7 +141,9 @@ function Reviews() {
             description={
               tab === 'written'
                 ? 'After each trip you can review the other side.'
-                : 'Reviews show here once they’re published, after both sides have written one.'
+                : together
+                  ? 'Reviews show here once they’re published, after both sides have written one.'
+                  : 'Reviews show here once they’re published.'
             }
           />
         ) : (
@@ -192,8 +199,9 @@ function ReviewsSkeleton() {
 export function ReviewsPage() {
   const [params] = useSearchParams();
   const asHost = openedAsHost(params);
-  const description =
-    'Reviews are published once both sides have written one, or when the time to review runs out.';
+  const description = useRevealTogether()
+    ? 'Reviews are published once both sides have written one, or when the time to review runs out.'
+    : 'Reviews are published as soon as they’re written, unless our team needs to check them first.';
   return (
     <Container className="py-8 sm:py-12">
       <PageBackdrop art={asHost ? ParkingBays : DotGrid} />

@@ -50,7 +50,7 @@ export const rangeMetrics: OverviewMetric[] = [
     label: 'Platform fees',
     icon: Percent,
     format: formatNzdFromCents,
-    hint: 'Service fees and commission on trips starting on these dates, and the platform’s share of fees kept and extra charges',
+    hint: 'Service fees and commission on trips starting on these dates, Host cancellation fees, and the platform’s share of fees kept and extra charges',
   },
   {
     key: 'hostPayoutsCents',
@@ -117,7 +117,7 @@ export const currentMetrics: OverviewMetric[] = [
     label: 'Pending verifications',
     icon: ShieldCheck,
     format: formatNumber,
-    hint: 'Identity checks waiting, right now',
+    hint: 'Identity checks and licences waiting, right now',
   },
   {
     key: 'suspendedUsers',

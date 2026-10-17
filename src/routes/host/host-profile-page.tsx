@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Bell, ReceiptText, Star, Wallet } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router';
 import type { HostProfile } from '@/api/types';
@@ -47,6 +47,7 @@ function InfoCard({ title, icon, children }: { title: string; icon: ReactNode; c
 
 function ProfileForm({ host }: { host: HostProfile }) {
   const save = useSaveHostProfile();
+  const schema = useMemo(() => hostProfileSchema(host.gstNumber), [host.gstNumber]);
   const {
     register,
     control,
@@ -55,7 +56,7 @@ function ProfileForm({ host }: { host: HostProfile }) {
     reset,
     formState: { errors, isDirty },
   } = useForm<HostProfileValues>({
-    resolver: zodResolver(hostProfileSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       bio: host.bio ?? '',
       gstRegistered: host.gstRegistered,

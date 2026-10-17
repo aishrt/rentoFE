@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
-import { Ban, FileDown, KeyRound, LockOpen, PencilLine, SearchX, UserX } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ban, Inbox, KeyRound, LockOpen, PencilLine, SearchX, UserX } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -19,6 +19,7 @@ import { ReviewSection } from '@/features/admin/listings/review-section';
 import { ROLE_LABELS, USER_STATUS } from '@/features/admin/ops/admin-labels';
 import { AdminPageHeader } from '@/features/admin/ops/admin-page-header';
 import { LoadError } from '@/features/admin/ops/query-feedback';
+import { verificationsQueryKey } from '@/features/admin/operations/operations-api';
 import { resetStaffMfaRequest } from '@/features/admin/staff/staff-api';
 import { RiskFlagItem } from '@/features/admin/users/risk-flag-item';
 import {
@@ -33,13 +34,14 @@ import {
   AccountSection,
   HostSection,
   LicenceSection,
+  SameLicenceSection,
   UserBookingsTable,
 } from '@/features/admin/users/user-sections';
 import {
+  allowVerificationRetryRequest,
   clearRiskFlagRequest,
   closeUserRequest,
   correctUserRequest,
-  downloadUserData,
   setRefundsPermissionRequest,
   suspendUserRequest,
   unsuspendUserRequest,
@@ -135,13 +137,15 @@ export function AdminUserPage() {
   return <UserRecord user={user.data} />;
 }
 
-type DialogName = 'suspend' | 'unsuspend' | 'waive' | 'close' | 'reset-mfa' | 'correct';
+type DialogName =
+  'suspend' | 'unsuspend' | 'waive' | 'close' | 'reset-mfa' | 'correct' | 'identity-retry' | 'licence-retry';
 
 function UserRecord({ user }: { user: AdminUserDetail }) {
   const session = useSession();
   const isAdmin = session.data?.roles.includes('ADMIN') ?? false;
   const isSelf = session.data?.id === user.id;
   const updateCache = useUpdateUserCache();
+  const queryClient = useQueryClient();
   const reduceMotion = useReducedMotion();
   const [dialog, setDialog] = useState<DialogName | null>(null);
   // After a suspension, the bookings it affects are brought into view for staff to keep or cancel.
@@ -154,6 +158,8 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
   // Only the admin changes a staff account (the API says so too).
   const canCorrect =
     canAct && (isAdmin || !user.roles.some((role) => role === 'ADMIN' || role === 'SUPPORT'));
+  // A turned-down check can be opened for another try; support staff leave their own to another team member.
+  const canReopen = !user.closed && (isAdmin || !isSelf);
   const openFlags = user.riskFlags.filter((flag) => !flag.clearedAt);
   // Open flags first, then the cleared ones as history.
   const flags = [...openFlags, ...user.riskFlags.filter((flag) => flag.clearedAt)];
@@ -237,11 +243,23 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
     });
   };
 
-  const download = useMutation({
-    mutationFn: () => downloadUserData(user.id),
-    onSuccess: () => toast('Their information is downloading', { description: 'Send it to them securely.' }),
-    onError: (error) => toast(userErrorMessage(error) ?? 'We couldn’t download it', { tone: 'danger' }),
-  });
+  const allowRetry = async (kind: 'IDENTITY' | 'LICENCE', reason: string) => {
+    updateCache(await allowVerificationRetryRequest({ id: user.id, kind, reason }));
+    // A licence sent back for another check joins the verification queue.
+    void queryClient.invalidateQueries({ queryKey: verificationsQueryKey });
+    setDialog(null);
+    toast(
+      kind === 'IDENTITY'
+        ? `${user.firstName} can do their identity check again`
+        : `${user.firstName}’s licence is back in the queue`,
+      {
+        description:
+          kind === 'IDENTITY'
+            ? 'We’ve emailed them to say so.'
+            : 'We’ve emailed them, in case they want to correct it first.',
+      },
+    );
+  };
 
   const resetMfa = async () => {
     await resetStaffMfaRequest(user.id);
@@ -303,7 +321,12 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="grid min-w-0 content-start gap-6">
-          <AccountSection user={user} />
+          <AccountSection
+            user={user}
+            onAllowIdentityRetry={
+              canReopen && user.identityStatus === 'REJECTED' ? () => setDialog('identity-retry') : undefined
+            }
+          />
 
           <ReviewSection
             id={UPCOMING_ID}
@@ -379,7 +402,16 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
             />
           )}
 
-          <LicenceSection user={user} />
+          <LicenceSection
+            user={user}
+            onAllowRetry={
+              canReopen && user.licence?.status === 'REJECTED' ? () => setDialog('licence-retry') : undefined
+            }
+          />
+
+          {user.sameLicence && user.sameLicence.length > 0 && (
+            <SameLicenceSection accounts={user.sameLicence} />
+          )}
 
           {isAdmin && isSupportMember && !user.closed && (
             <ReviewSection id="staff-access" title="Support team">
@@ -414,16 +446,18 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
                     Correct details
                   </Button>
                 )}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={download.isPending}
-                  onClick={() => download.mutate()}
-                >
-                  <FileDown aria-hidden="true" />
-                  Download their data
+                <Button asChild variant="secondary" size="sm">
+                  <Link to={`/admin/support?category=privacy&user=${user.id}`}>
+                    <Inbox aria-hidden="true" />
+                    Privacy requests
+                  </Link>
                 </Button>
               </div>
+              {/* A copy answers their request (plan §14), so it's downloaded from that ticket and logged with it. */}
+              <p className="mt-3 text-sm text-muted">
+                To send them a copy of their information, open the privacy request they sent us: the download
+                is there.
+              </p>
             </ReviewSection>
           )}
 
@@ -469,7 +503,7 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
       <ActionDialog
         {...dialogProps('unsuspend')}
         title={`Lift ${name}’s suspension?`}
-        description="They can sign in again, their listings return to search and any held payouts are sent."
+        description="They can sign in again, their listings return to search, and payouts held because of the suspension are sent."
         confirmLabel="Lift suspension"
         tone="primary"
         onConfirm={unsuspend}
@@ -519,6 +553,31 @@ function UserRecord({ user }: { user: AdminUserDetail }) {
           confirmLabel="Reset authenticator"
           onConfirm={resetMfa}
         />
+      )}
+
+      {canReopen && (
+        <>
+          <ReasonDialog
+            {...dialogProps('identity-retry')}
+            title={`Allow ${name} another identity check?`}
+            description="Their turned-down check is set aside, and they can start a new one from their account. We email them to say so."
+            reasonLabel="Reason"
+            reasonDescription="Why they can try again, for the audit log. It isn’t sent to them."
+            confirmLabel="Allow another check"
+            tone="primary"
+            onConfirm={(reason) => allowRetry('IDENTITY', reason)}
+          />
+          <ReasonDialog
+            {...dialogProps('licence-retry')}
+            title={`Allow another check of ${name}’s licence?`}
+            description="Their licence goes back to the verification queue for another check, and their booked trips wait for it again. We email them, so they can correct their details first."
+            reasonLabel="Reason"
+            reasonDescription="Why it’s being checked again, for the audit log. It isn’t sent to them."
+            confirmLabel="Allow another check"
+            tone="primary"
+            onConfirm={(reason) => allowRetry('LICENCE', reason)}
+          />
+        </>
       )}
     </div>
   );

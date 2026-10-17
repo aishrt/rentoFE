@@ -43,7 +43,7 @@ function ChargeNote({
   if (charge.status === 'UNPAID') {
     return viewer === 'GUEST' ? (
       <div className="grid justify-items-start gap-3">
-        <p>Your saved card didn’t go through. Pay it here with another card, Apple Pay or Google Pay.</p>
+        <p>We couldn’t charge it to a saved card. Pay it here with a card, Apple Pay or Google Pay.</p>
         {charge.payPath && (
           <Button asChild>
             <Link to={charge.payPath}>

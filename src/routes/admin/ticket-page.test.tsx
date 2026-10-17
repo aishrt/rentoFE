@@ -144,6 +144,116 @@ describe('AdminTicketPage', () => {
     );
     expect(panel.getByRole('button', { name: 'Handled by Nobody yet' })).toBeInTheDocument();
     expect(panel.getByRole('button', { name: /^Status/ })).toHaveTextContent('Open');
+    // Only a privacy request downloads their information.
+    expect(panel.queryByRole('button', { name: 'Download their data' })).not.toBeInTheDocument();
+  });
+
+  it('downloads the information a privacy request asks for, from the request itself', async () => {
+    const fetchMock = mockApi({
+      'GET /admin/support/tickets/ST-ABC123': {
+        status: 200,
+        body: { ticket: { ...ticket, category: 'PRIVACY', subject: 'A copy of my information' } },
+      },
+      'GET /admin/users/u2/export': { status: 200, body: { account: { firstName: 'Kiri' } } },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(details().getByRole('button', { name: 'Download their data' }));
+
+    expect(await screen.findByText('Their information is downloading')).toBeInTheDocument();
+    const sent = fetchMock.mock.calls
+      .map(([input]) => new URL((input as Request).url))
+      .find((url) => url.pathname.endsWith('/admin/users/u2/export'));
+    expect(sent?.searchParams.get('ticket')).toBe('ST-ABC123');
+  });
+
+  it('says why their information can’t be downloaded from this request', async () => {
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': {
+        status: 200,
+        body: { ticket: { ...ticket, category: 'PRIVACY' } },
+      },
+      'GET /admin/users/u2/export': {
+        status: 403,
+        body: {
+          error: {
+            code: 'OWN_RECORD',
+            message: "Another team member needs to handle this, as it's about your own account.",
+          },
+        },
+      },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    await userEvent.click(details().getByRole('button', { name: 'Download their data' }));
+
+    expect(
+      await screen.findByText("Another team member needs to handle this, as it's about your own account."),
+    ).toBeInTheDocument();
+  });
+
+  it('links a request sent signed out to the account with its email, then offers the download', async () => {
+    let sent: unknown;
+    const signedOut: StaffTicket = {
+      ...ticket,
+      category: 'PRIVACY',
+      subject: 'A copy of my information',
+      from: { name: 'Kiri Ngata', email: 'kiri@example.co.nz' },
+      accountWithEmail: { id: 'u2', name: 'Kiri Ngata' },
+    };
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': { status: 200, body: { ticket: signedOut } },
+      'POST /admin/support/tickets/ST-ABC123/link-account': (init) => {
+        sent = JSON.parse(String(init?.body));
+        const linked = {
+          ...signedOut,
+          accountWithEmail: undefined,
+          from: { ...signedOut.from, userId: 'u2' },
+        };
+        return { status: 200, body: { ticket: linked } };
+      },
+    });
+    render();
+    const user = userEvent.setup();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    expect(details().getByText(/They weren’t signed in when they wrote/)).toBeInTheDocument();
+    expect(details().getByRole('link', { name: 'Kiri Ngata' })).toHaveAttribute('href', '/admin/users/u2');
+    // Not their request until it's linked.
+    expect(details().queryByRole('button', { name: 'Download their data' })).not.toBeInTheDocument();
+
+    await user.click(details().getByRole('button', { name: 'Link to their account' }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Link this request to Kiri Ngata’s account?' }),
+    );
+    await user.type(
+      dialog.getByRole('textbox', { name: /How you checked/ }),
+      'They replied from that address',
+    );
+    await user.click(dialog.getByRole('button', { name: 'Link to their account' }));
+
+    expect(await screen.findByText('Linked to their account')).toBeInTheDocument();
+    expect(sent).toEqual({ note: 'They replied from that address' });
+    expect(await details().findByRole('button', { name: 'Download their data' })).toBeInTheDocument();
+    expect(details().queryByRole('button', { name: 'Link to their account' })).not.toBeInTheDocument();
+  });
+
+  it('says when no account uses the email of a request sent signed out', async () => {
+    mockApi({
+      'GET /admin/support/tickets/ST-ABC123': {
+        status: 200,
+        body: { ticket: { ...ticket, from: { name: 'Rua', email: 'rua@example.co.nz' } } },
+      },
+    });
+    render();
+
+    await screen.findByRole('complementary', { name: 'Ticket details' });
+    expect(
+      details().getByText('No Rento Vroom account uses this email: they wrote from the Contact form.'),
+    ).toBeInTheDocument();
+    expect(details().queryByRole('button', { name: 'Link to their account' })).not.toBeInTheDocument();
   });
 
   it('sends a reply, leaving the ticket waiting on them', async () => {

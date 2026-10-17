@@ -80,7 +80,10 @@ describe('PayPage', () => {
     mockCharge({ status: 'DUE', failureReason: 'Your card was declined.' });
     render();
     expect(await screen.findByRole('button', { name: 'Pay now' })).toBeInTheDocument();
-    expect(screen.getByText(/Your card was declined\./)).toBeInTheDocument();
+    // Not "another card": the Guest may have had no saved card to charge.
+    expect(
+      screen.getByText(/^Your card was declined\. Pay with a card, Apple Pay or Google Pay below\.$/),
+    ).toBeInTheDocument();
   });
 
   it('says a refunded charge was refunded, with nothing to pay', async () => {

@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { RequireSignedIn } from '@/features/auth/require-signed-in';
 import { StatusBadge } from '@/features/booking/booking-parts';
-import { formatNzDateTime, formatNzd } from '@/features/booking/booking-format';
+import { formatNzDateTime, formatNzd, type StatusLabel } from '@/features/booking/booking-format';
 import { EvidencePicker } from '@/features/incidents/evidence-picker';
 import { useEvidence } from '@/features/incidents/use-evidence';
 import {
@@ -34,7 +34,51 @@ const ACTION_WORDS: Record<string, string> = {
   STATUS: 'changed the status',
   ASSIGNED: 'took the case',
   CHARGE_ADDED: 'added a charge',
+  CHARGE_CANCELLED: 'cancelled a charge',
+  CHARGE_REFUNDED: 'refunded a charge',
 };
+
+type CaseCharge = Incident['extraCharges'][number];
+
+/** Where a charge from the case stands, in the trip page's words (features/booking/extra-charges.tsx). */
+function chargeStatus(charge: CaseCharge): StatusLabel {
+  if (charge.status === 'CANCELLED') return { label: 'Cancelled', tone: 'neutral' };
+  if (charge.status === 'FAILED') return { label: 'Didn’t go through', tone: 'ended' };
+  if (charge.status === 'PENDING') return { label: 'Waiting for payment', tone: 'waiting' };
+  return (charge.refundedCents ?? 0) >= charge.amountCents
+    ? { label: 'Refunded', tone: 'neutral' }
+    : { label: 'Paid', tone: 'positive' };
+}
+
+function ChargeItem({ charge }: { charge: CaseCharge }) {
+  const partlyRefunded =
+    charge.status === 'SUCCEEDED' && charge.refundedCents && charge.refundedCents < charge.amountCents
+      ? charge.refundedCents
+      : 0;
+  return (
+    <li className="grid gap-1.5">
+      <p className="flex justify-between gap-3 text-ink/85">
+        <span>{charge.description}</span>
+        <span
+          className={cn(
+            'font-medium tabular-nums',
+            charge.status === 'CANCELLED' && 'text-muted line-through',
+          )}
+        >
+          {formatNzd(charge.amountCents)}
+        </span>
+      </p>
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+        <StatusBadge status={chargeStatus(charge)} />
+        {partlyRefunded > 0 && (
+          <span>
+            <span className="tabular-nums">{formatNzd(partlyRefunded)}</span> of it was refunded
+          </span>
+        )}
+      </p>
+    </li>
+  );
+}
 
 function EventItem({ event }: { event: IncidentEvent }) {
   const support = event.by === 'SUPPORT';
@@ -187,12 +231,11 @@ function Case({ caseRef }: { caseRef: string }) {
       {data.extraCharges.length > 0 && (
         <Card className="grid gap-2 p-5 text-sm sm:p-6">
           <p className="font-semibold text-ink">Charges from this case</p>
-          {data.extraCharges.map((charge) => (
-            <p key={charge.description} className="flex justify-between gap-3 text-ink/85">
-              <span>{charge.description}</span>
-              <span className="font-medium tabular-nums">{formatNzd(charge.amountCents)}</span>
-            </p>
-          ))}
+          <ul className="grid gap-3">
+            {data.extraCharges.map((charge, index) => (
+              <ChargeItem key={`${index}-${charge.description}`} charge={charge} />
+            ))}
+          </ul>
         </Card>
       )}
 

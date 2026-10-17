@@ -90,6 +90,10 @@ export function CancellationTiers({ cancellation }: { cancellation: Cancellation
           Each listing shows its policy before you book, and you’ll see exactly what would be refunded before
           you confirm a cancellation.
         </li>
+        <li>
+          The refunds above are of the rental and the service fee. Any delivery fee and protection are always
+          refunded in full.
+        </li>
         {selectable.length > 1 && defaultName && (
           <li>
             Hosts choose {listOf(selectable, 'or')} for each car. {defaultName} applies unless they choose

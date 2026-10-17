@@ -231,6 +231,10 @@ export function statusLabel(
 export function refundSentence(cancellation: NonNullable<Booking['cancellation']>): string | null {
   const { refundCents, feeCents, refundStatus, earlierRefundCents } = cancellation;
   if (refundCents === undefined) return null;
+  // Cancelled by support while the payment is in a card dispute: nothing was refunded here (plan §8.1, item 12).
+  // True whether the dispute is still open or settled since.
+  if (cancellation.disputed && refundCents === 0)
+    return 'The card payment went to a dispute with your bank, which decides what goes back to your card, so there’s no separate refund from us.';
   const earlier = earlierRefundCents ? formatNzd(earlierRefundCents) : null;
   if (refundCents === 0 && !feeCents) {
     return earlier

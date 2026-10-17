@@ -86,7 +86,7 @@ describe('HostApplyPage', () => {
     await vi.waitFor(() => expect(sessionCalls).toBe(2));
   });
 
-  it('needs a GST number in the right shape when registered for GST', async () => {
+  it('needs a valid GST number in the right shape when registered for GST', async () => {
     let sent: unknown;
     mockApi({
       'POST /auth/session': { status: 200, body: { user: verifiedGuest } },
@@ -107,11 +107,20 @@ describe('HostApplyPage', () => {
     expect(await screen.findByText('GST numbers look like 123-456-789')).toBeInTheDocument();
     expect(sent).toBeUndefined();
 
+    // The right shape, but the check digit is wrong.
     await userEvent.clear(screen.getByLabelText('GST number'));
     await userEvent.type(screen.getByLabelText('GST number'), '123-456-789');
     await userEvent.click(screen.getByRole('button', { name: 'Submit application' }));
+    expect(
+      await screen.findByText('That isn’t a valid GST number. Check it on your IRD registration.'),
+    ).toBeInTheDocument();
+    expect(sent).toBeUndefined();
+
+    await userEvent.clear(screen.getByLabelText('GST number'));
+    await userEvent.type(screen.getByLabelText('GST number'), '136-410-132');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit application' }));
     await vi.waitFor(() =>
-      expect(sent).toEqual({ gstRegistered: true, gstNumber: '123-456-789', acceptHostAgreement: true }),
+      expect(sent).toEqual({ gstRegistered: true, gstNumber: '136-410-132', acceptHostAgreement: true }),
     );
   });
 

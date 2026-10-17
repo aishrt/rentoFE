@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { bufferOptions, noticeOptions } from './availability-options';
-import { hostKeys, patchVehicleRequest, storeVehicle } from './host-api';
+import { patchVehicleRequest, refreshCalendars, storeVehicle } from './host-api';
 import { hostErrorMessage } from './use-step-save';
 
 /** Minimum notice and preparation time, next to the calendar they shape (plan §9, Days 10–11). */
@@ -26,7 +26,7 @@ export function TripRulesCard({ vehicle }: { vehicle: HostVehicle }) {
       }),
     onSuccess: (saved) => {
       storeVehicle(queryClient, saved);
-      void queryClient.invalidateQueries({ queryKey: hostKeys.calendar(vehicle.id) });
+      refreshCalendars(queryClient, vehicle.id);
       toast('Saved', { description: 'New bookings follow these straight away.' });
     },
   });

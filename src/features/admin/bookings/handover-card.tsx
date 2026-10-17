@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { applyFieldErrors } from '@/features/account/form-errors';
-import { formatNzDateTimeWithYear, formatNzd } from '@/features/booking/booking-format';
+import { formatNzDateTime, formatNzDateTimeWithYear, formatNzd } from '@/features/booking/booking-format';
 import { DetailCard } from '@/features/booking/booking-parts';
 import { ANGLE_LABELS, takenLabel } from '@/features/handover/angles';
 import { areaName } from '@/features/handover/car-areas';
@@ -407,11 +407,12 @@ function CompleteTripForm({ handover, bookingRef }: { handover: Handover; bookin
       void queryClient.invalidateQueries({ queryKey: adminBookingListsQueryKey });
       reset();
       setPhoto(null);
-      const extra = next.kilometres?.extraChargeCents ?? 0;
+      // Extra kilometres wait like after any check-out (plan §8.2): the API says until when.
+      const standing = next.extraKmStatus;
       toast('Trip completed', {
         description:
-          extra > 0
-            ? `${formatNumber(next.kilometres!.extra)} extra km: ${formatNzd(extra)} is charged to the Guest’s saved card. We’ve asked both for reviews.`
+          next.kilometres && standing?.status === 'WAITING' && standing.chargeAt
+            ? `${formatNumber(next.kilometres.extra)} extra km (${formatNzd(standing.amountCents)}) will be charged to the Guest’s saved card on ${formatNzDateTime(standing.chargeAt)} unless a reading is corrected, or sooner if the Guest confirms the readings. We’ve asked both for reviews.`
             : 'We’ve asked the Guest and Host for reviews, as after a check-out in the app.',
       });
     },
@@ -445,7 +446,8 @@ function CompleteTripForm({ handover, bookingRef }: { handover: Handover; bookin
         </h3>
         <p>
           For a car back with its Host but no check-out in the app. The readings become the check-out record,
-          so extra kilometres are charged as usual, and both are asked for reviews.
+          and both are asked for reviews. Extra kilometres are charged as after any check-out: once the Guest
+          confirms the readings, or when the damage-report window closes.
         </p>
         <p className="text-muted">
           {checkIn

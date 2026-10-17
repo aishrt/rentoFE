@@ -30,8 +30,8 @@ const render = (path = '/admin/settings?tab=platform') =>
   );
 
 /** The API: GET returns the saved settings; PATCH merges like the backend (groups replace, decisions merge). */
-function mockSettingsApi() {
-  let current: PlatformSettingsResponse = settingsResponseFixture;
+function mockSettingsApi(saved: PlatformSettingsResponse = settingsResponseFixture) {
+  let current = saved;
   const sent: PlatformSettingsUpdate[] = [];
   const fetchMock = mockApi({
     'POST /auth/session': { status: 200, body: { user: adminUser } },
@@ -70,7 +70,7 @@ describe('Settings menu', () => {
     expect(nav.getByRole('button', { name: /^Platform settings/ })).toHaveAttribute('aria-expanded', 'true');
     // The count of decisions waiting arrives with the settings.
     expect(
-      await nav.findByRole('button', { name: 'Platform settings, 11 waiting for the client' }),
+      await nav.findByRole('button', { name: 'Platform settings, 13 waiting for the client' }),
     ).toBeInTheDocument();
     const groups = [
       'Overview',
@@ -83,7 +83,9 @@ describe('Settings menu', () => {
       'Reviews and trips',
       'Company and brand',
       'Other booking rules',
+      'Listings and search',
       'Licence and plate checks',
+      'Become a Host estimator',
       'Retention and risk',
     ];
     for (const name of groups) {
@@ -97,11 +99,11 @@ describe('Settings menu', () => {
     const { router } = render('/admin/settings');
 
     await openGroup(/^Overview/);
-    expect(await screen.findByText('11 of 11 decisions are still placeholders')).toBeInTheDocument();
+    expect(await screen.findByText('13 of 13 decisions are still placeholders')).toBeInTheDocument();
     expect(router.state.location.search).toBe('?tab=platform');
     expect(screen.queryByRole('region', { name: 'Two-factor sign-in' })).not.toBeInTheDocument();
     const overview = within(screen.getByRole('list', { name: 'Settings groups' }));
-    expect(overview.getAllByRole('listitem')).toHaveLength(11);
+    expect(overview.getAllByRole('listitem')).toHaveLength(13);
     expect(overview.getByRole('link', { name: 'Fees' })).toHaveAccessibleDescription(
       'Placeholder 10% Guest service fee, 20% Host commission',
     );
@@ -111,7 +113,7 @@ describe('Settings menu', () => {
     expect((await card('GST')).getByLabelText('GST rate')).toHaveValue('15');
     expect(router.state.location.search).toBe('?tab=platform&section=gst');
     // The overview stays mounted, hidden, like the groups.
-    expect(screen.getByText('11 of 11 decisions are still placeholders')).not.toBeVisible();
+    expect(screen.getByText('13 of 13 decisions are still placeholders')).not.toBeVisible();
 
     await openGroup(/^Fees/);
     expect((await card('Fees')).getByLabelText('Guest service fee')).toHaveValue('10');
@@ -201,11 +203,11 @@ describe('Platform settings', () => {
     const nav = await menu();
     expect(nav.getByRole('link', { name: 'GST, confirmed' })).toBeInTheDocument();
     expect(
-      nav.getByRole('button', { name: 'Platform settings, 10 waiting for the client' }),
+      nav.getByRole('button', { name: 'Platform settings, 12 waiting for the client' }),
     ).toBeInTheDocument();
 
     await openGroup(/^Overview/);
-    expect(await screen.findByText('10 of 11 decisions are still placeholders')).toBeInTheDocument();
+    expect(await screen.findByText('12 of 13 decisions are still placeholders')).toBeInTheDocument();
     expect(screen.getByText(/Last saved by Aroha Admin on/)).toBeInTheDocument();
   });
 
@@ -370,6 +372,137 @@ describe('Platform settings', () => {
 
     expect(await screen.findByText('Reviews and trips saved')).toBeInTheDocument();
     expect(sent[0]?.trips).toEqual({ ...settingsFixture.trips, threadReadOnlyDays: 60 });
+  });
+
+  it('changes when extra kilometres are checked before they’re charged', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=reviewsAndTrips');
+
+    const trips = await card('Reviews and trips');
+    const field = trips.getByLabelText('Check extra kilometres above');
+    expect(field).toHaveValue('1000');
+    await userEvent.clear(field);
+    await userEvent.type(field, '0');
+    await userEvent.click(trips.getByRole('button', { name: 'Save changes' }));
+    expect(await trips.findByText('Enter 1–10,000 km')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(field);
+    await userEvent.type(field, '600');
+    await userEvent.click(trips.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Reviews and trips saved')).toBeInTheDocument();
+    expect(sent[0]?.trips).toEqual({ ...settingsFixture.trips, extraKmReviewAboveKmPerDay: 600 });
+  });
+
+  it('saves what a listing needs and the search limits, checking each range', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=listingsAndSearch');
+
+    const listings = await card('Listings and search');
+    expect(listings.getByLabelText('Insurance')).toBeChecked();
+    expect(listings.getByLabelText('Boot')).toBeChecked();
+    expect(listings.getByLabelText('Lowest daily price')).toHaveValue('20');
+    const fewest = listings.getByLabelText('Fewest seats');
+    const most = listings.getByLabelText('Most seats');
+    await userEvent.clear(most);
+    await userEvent.type(most, '1');
+    const start = listings.getByLabelText('Search radius to start with');
+    await userEvent.clear(start);
+    await userEvent.type(start, '400');
+    await userEvent.click(listings.getByRole('button', { name: 'Save changes' }));
+    expect(await listings.findByText('Make it at least the fewest seats')).toBeInTheDocument();
+    expect(listings.getByText('Choose a default between the smallest and largest')).toBeInTheDocument();
+    expect(fewest).toHaveValue('2');
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(most);
+    await userEvent.type(most, '9');
+    await userEvent.clear(start);
+    await userEvent.type(start, '30');
+    await userEvent.click(listings.getByLabelText('Boot'));
+    const discount = listings.getByLabelText('Weekly and monthly discounts up to');
+    await userEvent.clear(discount);
+    await userEvent.type(discount, '40');
+    const highest = listings.getByLabelText('Highest daily price');
+    await userEvent.clear(highest);
+    await userEvent.type(highest, '1,500');
+    const longest = listings.getByLabelText('Longest trip');
+    await userEvent.clear(longest);
+    await userEvent.type(longest, '60');
+    await userEvent.click(listings.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Listings and search saved')).toBeInTheDocument();
+    expect(sent).toEqual([
+      {
+        vehicles: {
+          ...settingsFixture.vehicles,
+          requiredPhotoAngles: ['FRONT', 'REAR', 'DRIVER', 'PASSENGER', 'INTERIOR', 'DASH', 'TYRES'],
+          seats: { min: 2, max: 9 },
+          dailyPriceCents: { min: 2_000, max: 150_000 },
+          maxDiscountPct: 40,
+        },
+        search: { maxTripDays: 60, radiusKm: { min: 5, default: 30, max: 300 } },
+        decisions: { listingsAndSearch: { status: 'PENDING', note: '' } },
+      },
+    ]);
+  });
+
+  it('saves the Become a Host estimator’s typical prices and booked days', async () => {
+    const { sent } = mockSettingsApi();
+    render('/admin/settings?tab=platform&section=hostEstimator');
+
+    const estimator = await card('Become a Host estimator');
+    const days = estimator.getByLabelText('Days booked each month');
+    expect(days).toHaveValue('10');
+    await userEvent.clear(days);
+    await userEvent.type(days, '31');
+    await userEvent.click(estimator.getByRole('button', { name: 'Save changes' }));
+    expect(await estimator.findByText('Enter 1–30 days')).toBeInTheDocument();
+    expect(sent).toEqual([]);
+
+    await userEvent.clear(days);
+    await userEvent.type(days, '12');
+    const suv = estimator.getByLabelText('SUV');
+    expect(suv).toHaveValue('95');
+    await userEvent.clear(suv);
+    await userEvent.type(suv, '99.50');
+    await userEvent.click(estimator.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Become a Host estimator saved')).toBeInTheDocument();
+    expect(sent[0]?.hostEstimator).toEqual({
+      bookedDaysPerMonth: 12,
+      dailyCentsByBodyType: { ...settingsFixture.hostEstimator.dailyCentsByBodyType, SUV: 9_950 },
+    });
+  });
+
+  it('saves the company card with a GST number saved before the check digit was checked, but checks a new one', async () => {
+    const { sent } = mockSettingsApi({
+      settings: { ...settingsFixture, business: { ...settingsFixture.business, gstNumber: '123-456-789' } },
+    });
+    render('/admin/settings?tab=platform&section=company');
+
+    const company = await card('Company and brand');
+    const name = company.getByLabelText('Legal name');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Rento Vroom Limited');
+    await userEvent.click(company.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Company and brand saved')).toBeInTheDocument();
+    expect(sent[0]?.business).toEqual({
+      legalName: 'Rento Vroom Limited',
+      gstNumber: '123-456-789',
+      supportEmail: 'rentovroom@gmail.com',
+    });
+
+    const gst = company.getByLabelText('GST number');
+    await userEvent.clear(gst);
+    await userEvent.type(gst, '123-456-788');
+    await userEvent.click(company.getByRole('button', { name: 'Save changes' }));
+
+    expect(
+      await company.findByText('That isn’t a valid GST number. Check it on the IRD registration.'),
+    ).toBeInTheDocument();
+    expect(sent).toHaveLength(1);
   });
 
   it("shows the API's reason when it refuses the change", async () => {

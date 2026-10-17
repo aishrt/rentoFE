@@ -92,7 +92,25 @@ describe('HostProfilePage', () => {
     expect(await screen.findByText('GST numbers look like 123-456-789')).toBeInTheDocument();
 
     await user.clear(gst);
-    await user.type(gst, '123-456-789');
+    await user.type(gst, '136-410-132');
+    await user.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    expect(await screen.findByText('Profile saved')).toBeInTheDocument();
+    expect(sent.find((request) => request.method === 'PATCH')?.body).toEqual({
+      bio: 'Kia ora, I’m Aroha.',
+      gstRegistered: true,
+      gstNumber: '136-410-132',
+    });
+  });
+
+  it('saves a new bio with a GST number saved before the check digit was checked, but checks a new one', async () => {
+    const user = userEvent.setup();
+    const sent = api({ ...profile, gstRegistered: true, gstNumber: '123-456-789' });
+    render();
+
+    const bio = await screen.findByLabelText('About you');
+    await user.clear(bio);
+    await user.type(bio, 'Kia ora, I’m Aroha.');
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
 
     expect(await screen.findByText('Profile saved')).toBeInTheDocument();
@@ -101,6 +119,16 @@ describe('HostProfilePage', () => {
       gstRegistered: true,
       gstNumber: '123-456-789',
     });
+
+    const gst = screen.getByLabelText('GST number');
+    await user.clear(gst);
+    await user.type(gst, '123-456-788');
+    await user.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    expect(
+      await screen.findByText('That isn’t a valid GST number. Check it on your IRD registration.'),
+    ).toBeInTheDocument();
+    expect(sent.filter((request) => request.method === 'PATCH')).toHaveLength(1);
   });
 
   it('waits for approval before the profile can be edited', async () => {

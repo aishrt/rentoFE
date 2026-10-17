@@ -3,6 +3,7 @@ import { ApiError, client, unwrap } from '@/api/client';
 import { refreshStaleData } from '@/api/stale-data';
 import type { FlagDamageRequest, Handover, InspectionRequest, InspectionStage } from '@/api/types';
 import { bookingQueryKey, bookingsQueryKey } from '@/features/booking/booking-api';
+import { refreshHostDashboard } from '@/features/host/host-api';
 
 /*
  * The digital vehicle handover's requests (spec §14): both reports, recording a check-in or check-out,
@@ -66,6 +67,8 @@ function useHandoverMutation<Variables>(
       queryClient.setQueryData(handoverQueryKey(ref), handover);
       void queryClient.invalidateQueries({ queryKey: bookingQueryKey(ref) });
       void queryClient.invalidateQueries({ queryKey: bookingsQueryKey });
+      // The Host's to-do list (a handover to confirm), earnings and calendars move with the trip.
+      refreshHostDashboard(queryClient);
     },
     onError: refreshStaleData(queryClient, [handoverQueryKey(ref), bookingQueryKey(ref)]),
   });

@@ -52,6 +52,44 @@ const WHO: Record<ConditionReport['submittedBy'], string> = {
 const bookingPath = (handover: Handover) =>
   handover.role === 'HOST' ? `/host/bookings/${handover.ref}` : `/trips/${handover.ref}`;
 
+/**
+ * Where the extra kilometres stand (plan §8.2): waiting for the other party to confirm the check-out readings
+ * or the damage-report window to close, being checked by our team, or charged.
+ */
+function extraKmLine(handover: Handover, km: NonNullable<Handover['kilometres']>): string {
+  const guest = handover.role === 'GUEST';
+  const card = guest ? 'your saved card' : 'the guest’s saved card';
+  const standing = handover.extraKmStatus;
+  const cents = standing?.status === 'CHARGED' ? standing.amountCents : km.extraChargeCents;
+  const amount = `${km.extra.toLocaleString('en-NZ')} extra km: ${formatNzd(cents)}`;
+  switch (standing?.status) {
+    case 'WAITING': {
+      if (!standing.chargeAt || new Date(standing.chargeAt) <= new Date()) {
+        return `${amount}, charged to ${card} shortly.`;
+      }
+      const on = `on ${formatNzDateTime(standing.chargeAt)} (NZ time)`;
+      if (!standing.waitingFor) return `${amount}, charged to ${card} ${on}.`;
+      const who =
+        standing.waitingFor === handover.role ? 'you confirm' : `the ${guest ? 'host' : 'guest'} confirms`;
+      return `${amount}, charged to ${card} once ${who} the readings, or ${on}.`;
+    }
+    case 'CHECKING':
+      return `${amount}. Our team is checking the readings before it’s charged.`;
+    case 'CHARGED':
+      if (standing.chargeStatus === 'PAID') return `${amount}, paid with ${card}.`;
+      if (standing.chargeStatus === 'NOT_PAID') {
+        return guest
+          ? `${amount}. We couldn’t charge it to a saved card: see Extra charges on your trip to pay it.`
+          : `${amount}. We couldn’t charge the guest’s card yet, so it isn’t paid.`;
+      }
+      return `${amount}, being charged to ${card}.`;
+    case 'NOT_CHARGED':
+      return `${amount}, not charged.`;
+    default:
+      return `${amount}, charged to ${card} once the readings are confirmed.`;
+  }
+}
+
 function ConfirmationLine({ report }: { report: ConditionReport }) {
   const parties = [
     { label: 'Guest', at: report.confirmedByGuestAt },
@@ -537,12 +575,7 @@ function HandoverView({ bookingRef }: { bookingRef: string }) {
                   ? ' (unlimited kilometres)'
                   : ` of ${km.allowance.toLocaleString('en-NZ')} km included`}
               </p>
-              {km.extra > 0 && (
-                <p className="text-ink/85">
-                  {km.extra.toLocaleString('en-NZ')} extra km: {formatNzd(km.extraChargeCents)}, charged to
-                  {data.role === 'HOST' ? ' the guest’s saved card' : ' your saved card'}.
-                </p>
-              )}
+              {km.extra > 0 && <p className="text-ink/85">{extraKmLine(data, km)}</p>}
               {data.fuelShortfall && (
                 <p className="flex items-start gap-2 text-ink/85">
                   <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-danger" />

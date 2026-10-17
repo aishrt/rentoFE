@@ -58,6 +58,10 @@ export function CancellationPolicy({ tier, start }: { tier: Tier; start?: string
           </div>
         ))}
       </dl>
+      <p className="mt-2 text-muted">
+        Refunds are of the rental and the service fee. Any delivery fee and protection are always refunded in
+        full.
+      </p>
       <Link
         to="/cancellation-policy"
         target="_blank"

@@ -348,6 +348,82 @@ describe('HandoverPage', () => {
     expect(await within(checkIn).findByText('Guest confirmed')).toBeInTheDocument();
   });
 
+  it.each([
+    {
+      role: 'GUEST' as const,
+      standing: {
+        status: 'WAITING',
+        amountCents: 1750,
+        chargeAt: '2036-10-16T21:00:00.000Z',
+        waitingFor: 'HOST',
+      },
+      line: /^50 extra km: \$17\.50, charged to your saved card once the host confirms the readings, or on .+ \(NZ time\)\.$/,
+    },
+    {
+      role: 'HOST' as const,
+      standing: {
+        status: 'WAITING',
+        amountCents: 1750,
+        chargeAt: '2036-10-16T21:00:00.000Z',
+        waitingFor: 'HOST',
+      },
+      line: /^50 extra km: \$17\.50, charged to the guest’s saved card once you confirm the readings, or on .+ \(NZ time\)\.$/,
+    },
+    {
+      role: 'GUEST' as const,
+      standing: { status: 'CHECKING', amountCents: 1750 },
+      line: /^50 extra km: \$17\.50\. Our team is checking the readings before it’s charged\.$/,
+    },
+    {
+      role: 'GUEST' as const,
+      standing: { status: 'CHARGED', amountCents: 1750, chargeStatus: 'PAID' },
+      line: /^50 extra km: \$17\.50, paid with your saved card\.$/,
+    },
+    {
+      role: 'HOST' as const,
+      standing: { status: 'CHARGED', amountCents: 1750, chargeStatus: 'NOT_PAID' },
+      line: /^50 extra km: \$17\.50\. We couldn’t charge the guest’s card yet, so it isn’t paid\.$/,
+    },
+    {
+      role: 'GUEST' as const,
+      standing: { status: 'CHARGED', amountCents: 1750, chargeStatus: 'NOT_PAID' },
+      line: /^50 extra km: \$17\.50\. We couldn’t charge it to a saved card: see Extra charges on your trip to pay it\.$/,
+    },
+  ] satisfies { role: Handover['role']; standing: Handover['extraKmStatus']; line: RegExp }[])(
+    'tells the $role where the extra kilometres stand: $standing.status',
+    async ({ role, standing, line }) => {
+      mockHandover(() =>
+        handover({
+          role,
+          bookingStatus: 'COMPLETED',
+          checkIn: report({ confirmedByGuestAt: '2026-10-11T21:10:00.000Z' }),
+          checkOut: report({
+            stage: 'CHECK_OUT',
+            submittedBy: 'GUEST',
+            odometer: 46010,
+            confirmedByGuestAt: '2026-10-14T21:05:00.000Z',
+            confirmedByHostAt: undefined,
+            damagePins: [],
+          }),
+          kilometres: { driven: 800, allowance: 750, extra: 50, extraChargeCents: 1750 },
+          extraKmStatus: standing,
+          damageWindowEndsAt: '2036-10-16T21:00:00.000Z',
+          actions: {
+            checkIn: false,
+            checkOut: false,
+            confirmCheckIn: false,
+            confirmCheckOut: role === 'HOST',
+            flagDamage: true,
+          },
+        }),
+      );
+      render('/trips/RV-7K2Q9M/handover');
+
+      expect(await screen.findByText('800 km driven of 750 km included')).toBeInTheDocument();
+      expect(screen.getByText(line)).toBeInTheDocument();
+    },
+  );
+
   it('flags new damage, then opens an incident with it in one tap', async () => {
     const sent = mockHandover(() =>
       handover({
