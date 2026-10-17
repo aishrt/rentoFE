@@ -85,6 +85,10 @@ export function PoliciesSection({ vehicle }: { vehicle: VehicleDetail }) {
               </div>
             ))}
           </dl>
+          <p className="mt-2 text-sm text-muted">
+            Refunds are of the rental and the service fee. Any delivery fee and protection are always refunded
+            in full.
+          </p>
           <Link
             to="/cancellation-policy"
             className="link-underline mt-3 inline-block text-sm font-medium text-primary"
