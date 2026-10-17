@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { CircleDot, FileDown, MessagesSquare, UserCheck, UserRound } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { CircleDot, FileDown, Link2, MessagesSquare, UserCheck, UserRound } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { StaffTicket } from '@/api/types';
 import { Alert } from '@/components/ui/alert';
@@ -10,12 +10,13 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { threadPath } from '@/features/admin/bookings/bookings-api';
+import { DecisionDialog } from '@/features/admin/listings/decision-dialog';
 import { TICKET_CATEGORY, TICKET_STATUS } from '@/features/admin/ops/admin-labels';
 import { useIncidentAssignees } from '@/features/admin/operations/operations-api';
 import { EmailAddress } from '@/features/admin/ops/email-address';
 import { downloadUserData, userErrorMessage } from '@/features/admin/users/users-api';
 import { formatNzDateTime, formatRelativeTime } from '@/features/booking/booking-format';
-import { TICKET_STATUSES, useUpdateTicket } from './support-api';
+import { TICKET_STATUSES, useLinkTicketToAccount, useUpdateTicket } from './support-api';
 
 const STATUS_OPTIONS = TICKET_STATUSES.map((status) => ({
   value: status,
@@ -54,10 +55,56 @@ function DownloadTheirData({ userId, ticketRef }: { userId: string; ticketRef: s
 }
 
 /**
+ * A request sent signed out from the email address on an account (plan §14): once staff have checked it's
+ * them, it's linked to that account and becomes the member's own, so replies reach their account and a
+ * privacy request's download appears here. The API writes it to the audit log with the note.
+ */
+function LinkToAccount({
+  ticketRef,
+  account,
+  privacy,
+}: {
+  ticketRef: string;
+  account: { id: string; name: string };
+  privacy: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const link = useLinkTicketToAccount(ticketRef);
+  return (
+    <div className="mt-4">
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <Link2 aria-hidden="true" />
+        Link to their account
+      </Button>
+      <DecisionDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Link this request to ${account.name}’s account?`}
+        description="Check it’s them first, for example from a reply sent from this email address. The request moves into their account, and your replies reach them there. This can’t be undone."
+        confirmLabel="Link to their account"
+        notes="optional"
+        notesLabel="How you checked it’s them (optional)"
+        notesDescription="Kept in the audit log; not sent to them."
+        onConfirm={async (note) => {
+          await link.mutateAsync(note);
+          setOpen(false);
+          toast('Linked to their account', {
+            description: privacy
+              ? 'You can download their data now.'
+              : 'Your replies reach their account now.',
+          });
+        }}
+      />
+    </div>
+  );
+}
+
+/**
  * Who wrote, what it's about, and the controls: the ticket's status, and who handles it (anyone on the
  * support team, the admin or nobody, as for a case), with "Assign to me" for the quick way. Each change
  * applies straight away and is in the audit log; whoever is handed it is told. The API refuses to hand it to
- * someone it's about. A privacy request from a member also has the download of their information.
+ * someone it's about. A privacy request from a member also has the download of their information; one sent
+ * signed out from the email on an account can be linked to that account first.
  */
 export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; ticketRef: string }) {
   const update = useUpdateTicket(ticketRef);
@@ -177,10 +224,31 @@ export function TicketDetails({ ticket, ticketRef }: { ticket: StaffTicket; tick
           )}
           {!ticket.from.userId && (
             <p className="mt-1 text-xs text-muted">
-              No Rento Vroom account: they wrote from the Contact form.
+              {ticket.accountWithEmail ? (
+                <>
+                  They weren’t signed in when they wrote, but this email is on{' '}
+                  <Link
+                    to={`/admin/users/${ticket.accountWithEmail.id}`}
+                    className="link-underline font-medium text-primary"
+                  >
+                    {ticket.accountWithEmail.name}
+                  </Link>
+                  ’s account.
+                  {ticket.category === 'PRIVACY' && ' Link the request to it to download their data.'}
+                </>
+              ) : (
+                'No Rento Vroom account uses this email: they wrote from the Contact form.'
+              )}
             </p>
           )}
         </div>
+        {!ticket.from.userId && ticket.accountWithEmail && (
+          <LinkToAccount
+            ticketRef={ticket.ref}
+            account={ticket.accountWithEmail}
+            privacy={ticket.category === 'PRIVACY'}
+          />
+        )}
         {ticket.category === 'PRIVACY' && ticket.from.userId && (
           <DownloadTheirData userId={ticket.from.userId} ticketRef={ticket.ref} />
         )}

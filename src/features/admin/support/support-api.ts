@@ -5,8 +5,9 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { client, unwrap } from '@/api/client';
+import { ApiError, client, unwrap } from '@/api/client';
 import type { StaffTicket, StaffTicketReplyRequest, StaffTicketRow } from '@/api/types';
+import { asNotesError } from '@/features/admin/moderation/moderation-api';
 
 /*
  * The support inbox (plan §12.6): tickets from the Contact form, a booking's Contact support link and
@@ -112,6 +113,39 @@ export function useReplyToTicket(ref: string) {
           client.POST('/admin/support/tickets/{ref}/messages', { params: { path: { ref } }, body: reply }),
         )
       ).ticket,
+    onSuccess: (ticket) => storeTicket(queryClient, ref, ticket),
+  });
+}
+
+// The API's limit for the note, under the decision dialog's own.
+const LINK_NOTE_MAX = 500;
+
+/**
+ * Links a request sent signed out to the account with its email address, once staff have checked it's them
+ * (plan §14): it becomes the member's own, so replies reach their account and a privacy request's download
+ * works. `note` says how they checked, for the audit log; its errors show under the dialog's notes field.
+ */
+export function useLinkTicketToAccount(ref: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (note: string | undefined): Promise<StaffTicket> => {
+      if (note && note.length > LINK_NOTE_MAX) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Some details need fixing.', {
+          notes: `Keep it under ${LINK_NOTE_MAX} characters`,
+        });
+      }
+      try {
+        const { ticket } = await unwrap(
+          client.POST('/admin/support/tickets/{ref}/link-account', {
+            params: { path: { ref } },
+            body: note ? { note } : {},
+          }),
+        );
+        return ticket;
+      } catch (error) {
+        throw asNotesError(error, 'note');
+      }
+    },
     onSuccess: (ticket) => storeTicket(queryClient, ref, ticket),
   });
 }

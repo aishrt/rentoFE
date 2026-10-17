@@ -49,6 +49,9 @@ function decidedToast({ item, decision }: Decision, outcome: VerificationOutcome
       : [
           outcome.released.length > 0 &&
             `Released ${joinRefs(outcome.released)} and the card authorisation: nothing was charged.`,
+          // A turned-down identity check leaves confirmed trips booked, for the team to decide.
+          outcome.stillBooked.length > 0 &&
+            `${joinRefs(outcome.stillBooked)} is still booked: the team is alerted to each, to contact them and decide.`,
         ];
   const title = licence
     ? decision === 'APPROVE'
@@ -235,7 +238,7 @@ export function AdminVerificationsPage() {
         description={
           identity
             ? rejecting
-              ? `They won’t be able to book.${waiting > 0 ? ' Bookings waiting on this check are released with their card authorisations, so nothing is charged.' : ''} We’ll email them.`
+              ? `They won’t be able to book.${waiting > 0 ? ' Bookings waiting on this check are released with their card authorisations, so nothing is charged.' : ''} Any trip of theirs already confirmed stays booked, and the team is alerted to it. We’ll email them.`
               : `They’ll be verified.${waiting > 0 ? ' Bookings waiting on this check are confirmed; requests still go to their Host.' : ''} We’ll email them.`
             : rejecting
               ? `They won’t be able to book until their licence details are fixed.${waiting > 0 ? ' Bookings waiting on this licence are released with their card authorisations, so nothing is charged.' : ''}${confirmedTrips > 0 ? ' Their confirmed trips still can’t start, and the team is alerted to each.' : ''} We’ll email them your note, so write it for them.`

@@ -135,7 +135,7 @@ describe('AdminVerificationsPage', () => {
     expect(await screen.findByText('1 check waiting')).toBeInTheDocument();
   });
 
-  it('rejects an identity check without a note, releasing the booking', async () => {
+  it('rejects an identity check without a note, releasing the booking and keeping a confirmed trip', async () => {
     let sent: unknown;
     mockApi({
       'GET /admin/verifications': { status: 200, body: { items: [kiri] } },
@@ -143,7 +143,13 @@ describe('AdminVerificationsPage', () => {
         sent = JSON.parse(String(init?.body));
         return {
           status: 200,
-          body: { identityStatus: 'REJECTED', confirmed: [], waitingForHost: [], released: ['RV-7K2Q9M'] },
+          body: {
+            identityStatus: 'REJECTED',
+            confirmed: [],
+            waitingForHost: [],
+            released: ['RV-7K2Q9M'],
+            stillBooked: ['RV-3H8T2W'],
+          },
         };
       },
     });
@@ -153,10 +159,12 @@ describe('AdminVerificationsPage', () => {
       (await card('Kiri Smith')).getByRole('button', { name: 'Reject Kiri Smith’s identity check' }),
     );
     const dialog = within(await screen.findByRole('dialog', { name: 'Reject Kiri Smith’s identity check?' }));
+    expect(dialog.getByText(/Any trip of theirs already confirmed stays booked/)).toBeInTheDocument();
     await userEvent.click(dialog.getByRole('button', { name: 'Reject' }));
 
     expect(await screen.findByText('Kiri Smith’s identity check was rejected')).toBeInTheDocument();
     expect(screen.getByText(/Released RV-7K2Q9M and the card authorisation/)).toBeInTheDocument();
+    expect(screen.getByText(/RV-3H8T2W is still booked: the team is alerted/)).toBeInTheDocument();
     expect(sent).toEqual({ decision: 'REJECT' });
   });
 

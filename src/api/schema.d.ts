@@ -9210,7 +9210,7 @@ export interface paths {
         put?: never;
         /**
          * Staff: decide an identity check that needed a manual review
-         * @description Approving confirms the Guest’s bookings that waited for the check (capturing their card authorisations), except requests their Host still has to accept. Rejecting ends those bookings and releases the authorisations (plan §8.2).
+         * @description Approving confirms the Guest’s bookings that waited for the check (capturing their card authorisations), except requests their Host still has to accept. Rejecting ends those bookings and releases the authorisations (plan §8.2); their confirmed trips stay booked (`stillBooked`), and support are alerted to each to decide.
          */
         post: {
             parameters: {
@@ -13144,7 +13144,7 @@ export interface paths {
         };
         /**
          * Staff: download a copy of a person’s information (a privacy request)
-         * @description A JSON file of their account, bookings, payments and refunds, payouts, messages they sent, reviews by and about them, support requests and the incidents they reported (plan §14). Other people’s details, internal notes and staff-only fields are left out. Downloaded from the privacy request it answers: `ticket` is a PRIVACY ticket they raised, in any status (400 without one; 403 NO_PRIVACY_REQUEST when it isn’t). Any staff member, the admin included, audit-logged with the ticket; 403 OWN_RECORD for their own account.
+         * @description A JSON file of their account, bookings, payments and refunds, payouts, messages they sent, reviews by and about them, support requests and the incidents they reported (plan §14). Other people’s details, internal notes and staff-only fields are left out. Downloaded from the privacy request it answers: `ticket` is a PRIVACY ticket they raised, in any status (one sent signed out is linked to their account first: POST /admin/support/tickets/{ref}/link-account) (400 without one; 403 NO_PRIVACY_REQUEST when it isn’t). Any staff member, the admin included, audit-logged with the ticket; 403 OWN_RECORD for their own account.
          */
         get: {
             parameters: {
@@ -14495,6 +14495,96 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/tickets/{ref}/link-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff: link a request sent signed out to the account with its email
+         * @description Once staff have checked it’s them (plan §14), the request becomes the member’s own: listed in their account and on their record, replies reach them there and can carry files, and a privacy request’s copy of their data is downloaded from it. Audit-logged with the note. 409 ALREADY_LINKED for a request already on an account; 404 NO_ACCOUNT when no open account has its email; 403 OWN_RECORD for a support member’s own account or booking.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TicketLinkRequest"];
+                };
+            };
+            responses: {
+                /** @description Done */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StaffTicketResponse"];
+                    };
+                };
+                /** @description Invalid input. `error.fields` has one message per invalid field. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not signed in, or the session has ended */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Signed in, but this account can't do this (or the request came from an untrusted origin) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conflicts with existing data, e.g. the email address already has an account */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -19564,6 +19654,8 @@ export interface components {
             carSuspended?: string[];
             /** @description Bookings not confirmed because the Guest’s licence no longer meets the rules for that trip (it expires before the trip ends, say): they keep waiting until the Guest updates it, support cancels them or their time runs out */
             licenceNotEligible?: string[];
+            /** @description Set when a turned-down check leaves the Guest with confirmed trips: they stay booked, and support are alerted to each to decide (check-in refuses them unless the licence is approved) */
+            stillBooked?: string[];
         };
         IdentityReviewRequest: {
             /** @enum {string} */
@@ -20758,6 +20850,11 @@ export interface components {
             updatedAt: string;
             /** Format: date-time */
             createdAt: string;
+            /** @description For a request sent signed out: the open account with its email address, which staff can link it to once they’ve checked it’s them (POST …/link-account) */
+            accountWithEmail?: {
+                id: string;
+                name: string;
+            };
             thread: {
                 id: string;
                 /** @enum {string} */
@@ -20787,6 +20884,10 @@ export interface components {
              * @default []
              */
             attachments: components["schemas"]["AttachmentInput"][];
+        };
+        TicketLinkRequest: {
+            /** @description How staff checked it’s them, for the audit log */
+            note?: string;
         };
         TicketUpdateRequest: {
             /** @enum {string} */
