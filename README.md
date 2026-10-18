@@ -51,6 +51,7 @@ Sentry (`src/lib/monitoring.ts`) records errors and real-user Core Web Vitals on
 | `npm run lint` · `npm run typecheck` · `npm test` | Checks (Vitest + Testing Library)                                                                                                                                  |
 | `npm run api:types`                               | Regenerates `src/api/schema.d.ts` from `../backend/openapi.json` after an API change (plan §2.3). The pipeline fails while it doesn't match the backend on master. |
 | `npm run size`                                    | After a build: the homepage's first-load JavaScript against the 170 KB budget (plan §12.5)                                                                         |
+| `npm run e2e`                                     | Runs Playwright end-to-end tests covering full trip lifecycle (`e2e/trip-lifecycle.spec.ts`), operational edge cases (`e2e/trip-edge-cases.spec.ts`), and host onboarding |
 | `npm run format`                                  | Prettier                                                                                                                                                           |
 
 ## Folder map
