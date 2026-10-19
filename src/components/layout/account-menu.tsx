@@ -42,6 +42,14 @@ export function AccountMenu({ user }: { user: SessionUser }) {
     <>
       {/* The header's signed-in part, on every public page, so visitors never download it. */}
       <AgreementsGate />
+      <Link
+        to="/saved"
+        viewTransition
+        aria-label="Saved cars"
+        className="relative inline-flex size-11 shrink-0 animate-fade-in items-center justify-center rounded-full text-ink/75 transition-[background-color,color,scale] duration-120 ease-out hover:bg-ink/6 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-94 [&_svg]:size-5"
+      >
+        <Heart aria-hidden="true" />
+      </Link>
       {/* The bell lives in this signed-in chunk too, so the homepage's first load doesn't grow (plan §12.5). */}
       <NotificationBell />
       <DropdownMenu>

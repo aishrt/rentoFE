@@ -1,5 +1,10 @@
 import type { DeliveryAddress, QuoteRequest, VehicleDetail } from '@/api/types';
-import { addressPartsOf, hasCoordinates, type PlaceChoice } from '@/features/host/place-choice';
+import {
+  addressFromPlace,
+  addressPartsOf,
+  hasCoordinates,
+  type PlaceChoice,
+} from '@/features/host/place-choice';
 
 /*
  * What the Guest has chosen at checkout, kept so that nothing is lost when they sign in midway (plan §6.1):
@@ -89,12 +94,17 @@ export function needsDeliveryAddress(resolved: ResolvedChoices, vehicle: Vehicle
 
 // ── The delivery address ─────────────────────────────────────────────────────────────────────────────
 
-/** The address as typed: the street by hand, the suburb or town chosen from our places for its coordinates. */
+/**
+ * The address as entered: found from Google Places or our suburbs and towns for its coordinates and region,
+ * which fills in the rest; each part can then be corrected by hand.
+ */
 export interface AddressDraft {
   unit: string;
   streetNumber: string;
   street: string;
   place: PlaceChoice;
+  suburb: string;
+  city: string;
   postcode: string;
 }
 
@@ -103,24 +113,35 @@ export const emptyAddress: AddressDraft = {
   streetNumber: '',
   street: '',
   place: { label: '' },
+  suburb: '',
+  city: '',
   postcode: '',
 };
 
-export type AddressErrors = Partial<Record<'streetNumber' | 'street' | 'place' | 'postcode', string>>;
+export type AddressErrors = Partial<
+  Record<'streetNumber' | 'street' | 'place' | 'city' | 'postcode', string>
+>;
+
+/** The draft with what a chosen place fills in. Its region stays with the place. */
+export function withPlace(draft: AddressDraft, place: PlaceChoice): AddressDraft {
+  const { region: _region, ...fill } = addressFromPlace(place);
+  return { ...draft, ...fill, place };
+}
 
 /** The address the API takes, or the errors that stop it. */
 export function toDeliveryAddress(draft: AddressDraft): { address?: DeliveryAddress; errors: AddressErrors } {
   const errors: AddressErrors = {};
+  const { region } = addressPartsOf(draft.place);
+  if (!hasCoordinates(draft.place) || !region) {
+    errors.place = draft.place.label.trim()
+      ? 'Choose your address from the list'
+      : 'Enter your address, then choose it from the list';
+  }
   if (!draft.streetNumber.trim()) errors.streetNumber = 'Enter the street number';
   if (draft.street.trim().length < 2) errors.street = 'Enter the street name';
+  if (draft.city.trim().length < 2) errors.city = 'Enter the town or city';
   if (!/^\d{4}$/.test(draft.postcode.trim())) errors.postcode = 'Enter the 4-digit postcode';
-  const parts = addressPartsOf(draft.place);
-  if (!hasCoordinates(draft.place) || !parts.city || !parts.region) {
-    errors.place = draft.place.label.trim()
-      ? 'Choose your suburb or town from the list'
-      : 'Enter your suburb or town, then choose it from the list';
-  }
-  if (Object.keys(errors).length > 0 || !hasCoordinates(draft.place) || !parts.city || !parts.region) {
+  if (Object.keys(errors).length > 0 || !hasCoordinates(draft.place) || !region) {
     return { errors };
   }
   return {
@@ -129,9 +150,9 @@ export function toDeliveryAddress(draft: AddressDraft): { address?: DeliveryAddr
       ...(draft.unit.trim() && { unit: draft.unit.trim() }),
       streetNumber: draft.streetNumber.trim(),
       street: draft.street.trim(),
-      ...(parts.suburb && { suburb: parts.suburb }),
-      city: parts.city,
-      region: parts.region,
+      ...(draft.suburb.trim() && { suburb: draft.suburb.trim() }),
+      city: draft.city.trim(),
+      region,
       postcode: draft.postcode.trim(),
       lat: draft.place.lat,
       lng: draft.place.lng,
@@ -179,8 +200,11 @@ export function loadProgress(slug: string): SavedProgress | null {
     const raw = sessionStorage.getItem(storageKey(slug));
     if (!raw) return null;
     const saved = JSON.parse(raw) as Partial<SavedProgress>;
+    const place = saved.address?.place ?? { label: '' };
+    // A draft saved before the suburb and town had their own fields takes them from its place.
+    const { region: _region, ...fill } = addressFromPlace(place);
     return {
-      address: { ...emptyAddress, ...saved.address, place: saved.address?.place ?? { label: '' } },
+      address: { ...emptyAddress, ...fill, ...saved.address, place },
       step: typeof saved.step === 'number' ? saved.step : 0,
       tripKey: typeof saved.tripKey === 'string' ? saved.tripKey : '',
       holdRef: typeof saved.holdRef === 'string' ? saved.holdRef : null,

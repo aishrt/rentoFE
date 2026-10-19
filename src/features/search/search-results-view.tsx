@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Select } from '@/components/ui/select';
-import { useSession } from '@/features/auth/use-session';
+import { useIsApprovedHost, useSession } from '@/features/auth/use-session';
 import { usePolicies } from '@/features/content/content-api';
 import { CurrencyPicker } from '@/features/currency/currency-picker';
 import { MaxMotion } from '@/features/vehicles/max-motion';
@@ -102,6 +102,7 @@ function NoResults({
   onClearAll,
   widenTo,
 }: NoResultsProps) {
+  const approvedHost = useIsApprovedHost();
   const widen = widenTo ? (
     <Button variant="secondary" onClick={() => onChange({ radiusKm: widenTo })}>
       Search within {widenTo} km
@@ -184,12 +185,14 @@ function NoResults({
       }
       actions={
         <>
-          <Button asChild>
-            <Link to="/become-a-host" viewTransition>
-              Become a Host
-              <ArrowRight aria-hidden="true" className="nudge-right" />
-            </Link>
-          </Button>
+          {!approvedHost && (
+            <Button asChild>
+              <Link to="/become-a-host" viewTransition>
+                Become a Host
+                <ArrowRight aria-hidden="true" className="nudge-right" />
+              </Link>
+            </Button>
+          )}
           {widen}
           {placeLabel && !widen && (
             <Button variant="secondary" asChild>

@@ -17643,6 +17643,10 @@ export interface components {
             region?: "Northland" | "Auckland" | "Waikato" | "Bay of Plenty" | "Gisborne" | "Hawke's Bay" | "Taranaki" | "Manawatū-Whanganui" | "Wellington" | "Tasman" | "Nelson" | "Marlborough" | "West Coast" | "Canterbury" | "Otago" | "Southland";
             lat: number;
             lng: number;
+            /** @description Google places: the suburb, when Google knows it, even without a street */
+            suburb?: string;
+            /** @description Google places: the 4-digit postcode, when Google knows it */
+            postcode?: string;
             /** @description A street address in the structured NZ format, when every part is known */
             address?: {
                 unit?: string;

@@ -20,6 +20,13 @@ export interface PlaceValue {
   code?: string;
 }
 
+/** One token per search, so Google Places bills the typing and the chosen place as one session (plan §1.2). */
+export function newSessionToken(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
 export interface TripParams {
   place: PlaceValue;
   /** "2026-10-12T10:00" in NZ time. */

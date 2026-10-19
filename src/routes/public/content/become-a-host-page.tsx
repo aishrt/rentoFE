@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, Navigate } from 'react-router';
 import type { PublicPolicies } from '@/api/types';
 import { StreetArt } from '@/components/brand/scenes/street-art';
 import { SectionError } from '@/components/errors/section-error';
@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { CheckList } from '@/components/ui/check-list';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { Accordion, AccordionSkeleton } from '@/features/content/accordion';
 import { useFaqs, usePolicies } from '@/features/content/content-api';
 import { CtaBand } from '@/features/content/cta-band';
@@ -290,6 +291,10 @@ function HostFaqSection() {
  */
 export function BecomeAHostPage() {
   const policies = usePolicies();
+  const approvedHost = useIsApprovedHost();
+
+  // An approved Host has nothing to apply for: send them to the Host home.
+  if (approvedHost) return <Navigate to="/host" replace />;
 
   return (
     <>

@@ -12,6 +12,7 @@ import { fadeUp } from '@/components/motion/presets';
 import { Reveal } from '@/components/motion/reveal';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
@@ -153,6 +154,7 @@ function DestinationHero({ destination }: { destination: DestinationDetail }) {
 
 function CarsNear({ destination }: { destination: DestinationDetail }) {
   const cars = useCarsNear(destination);
+  const approvedHost = useIsApprovedHost();
   const total = cars.data?.total ?? 0;
   const browseLink = `/cars?${tripParams({
     place: { label: destination.city, type: 'DESTINATION', lat: destination.lat, lng: destination.lng },
@@ -208,12 +210,14 @@ function CarsNear({ destination }: { destination: DestinationDetail }) {
                 description={`No one in ${destination.city} has listed a car yet. If you have one, you could be the first, and earn from it while you're not using it.`}
                 actions={
                   <>
-                    <Button asChild>
-                      <Link to="/become-a-host" viewTransition>
-                        Become a Host
-                        <ArrowRight aria-hidden="true" className="nudge-right" />
-                      </Link>
-                    </Button>
+                    {!approvedHost && (
+                      <Button asChild>
+                        <Link to="/become-a-host" viewTransition>
+                          Become a Host
+                          <ArrowRight aria-hidden="true" className="nudge-right" />
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="secondary" asChild>
                       <Link to="/cars" viewTransition>
                         Browse all cars

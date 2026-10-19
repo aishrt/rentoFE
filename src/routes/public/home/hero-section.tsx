@@ -9,6 +9,7 @@ import { BlurText } from '@/components/motion/blur-text';
 import { fadeUp, heroTimeline } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { useHomeHero } from '@/features/content/site-content';
 import { HeroSearchForm } from '@/features/search/hero-search-form';
 import { motion } from '@/styles/tokens';
@@ -28,6 +29,7 @@ const ORIGINAL = {
  */
 export function HeroSection() {
   const { headline, subheading } = useHomeHero().data ?? ORIGINAL;
+  const approvedHost = useIsApprovedHost();
   const timeline = heroTimeline(headline.split(' ').length);
   return (
     <section aria-labelledby="hero-heading" className="relative isolate overflow-hidden bg-ink text-canvas">
@@ -61,20 +63,22 @@ export function HeroSection() {
             <HeroSearchForm />
           </ErrorBoundary>
 
-          <Card
-            variant="tinted"
-            className="mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:pl-5"
-          >
-            <p className="text-canvas/85">
-              <span className="font-semibold text-canvas">Have a car?</span> Earn money by sharing it.
-            </p>
-            <Button variant="outline-light" asChild className="shrink-0">
-              <Link to="/become-a-host" viewTransition>
-                Become a Host
-                <ArrowRight aria-hidden="true" className="nudge-right" />
-              </Link>
-            </Button>
-          </Card>
+          {!approvedHost && (
+            <Card
+              variant="tinted"
+              className="mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:pl-5"
+            >
+              <p className="text-canvas/85">
+                <span className="font-semibold text-canvas">Have a car?</span> Earn money by sharing it.
+              </p>
+              <Button variant="outline-light" asChild className="shrink-0">
+                <Link to="/become-a-host" viewTransition>
+                  Become a Host
+                  <ArrowRight aria-hidden="true" className="nudge-right" />
+                </Link>
+              </Button>
+            </Card>
+          )}
         </m.div>
       </Container>
     </section>
