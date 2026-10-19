@@ -234,7 +234,7 @@ export const policies = {
   },
   search: { maxTripDays: 90, radiusKm: { min: 5, default: 25, max: 300 } },
   hostEstimator: { bookedDaysPerMonth: 10, dailyCentsByBodyType: {} },
-  reviews: { windowDays: 14, revealTogether: true },
+  reviews: { windowDays: 14, revealTogether: true, requireApproval: true },
   trips: { lateReturnGraceMinutes: 30 },
 };
 

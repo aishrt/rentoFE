@@ -107,7 +107,7 @@ export const settingsFixture: PlatformSettings = {
     dailyPriceCents: { min: 2_000, max: 200_000 },
     maxDiscountPct: 50,
   },
-  reviews: { windowDays: 14, revealTogether: true, homepageThreshold: 10 },
+  reviews: { windowDays: 14, revealTogether: true, requireApproval: true, homepageThreshold: 10 },
   trips: {
     lateReturnGraceMinutes: 30,
     damageReportWindowHours: 48,
