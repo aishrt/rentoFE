@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { usePolicies } from '@/features/content/content-api';
 import { CtaBand } from '@/features/content/cta-band';
 import { EligibilitySummary, EligibilitySummarySkeleton } from '@/features/content/eligibility-summary';
@@ -170,6 +171,7 @@ function PillarsSection() {
 
 /** How It Works (plan §9, Days 12–14; spec §3, §28): both journeys, what protects them, and where to start. */
 export function HowItWorksPage() {
+  const approvedHost = useIsApprovedHost();
   return (
     <>
       <PageMeta page={seoPage('/how-it-works')} />
@@ -187,11 +189,13 @@ export function HowItWorksPage() {
                 <ArrowRight aria-hidden="true" className="nudge-right" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline-light">
-              <Link to="/become-a-host" viewTransition>
-                Become a host
-              </Link>
-            </Button>
+            {!approvedHost && (
+              <Button asChild size="lg" variant="outline-light">
+                <Link to="/become-a-host" viewTransition>
+                  Become a host
+                </Link>
+              </Button>
+            )}
           </>
         }
       />
@@ -212,11 +216,13 @@ export function HowItWorksPage() {
                 </Link>
               </Button>
             </Magnet>
-            <Button variant="outline-light" size="lg" asChild>
-              <Link to="/become-a-host" viewTransition>
-                Become a host
-              </Link>
-            </Button>
+            {!approvedHost && (
+              <Button variant="outline-light" size="lg" asChild>
+                <Link to="/become-a-host" viewTransition>
+                  Become a host
+                </Link>
+              </Button>
+            )}
           </>
         }
       />

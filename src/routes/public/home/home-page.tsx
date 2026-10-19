@@ -1,6 +1,7 @@
 import { lazy, type ReactNode } from 'react';
 import { ErrorBoundary } from '@/components/errors/error-boundary';
 import { PageMeta } from '@/components/layout/page-meta';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { seoPage } from '@/seo/pages';
 import { DestinationsSection } from './destinations-section';
 import { FaqSection } from './faq-section';
@@ -30,6 +31,7 @@ function Isolated({ children }: { children: ReactNode }) {
  * hosting, safety, customer reviews (hidden until the threshold in settings is reached) and FAQs.
  */
 export function HomePage() {
+  const approvedHost = useIsApprovedHost();
   return (
     <>
       <PageMeta page={seoPage('/')} />
@@ -49,9 +51,11 @@ export function HomePage() {
       <Isolated>
         <HowItWorksSection />
       </Isolated>
-      <Isolated>
-        <HostSection />
-      </Isolated>
+      {!approvedHost && (
+        <Isolated>
+          <HostSection />
+        </Isolated>
+      )}
       <Isolated>
         <SafetySection />
       </Isolated>

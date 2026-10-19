@@ -9,7 +9,7 @@ import { useSession } from '@/features/auth/use-session';
 import { cn } from '@/lib/cn';
 import { useScrolled } from '@/lib/use-scrolled';
 import { Container } from './container';
-import { primaryNav } from './site-nav';
+import { primaryNav, visibleNav } from './site-nav';
 
 // Both menus use Radix, so they load only when needed, keeping it off the homepage's first load (plan §12.5).
 const loadMobileMenu = () => import('./mobile-menu');
@@ -41,6 +41,7 @@ export function SiteHeader() {
   const scrolled = useScrolled();
   const { pathname } = useLocation();
   const session = useSession();
+  const approvedHost = session.data?.hostStatus === 'APPROVED';
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuRequested, setMenuRequested] = useState(false);
 
@@ -60,7 +61,7 @@ export function SiteHeader() {
 
         <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-8">
-            {primaryNav.map((item) => (
+            {visibleNav(primaryNav, approvedHost).map((item) => (
               <li key={item.to}>
                 <Link
                   to={item.to}

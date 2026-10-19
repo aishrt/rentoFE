@@ -9,6 +9,7 @@ import { Reveal, Stagger, StaggerItem } from '@/components/motion/reveal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { IconBadge } from '@/components/ui/icon-badge';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { CtaBand } from '@/features/content/cta-band';
 import { PageHero } from '@/features/content/page-hero';
 import { seoPage } from '@/seo/pages';
@@ -68,6 +69,7 @@ function ValuesSection() {
 
 /** About Us (plan §9, Days 12–14): the idea and the values behind Rento Vroom. Copy awaits the client (§16 item 18). */
 export function AboutPage() {
+  const approvedHost = useIsApprovedHost();
   return (
     <>
       <PageMeta page={seoPage('/about')} />
@@ -102,11 +104,13 @@ export function AboutPage() {
                 </Link>
               </Button>
             </Magnet>
-            <Button variant="outline-light" size="lg" asChild>
-              <Link to="/become-a-host" viewTransition>
-                Become a host
-              </Link>
-            </Button>
+            {!approvedHost && (
+              <Button variant="outline-light" size="lg" asChild>
+                <Link to="/become-a-host" viewTransition>
+                  Become a host
+                </Link>
+              </Button>
+            )}
           </>
         }
       />

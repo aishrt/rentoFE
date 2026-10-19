@@ -12,6 +12,11 @@ export function useSession() {
   });
 }
 
+/** True for a Host whose application is approved: the "Become a host" prompts are hidden for them. */
+export function useIsApprovedHost() {
+  return useSession().data?.hostStatus === 'APPROVED';
+}
+
 /** The password step. Staff with an authenticator app aren't signed in yet: their code comes next. */
 export function useLogin() {
   const queryClient = useQueryClient();

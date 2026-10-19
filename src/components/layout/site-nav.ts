@@ -11,6 +11,11 @@ export const primaryNav: NavLinkItem[] = [
   { label: 'Help', to: '/help' },
 ];
 
+/** Drops the Become a host link for a Host whose application is approved. */
+export function visibleNav<T extends { to: string }>(items: T[], approvedHost: boolean): T[] {
+  return approvedHost ? items.filter((item) => item.to !== '/become-a-host') : items;
+}
+
 /** The footer's links at launch; admins change them on the staff portal's Content page (plan §12.6). */
 export const footerNav: { title: string; links: NavLinkItem[] }[] = [
   {

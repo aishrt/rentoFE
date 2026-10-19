@@ -15,7 +15,13 @@ import { useVehicleAvailability } from '@/features/vehicles/vehicle-api';
 import { optionDetail, optionFee } from '@/features/vehicles/vehicle-format';
 import { cn } from '@/lib/cn';
 import { nzToday } from '@/lib/dates';
-import type { AddressDraft, AddressErrors, CheckoutChoices, ResolvedChoices } from './checkout-state';
+import {
+  withPlace,
+  type AddressDraft,
+  type AddressErrors,
+  type CheckoutChoices,
+  type ResolvedChoices,
+} from './checkout-state';
 
 // The legend above each date-and-time pair turns blue while either of its pickers has focus or is open.
 const legendClasses = cn(
@@ -46,8 +52,8 @@ interface TripSectionProps {
 
 /**
  * Step 1 (spec §7, steps 1–3): when and where the trip starts and ends, in NZ time, with the availability
- * check from the quote. A delivery needs the Guest's address, with the suburb or town chosen from our places
- * so the API can check it's inside the Host's delivery area.
+ * check from the quote. A delivery needs the Guest's address, found from Google Places or our suburbs and
+ * towns for its coordinates, so the API can check it's inside the Host's delivery area.
  */
 export function TripSection({
   vehicle,
@@ -215,6 +221,19 @@ export function TripSection({
           <p className="-mt-1 text-sm text-muted">
             Only your host sees this address, once your booking is confirmed.
           </p>
+          <Field
+            label="Address"
+            error={addressError('place')}
+            description="Choose it from the list to fill in the rest."
+          >
+            <PlacePicker
+              value={address.place}
+              onValueChange={(place) => onAddressChange(withPlace(address, place))}
+              types={['ADDRESS', 'SUBURB', 'CITY']}
+              placeholder="Start typing, e.g. 12 Queen Street"
+              listLabel="Suburbs and towns"
+            />
+          </Field>
           <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-[7rem_7rem_minmax(0,1fr)]">
             <Field label="Unit (optional)">
               <Input
@@ -239,14 +258,19 @@ export function TripSection({
               />
             </Field>
           </div>
-          <div className="grid items-start gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
-            <Field label="Suburb or town" error={addressError('place')}>
-              <PlacePicker
-                value={address.place}
-                onValueChange={(place) => onAddressChange({ ...address, place })}
-                types={['SUBURB', 'CITY']}
-                placeholder="Start typing, then choose"
-                listLabel="Suburbs and towns"
+          <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+            <Field label="Suburb (optional)">
+              <Input
+                autoComplete="off"
+                value={address.suburb}
+                onChange={(event) => onAddressChange({ ...address, suburb: event.target.value })}
+              />
+            </Field>
+            <Field label="Town or city" error={addressError('city')}>
+              <Input
+                autoComplete="off"
+                value={address.city}
+                onChange={(event) => onAddressChange({ ...address, city: event.target.value })}
               />
             </Field>
             <Field label="Postcode" error={addressError('postcode')}>

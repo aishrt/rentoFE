@@ -1,10 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Building2, Check, MapPin, Mountain, Plane, type LucideIcon } from 'lucide-react';
+import { Building2, Check, CircleAlert, MapPin, Mountain, Plane, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from 'react';
-import { client, unwrap } from '@/api/client';
-import type { PlaceSuggestion } from '@/api/types';
+import { ApiError, client, unwrap } from '@/api/client';
+import type { PlaceDetails, PlaceSuggestion } from '@/api/types';
 import { Input } from '@/components/ui/input';
 import { Popover } from '@/components/ui/popover';
+import { Spinner } from '@/components/ui/spinner';
+import { newSessionToken } from '@/features/search/place';
 import { assignRef } from '@/lib/assign-ref';
 import type { PlaceChoice } from './place-choice';
 
@@ -29,11 +31,34 @@ function useDebounced<Value>(value: Value, delay: number): Value {
   return debounced;
 }
 
+const toChoice = (place: PlaceSuggestion | PlaceDetails): PlaceChoice => {
+  const city = place.type === 'SUBURB' ? (place.city ?? place.secondary?.split(',')[0]?.trim()) : undefined;
+  return {
+    // "Ponsonby, Auckland": a suburb with its city, as saved addresses show it.
+    label: city ? `${place.label}, ${city}` : place.label,
+    id: place.id,
+    type: place.type,
+    name: place.name,
+    secondary: place.secondary,
+    code: place.code,
+    city: place.city,
+    region: place.region,
+    ...('suburb' in place && place.suburb && { suburb: place.suburb }),
+    ...('postcode' in place && place.postcode && { postcode: place.postcode }),
+    ...('address' in place && place.address && { address: place.address }),
+    lat: place.lat,
+    lng: place.lng,
+  };
+};
+
 interface PlacePickerProps {
   value: PlaceChoice;
   onValueChange: (value: PlaceChoice) => void;
   onBlur?: () => void;
-  /** Which of our places to offer, e.g. only airports. */
+  /**
+   * Which places to offer, e.g. only airports. With `ADDRESS`, Google's addresses come too (plan §1.2), and
+   * a chosen one is looked up for its coordinates and parts before it's passed on.
+   */
   types: readonly PlaceType[];
   placeholder?: string;
   /** Heads the list before anything is typed. */
@@ -44,10 +69,11 @@ interface PlacePickerProps {
 }
 
 /**
- * Chooses one of our NZ places (plan §3, `places`): a suburb or town for an address, whose coordinates
- * become where the car is found in search, or an airport for airport delivery. It works like the site's
- * Combobox: the list opens as you type or on a click, arrows move, Enter chooses, Escape closes, and focus
- * stays in the field. The street is typed beside it, so it asks for our places only, never Google's addresses.
+ * Chooses a place (plan §3, `places`): a street address from Google, or one of our NZ suburbs and towns, whose
+ * coordinates become where the car is found in search or where it's delivered; or one of our airports for
+ * airport delivery. It works like the site's Combobox: the list opens as you type or on a click, arrows move,
+ * Enter chooses, Escape closes, and focus stays in the field. Without `ADDRESS` it asks for our places only,
+ * so Google isn't asked (and billed) for nothing.
  */
 export function PlacePicker({
   value,
@@ -63,19 +89,35 @@ export function PlacePicker({
   const listId = useId();
   const anchorRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  // One token per search, so Google bills the typing and the chosen address as one session (plan §1.2).
+  const sessionToken = useRef<string | null>(null);
+  const latestValue = useRef(value);
   const [open, setOpen] = useState(false);
   const [typing, setTyping] = useState(false);
   const [active, setActive] = useState(-1);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const text = typing ? value.label.trim() : '';
   const query = useDebounced(text, DEBOUNCE);
+  const addresses = types.includes('ADDRESS');
+
+  useEffect(() => {
+    latestValue.current = value;
+  }, [value]);
 
   const suggestions = useQuery({
-    queryKey: ['places', 'suggest', query, 'ours'],
-    // Only our places: the street is typed, so Google's addresses would be fetched (and billed) for nothing.
+    queryKey: ['places', 'suggest', query, addresses ? 'addresses' : 'ours'],
     queryFn: async ({ signal }) =>
       (
         await unwrap(
-          client.GET('/places/suggest', { params: { query: { q: query, oursOnly: true } }, signal }),
+          client.GET('/places/suggest', {
+            params: {
+              query: addresses
+                ? { q: query, sessionToken: sessionToken.current ?? undefined }
+                : { q: query, oursOnly: true },
+            },
+            signal,
+          }),
         )
       ).suggestions,
     enabled: open,
@@ -100,24 +142,39 @@ export function PlacePicker({
       popover.scrollTop = bottom - popover.clientHeight;
   }, [expanded, active, listId]);
 
+  const openList = () => {
+    if (addresses) sessionToken.current ??= newSessionToken();
+    setOpen(true);
+  };
+
   const choose = (place: PlaceSuggestion) => {
-    const city = place.type === 'SUBURB' ? (place.city ?? place.secondary?.split(',')[0]?.trim()) : undefined;
-    onValueChange({
-      // "Ponsonby, Auckland": a suburb with its city, as saved addresses show it.
-      label: city ? `${place.label}, ${city}` : place.label,
-      id: place.id,
-      type: place.type,
-      name: place.name,
-      secondary: place.secondary,
-      code: place.code,
-      city: place.city,
-      region: place.region,
-      lat: place.lat,
-      lng: place.lng,
-    });
+    const choice = toChoice(place);
+    onValueChange(choice);
     setTyping(false);
     setOpen(false);
     setActive(-1);
+    setLookupError(null);
+    const token = sessionToken.current ?? undefined;
+    sessionToken.current = null;
+    if (choice.lat !== undefined && choice.lng !== undefined) return;
+
+    // Google's addresses come without coordinates. Ask with the same token, so it's still one session.
+    setLookingUp(true);
+    void unwrap(
+      client.GET('/places/{id}', { params: { path: { id: place.id }, query: { sessionToken: token } } }),
+    )
+      .then(({ place: details }) => {
+        if (latestValue.current.id === place.id) onValueChange(toChoice(details));
+      })
+      .catch((error: unknown) => {
+        if (latestValue.current.id !== place.id) return;
+        setLookupError(
+          error instanceof ApiError
+            ? error.message
+            : "We couldn't look up that address just now. Please try again, or choose a town or suburb.",
+        );
+      })
+      .finally(() => setLookingUp(false));
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -126,7 +183,7 @@ export function PlacePicker({
       event.preventDefault();
       const down = event.key === 'ArrowDown';
       if (!expanded) {
-        setOpen(true);
+        openList();
         setActive(down ? 0 : last);
       } else if (options.length > 0) {
         setActive((current) =>
@@ -164,6 +221,7 @@ export function PlacePicker({
         aria-expanded={expanded}
         aria-controls={expanded ? listId : undefined}
         aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
+        aria-busy={lookingUp || undefined}
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
@@ -173,13 +231,27 @@ export function PlacePicker({
           onValueChange({ label: event.target.value });
           setTyping(true);
           setActive(-1);
-          setOpen(true);
+          setLookupError(null);
+          openList();
         }}
-        onClick={() => setOpen(true)}
+        onClick={openList}
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         leadingIcon={leadingIcon}
+        trailing={
+          lookingUp ? (
+            <span className="pointer-events-none flex items-center pr-3 text-muted">
+              <Spinner label="Finding that address" />
+            </span>
+          ) : undefined
+        }
       />
+      {lookupError && (
+        <p role="alert" className="mt-1.5 flex animate-fade-in items-start gap-1.5 text-sm text-danger">
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span>{lookupError}</span>
+        </p>
+      )}
       <span aria-live="polite" className="sr-only">
         {status}
       </span>
@@ -218,7 +290,9 @@ export function PlacePicker({
                   <Icon />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">{place.label}</span>
+                  <span className="block truncate">
+                    {place.type === 'ADDRESS' ? place.name : place.label}
+                  </span>
                   {place.secondary && (
                     <span className="block truncate text-xs text-muted">{place.secondary}</span>
                   )}
@@ -232,7 +306,9 @@ export function PlacePicker({
         </ul>
         {noMatches && (
           <p className="px-2.5 py-3 text-sm text-muted">
-            We don't have “{text}” yet. Try the nearest suburb or town.
+            {addresses
+              ? `No places match “${text}”. Check the spelling, or try the suburb or town.`
+              : `We don't have “${text}” yet. Try the nearest suburb or town.`}
           </p>
         )}
       </Popover>

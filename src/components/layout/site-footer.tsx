@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import type { SiteFooter as FooterContent } from '@/api/types';
 import { Logo } from '@/components/brand/logo';
 import { Divider } from '@/components/ui/divider';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 import { useSiteFooter } from '@/features/content/site-content';
 import { Container } from './container';
 import { footerNav, socialLinks } from './site-nav';
@@ -36,7 +37,13 @@ function FooterLink({ label, href }: { label: string; href: string }) {
 }
 
 export function SiteFooter() {
-  const { groups, socialLinks: social } = useSiteFooter().data ?? ORIGINAL;
+  const { groups: allGroups, socialLinks: social } = useSiteFooter().data ?? ORIGINAL;
+  const approvedHost = useIsApprovedHost();
+  // Admin-edited links are filtered here too, so the prompt is gone however the footer was set up.
+  const groups = allGroups.map((group) => ({
+    ...group,
+    links: approvedHost ? group.links.filter((link) => link.href !== '/become-a-host') : group.links,
+  }));
   return (
     <footer className="bg-ink text-canvas/75 print:hidden">
       <Container className="grid gap-12 py-16 lg:grid-cols-[1.2fr_2fr] lg:py-20">

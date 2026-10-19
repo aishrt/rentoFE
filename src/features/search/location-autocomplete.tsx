@@ -17,7 +17,7 @@ import { Popover } from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { assignRef } from '@/lib/assign-ref';
 import { cn } from '@/lib/cn';
-import type { PlaceType, PlaceValue } from './place';
+import { newSessionToken, type PlaceType, type PlaceValue } from './place';
 import { useDebouncedValue } from './use-debounced-value';
 
 // A plane for airports, a pin for everything else: each extra icon would be one more download on the homepage.
@@ -25,13 +25,6 @@ const placeIcon = (type: PlaceType) => (type === 'AIRPORT' ? Plane : MapPin);
 
 /** How long typing pauses before suggestions are fetched, in ms. */
 const DEBOUNCE = 200;
-
-/** One token per search, so Google Places bills the typing and the chosen place as one session (plan §1.2). */
-function newSessionToken(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-  );
-}
 
 /** Lower case without accents, so "taupo" matches "Taupō". */
 const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();

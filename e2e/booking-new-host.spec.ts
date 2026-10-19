@@ -223,15 +223,15 @@ test('a new Host lists a car, the admin approves it, and a Guest books it', asyn
   await expect(page.getByRole('heading', { name: 'Availability', exact: true })).toBeVisible();
   await next(page);
 
-  // Step 6: where guests pick the car up.
-  await field(page, 'Street number').fill('12');
-  await field(page, 'Street').fill('Ponsonby Road');
-  await page.getByRole('combobox', { name: 'Suburb or town', exact: true }).fill('Ponsonby');
+  // Step 6: where guests pick the car up, found from our suburbs (Google's addresses need its key).
+  await page.getByRole('combobox', { name: 'Address', exact: true }).fill('Ponsonby');
   await page
     .getByRole('option', { name: /Ponsonby/ })
     .first()
     .click();
-  await choose(page, 'Region', 'Auckland');
+  await expect(field(page, 'Town or city')).toHaveValue('Auckland');
+  await field(page, 'Street number').fill('12');
+  await field(page, 'Street').fill('Ponsonby Road');
   await field(page, 'Postcode').fill('1011');
   await next(page, 'Review');
 

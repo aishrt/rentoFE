@@ -1,37 +1,26 @@
 import type { FieldPath } from 'react-hook-form';
 import { z } from 'zod';
 import type { DeliveryOptionInput, HostVehicle } from '@/api/types';
-import {
-  addressPartsOf,
-  emptyPlace,
-  hasCoordinates,
-  placeFromAddress,
-  type PlaceChoice,
-} from './place-choice';
+import { emptyPlace, hasCoordinates, placeFromAddress, type PlaceChoice } from './place-choice';
 import { NZ_REGIONS, type NzRegion } from './vehicle-labels';
 
 /*
  * Step 6, pickup and delivery (plan §9, Days 8–11): where guests collect the car, and the ways it can come
- * to them. Addresses use the structured NZ format with coordinates (plan §3, Key rules); the suburb or town
- * comes from our places, so the car can be found in search from there.
+ * to them. Addresses use the structured NZ format with coordinates (plan §3, Key rules): the address is found
+ * from Google Places or our suburbs and towns, which fills in its parts and gives the coordinates the car is
+ * found in search from.
  */
 
-const placeSchema = z.object({
-  label: z.string(),
-  id: z.string().optional(),
-  type: z.enum(['CITY', 'SUBURB', 'AIRPORT', 'DESTINATION', 'ADDRESS']).optional(),
-  name: z.string().optional(),
-  secondary: z.string().optional(),
-  code: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-});
+// The chosen place, kept whole: its coordinates are what's saved.
+const placeSchema = z.custom<PlaceChoice>((value) => typeof value === 'object' && value !== null);
 
 const addressSchema = z.object({
   unit: z.string().trim().max(20, 'Keep it under 20 characters'),
   streetNumber: z.string().trim().max(20, 'Keep it under 20 characters'),
   street: z.string().trim().max(120, 'Keep it under 120 characters'),
   place: placeSchema,
+  suburb: z.string().trim().max(80, 'Keep it under 80 characters'),
+  city: z.string().trim().max(80, 'Keep it under 80 characters'),
   region: z.string(),
   postcode: z.string().trim(),
 });
@@ -72,9 +61,10 @@ export const deliverySchema = z
     const issue = (path: (string | number)[], message: string) =>
       context.addIssue({ code: 'custom', path, message });
     const checkAddress = (address: AddressValues, path: (string | number)[]) => {
-      if (address.street.length < 2) issue([...path, 'street'], 'Enter the street');
       if (!hasCoordinates(address.place))
-        issue([...path, 'place'], 'Choose the suburb or town from the list');
+        issue([...path, 'place'], 'Find the address and choose it from the list');
+      if (address.street.length < 2) issue([...path, 'street'], 'Enter the street');
+      if (address.city.length < 2) issue([...path, 'city'], 'Enter the town or city');
       if (!address.region) issue([...path, 'region'], 'Choose a region');
       if (!/^\d{4}$/.test(address.postcode)) issue([...path, 'postcode'], 'NZ postcodes have 4 digits');
     };
@@ -112,12 +102,20 @@ export const emptyAddress: AddressValues = {
   streetNumber: '',
   street: '',
   place: emptyPlace,
+  suburb: '',
+  city: '',
   region: '',
   postcode: '',
 };
 
 export const isBlankAddress = (address: AddressValues) =>
-  !address.unit && !address.streetNumber && !address.street && !address.place.label && !address.postcode;
+  !address.unit &&
+  !address.streetNumber &&
+  !address.street &&
+  !address.place.label &&
+  !address.suburb &&
+  !address.city &&
+  !address.postcode;
 
 const dollars = (cents: number) => (cents ? String(Number((cents / 100).toFixed(2))) : '');
 const cents = (value: string) => (value ? Math.round(Number(value.replace('$', '')) * 100) : 0);
@@ -129,6 +127,8 @@ function addressValues(address: HostVehicle['deliveryOptions'][number]['address'
     streetNumber: address.streetNumber ?? '',
     street: address.street,
     place: placeFromAddress(address),
+    suburb: address.suburb ?? '',
+    city: address.city,
     region: address.region,
     postcode: address.postcode,
   };
@@ -178,13 +178,12 @@ export function deliveryDefaults(vehicle: HostVehicle): DeliveryValues {
 
 function apiAddress(address: AddressValues): NonNullable<DeliveryOptionInput['address']> {
   const place = address.place as PlaceChoice & { lat: number; lng: number };
-  const parts = addressPartsOf(place);
   return {
     ...(address.unit && { unit: address.unit }),
     ...(address.streetNumber && { streetNumber: address.streetNumber }),
     street: address.street,
-    ...(parts.suburb && { suburb: parts.suburb }),
-    city: parts.city ?? place.label,
+    ...(address.suburb && { suburb: address.suburb }),
+    city: address.city,
     region: address.region as NzRegion,
     postcode: address.postcode,
     lat: place.lat,
@@ -257,8 +256,8 @@ const ADDRESS_PARTS: Record<string, keyof AddressValues> = {
   unit: 'unit',
   streetNumber: 'streetNumber',
   street: 'street',
-  suburb: 'place',
-  city: 'place',
+  suburb: 'suburb',
+  city: 'city',
   lat: 'place',
   lng: 'place',
   region: 'region',

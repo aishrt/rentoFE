@@ -3,12 +3,14 @@ import { Link } from 'react-router';
 import { RoadTripScene } from '@/components/brand/road-trip-scene';
 import { Container } from '@/components/layout/container';
 import { PageMeta } from '@/components/layout/page-meta';
-import { primaryNav } from '@/components/layout/site-nav';
+import { primaryNav, visibleNav } from '@/components/layout/site-nav';
 import { staggerIndex } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
+import { useIsApprovedHost } from '@/features/auth/use-session';
 
 /** The 404 page: a night drive past a glowing 404, then the way back to the road. */
 export function NotFoundPage() {
+  const approvedHost = useIsApprovedHost();
   return (
     <Container className="py-10 sm:py-14 lg:py-16">
       <PageMeta title="Page not found" noindex />
@@ -45,7 +47,7 @@ export function NotFoundPage() {
           <nav aria-label="Popular pages" className="stagger-in mt-10" style={staggerIndex(5)}>
             <p className="text-sm text-muted">Or head to</p>
             <ul className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-2">
-              {primaryNav.map((item) => (
+              {visibleNav(primaryNav, approvedHost).map((item) => (
                 <li key={item.to}>
                   <Link
                     to={item.to}

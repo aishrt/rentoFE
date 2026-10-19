@@ -6,7 +6,7 @@ import { Divider } from '@/components/ui/divider';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useUnreadMessages } from '@/features/messages/unread-count';
 import { UnreadBadge } from '@/features/messages/unread-badge';
-import { primaryNav, type NavLinkItem } from './site-nav';
+import { primaryNav, visibleNav, type NavLinkItem } from './site-nav';
 
 interface MobileMenuProps {
   open: boolean;
@@ -26,7 +26,8 @@ export function MobileMenu({ open, onOpenChange, user }: MobileMenuProps) {
   const close = () => onOpenChange(false);
   const unread = useUnreadMessages(Boolean(user)).data ?? 0;
   const hosting = Boolean(user?.hostStatus);
-  const main = hosting ? primaryNav.filter((item) => item.to !== '/become-a-host') : primaryNav;
+  // Anyone who has applied sees Hosting instead; an approved Host sees no Become a host anywhere.
+  const main = visibleNav(primaryNav, hosting);
   const account: NavLinkItem[] = user
     ? [
         { label: 'Trips', to: '/trips' },
