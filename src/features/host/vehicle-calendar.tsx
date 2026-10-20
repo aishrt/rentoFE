@@ -65,7 +65,7 @@ function blocksWithin(blocks: readonly CalendarBlock[], days: readonly string[])
   return [...seen.values()].sort((a, b) => a.start.localeCompare(b.start));
 }
 
-function Calendar({ vehicle }: { vehicle: HostVehicle }) {
+function Calendar({ vehicle, embedded = false }: { vehicle: HostVehicle; embedded?: boolean }) {
   const [params, setParams] = useSearchParams();
   const [now] = useState(() => nzWallClock(new Date()));
   const today = now.day;
@@ -159,7 +159,7 @@ function Calendar({ vehicle }: { vehicle: HostVehicle }) {
   const detailDays = view === 'month' ? (dayRange ? [dayRange.start] : []) : days;
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className={embedded ? 'grid gap-8' : 'grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]'}>
       <div className="grid min-w-0 content-start gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedTabs
@@ -269,7 +269,8 @@ function Calendar({ vehicle }: { vehicle: HostVehicle }) {
 
       <div className="grid content-start gap-6">
         <RecurringRulesEditor vehicle={vehicle} />
-        <TripRulesCard vehicle={vehicle} />
+        {/* In the onboarding step, notice and preparation time are the step's own fields just above. */}
+        {!embedded && <TripRulesCard vehicle={vehicle} />}
       </div>
 
       <BlockDialog
@@ -289,9 +290,10 @@ function Calendar({ vehicle }: { vehicle: HostVehicle }) {
 /**
  * A car's calendar: month and week views of every block by reason, with a key; choose days or hours to block,
  * remove your own blocks, set weekly availability, and the minimum notice and preparation time. A listing that
- * can no longer change says so instead.
+ * can no longer change says so instead. `embedded` is for onboarding step 5, which has the notice and
+ * preparation time fields itself.
  */
-export function VehicleCalendar({ vehicle }: { vehicle: HostVehicle }) {
+export function VehicleCalendar({ vehicle, embedded = false }: { vehicle: HostVehicle; embedded?: boolean }) {
   if (isLocked(vehicle.status)) {
     return (
       <EmptyState
@@ -306,5 +308,5 @@ export function VehicleCalendar({ vehicle }: { vehicle: HostVehicle }) {
       />
     );
   }
-  return <Calendar vehicle={vehicle} />;
+  return <Calendar vehicle={vehicle} embedded={embedded} />;
 }

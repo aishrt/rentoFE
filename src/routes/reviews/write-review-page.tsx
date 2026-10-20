@@ -31,7 +31,9 @@ function ReviewForm({ booking }: { booking: Booking }) {
   const submit = useSubmitReview();
   const reviews = useMyReviews();
   // Staff can turn off waiting for both reviews (Platform settings); it's on until the policies say otherwise.
-  const together = usePolicies().data?.reviews.revealTogether ?? true;
+  const policies = usePolicies().data?.reviews;
+  const together = policies?.revealTogether ?? true;
+  const approval = policies?.requireApproval ?? true;
   const [scores, setScores] = useState<Scores>({ overall: 0, communication: 0, pickupReturn: 0, detail: 0 });
   const [body, setBody] = useState('');
   const [tried, setTried] = useState(false);
@@ -56,7 +58,7 @@ function ReviewForm({ booking }: { booking: Booking }) {
         title="Thanks for your review"
         description={
           review.moderation === 'HELD'
-            ? 'Our team checks it before it’s published, as it may include contact details, a link or strong language.'
+            ? 'Our team approves every review before it’s published. We’ll let you know once it’s been checked.'
             : review.status === 'PUBLISHED'
               ? otherPublished
                 ? `It’s published, and so is ${other}’s review of you.`
@@ -150,6 +152,7 @@ function ReviewForm({ booking }: { booking: Booking }) {
         <Textarea rows={5} maxLength={1000} value={body} onChange={(event) => setBody(event.target.value)} />
       </Field>
       <p className="text-sm text-muted">
+        {approval && 'Our team approves every review before it’s published. '}
         {together ? (
           <>
             {other} can’t see your review until they’ve written theirs, or the time to review runs out

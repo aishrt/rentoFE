@@ -27,6 +27,16 @@ function api(vehicle: HostVehicle, handlers: Parameters<typeof mockApi>[0] = {})
     'GET /policies': { status: 200, body: samplePolicies },
     'GET /host/vehicles/v1': { status: 200, body: { vehicle } },
     'GET /host/vehicles': { status: 200, body: { vehicles: [] } },
+    // Step 5 shows the car's calendar.
+    'GET /host/vehicles/v1/calendar': {
+      status: 200,
+      body: {
+        from: '2026-09-27T11:00:00.000Z',
+        to: '2026-11-08T11:00:00.000Z',
+        blocks: [],
+        rules: { minNoticeHours: 12, bufferHours: 2 },
+      },
+    },
     ...handlers,
   });
 }
@@ -212,6 +222,16 @@ describe('VehicleEditorPage', () => {
 
     expect(await screen.findByText('My vehicles page')).toBeInTheDocument();
     expect(patch).toHaveBeenCalledOnce();
+  });
+
+  it('shows the car’s calendar on the availability step, to block dates and set weekly availability', async () => {
+    api(sampleVehicle({ onboardingStep: 5 }));
+    render('/host/vehicles/v1/5');
+
+    expect(await screen.findByRole('radio', { name: /Instant Book on/ })).toBeInTheDocument();
+    expect(await screen.findByRole('tablist', { name: 'Calendar view' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Block a time' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save and open the calendar' })).not.toBeInTheDocument();
   });
 
   describe('unsaved changes', () => {

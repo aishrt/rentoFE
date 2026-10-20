@@ -1,7 +1,6 @@
-import { CalendarDays, Clock, MessageSquareText, Sparkles, Timer, Zap } from 'lucide-react';
+import { Clock, MessageSquareText, Timer, Zap } from 'lucide-react';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { bufferOptions, noticeOptions } from './availability-options';
@@ -10,6 +9,7 @@ import { FormSection } from './form-section';
 import type { StepProps } from './step-props';
 import { StepFrame } from './step-frame';
 import { fieldMap, placeFieldErrors, useStepSave, type StepTarget } from './use-step-save';
+import { VehicleCalendar } from './vehicle-calendar';
 
 interface AvailabilityValues {
   minNoticeHours: string;
@@ -25,7 +25,8 @@ const availabilityFieldFor = fieldMap<keyof AvailabilityValues>({
 
 /**
  * Step 5: when the car can be booked (plan §9, Days 8–11): minimum notice, preparation time between trips,
- * and Instant Book on or off. Blocked dates and weekly availability live on the car's calendar.
+ * and Instant Book on or off, then the car's calendar for blocked dates and weekly availability (spec §11).
+ * Blocks and weekly rules save as they're made, so they aren't part of this step's own save.
  */
 export function AvailabilityStep({ vehicle, missing, registerSave }: StepProps) {
   const { save, savingTo, problem } = useStepSave(vehicle, 5);
@@ -158,23 +159,10 @@ export function AvailabilityStep({ vehicle, missing, registerSave }: StepProps) 
 
       <FormSection
         title="Blocked dates and weekly availability"
-        description="Block the days you need the car, or times it's never free, such as weekdays while you drive to work. Booked trips appear there automatically."
+        description="Your car is available whenever it isn't blocked. Block the days you need it, or times it's never free, such as weekdays while you drive to work. Booked trips appear here automatically."
         columns={1}
       >
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="secondary"
-            onClick={() => void saveTo('calendar')}
-            loading={savingTo === 'calendar'}
-          >
-            <CalendarDays aria-hidden="true" />
-            Save and open the calendar
-          </Button>
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Sparkles aria-hidden="true" className="size-4 text-primary" />
-            Your car is available whenever it isn't blocked.
-          </p>
-        </div>
+        <VehicleCalendar vehicle={vehicle} embedded />
       </FormSection>
     </StepFrame>
   );

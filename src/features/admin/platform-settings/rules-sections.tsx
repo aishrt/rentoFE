@@ -109,6 +109,7 @@ const reviewsAndTripsSchema = z
   .object({
     windowDays: wholeField(1, 90, ' days'),
     revealTogether: z.boolean(),
+    requireApproval: z.boolean(),
     homepageThreshold: wholeField(0, 1000),
     damageReportWindowHours: wholeField(1, 720, ' hours'),
     lateReturnGraceMinutes: wholeField(0, 720, ' minutes'),
@@ -134,6 +135,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
       toValues={({ reviews, trips, sms }) => ({
         windowDays: String(reviews.windowDays),
         revealTogether: reviews.revealTogether,
+        requireApproval: reviews.requireApproval,
         homepageThreshold: String(reviews.homepageThreshold),
         damageReportWindowHours: String(trips.damageReportWindowHours),
         lateReturnGraceMinutes: String(trips.lateReturnGraceMinutes),
@@ -146,6 +148,7 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
         reviews: {
           windowDays: Number(values.windowDays),
           revealTogether: values.revealTogether,
+          requireApproval: values.requireApproval,
           homepageThreshold: Number(values.homepageThreshold),
         },
         trips: {
@@ -200,6 +203,13 @@ export function ReviewsAndTripsSection({ settings }: { settings: PlatformSetting
               name="revealTogether"
               label="Show both reviews of a trip at the same time"
               description="Once both are in, or when the time to review runs out, so neither side can reply in kind."
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <SwitchField
+              name="requireApproval"
+              label="Approve every review before it’s published"
+              description="Reviews stay hidden from the website until our team approves them in Moderation. Off: only reviews with contact details, links or strong language are checked."
             />
           </div>
           <TextInputField
