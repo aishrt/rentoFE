@@ -17109,6 +17109,14 @@ export interface components {
                 bookingsPerDay: number;
                 reportsBeforeFlag: number;
                 hostCancellationsPer90Days: number;
+                /** @default true */
+                autoHoldEnabled: boolean;
+                /** @default 3 */
+                holdScore: number;
+                /** @default 24 */
+                newAccountHours: number;
+                /** @default 150000 */
+                newAccountHighValueCents: number;
             };
             sms: {
                 quietHoursStart: string;
@@ -17317,6 +17325,14 @@ export interface components {
                 bookingsPerDay: number;
                 reportsBeforeFlag: number;
                 hostCancellationsPer90Days: number;
+                /** @default true */
+                autoHoldEnabled: boolean;
+                /** @default 3 */
+                holdScore: number;
+                /** @default 24 */
+                newAccountHours: number;
+                /** @default 150000 */
+                newAccountHighValueCents: number;
             };
             sms?: {
                 quietHoursStart: string;

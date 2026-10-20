@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { PlatformSettings } from '@/api/types';
-import { RECORDED_ONLY, wholeField } from './field-rules';
-import { NumberField } from './fields';
+import { RECORDED_ONLY, fromCents, moneyField, toCents, wholeField } from './field-rules';
+import { NumberField, SwitchField } from './fields';
 import { SettingsForm } from './settings-form';
 
 /*
@@ -19,6 +19,10 @@ const retentionSchema = z.object({
   bookingsPerDay: wholeField(1, 100),
   reportsBeforeFlag: wholeField(1, 100),
   hostCancellationsPer90Days: wholeField(1, 100),
+  autoHoldEnabled: z.boolean(),
+  holdScore: wholeField(1, 20),
+  newAccountHours: wholeField(1, 720, ' hours'),
+  newAccountHighValue: moneyField(),
 });
 
 export function RetentionAndRiskSection({ settings }: { settings: PlatformSettings }) {
@@ -38,6 +42,10 @@ export function RetentionAndRiskSection({ settings }: { settings: PlatformSettin
         bookingsPerDay: String(risk.bookingsPerDay),
         reportsBeforeFlag: String(risk.reportsBeforeFlag),
         hostCancellationsPer90Days: String(risk.hostCancellationsPer90Days),
+        autoHoldEnabled: risk.autoHoldEnabled,
+        holdScore: String(risk.holdScore),
+        newAccountHours: String(risk.newAccountHours),
+        newAccountHighValue: fromCents(risk.newAccountHighValueCents),
       })}
       toUpdate={(values) => ({
         retention: {
@@ -51,6 +59,10 @@ export function RetentionAndRiskSection({ settings }: { settings: PlatformSettin
           bookingsPerDay: Number(values.bookingsPerDay),
           reportsBeforeFlag: Number(values.reportsBeforeFlag),
           hostCancellationsPer90Days: Number(values.hostCancellationsPer90Days),
+          autoHoldEnabled: values.autoHoldEnabled,
+          holdScore: Number(values.holdScore),
+          newAccountHours: Number(values.newAccountHours),
+          newAccountHighValueCents: toCents(values.newAccountHighValue),
         },
       })}
     >
@@ -102,6 +114,30 @@ export function RetentionAndRiskSection({ settings }: { settings: PlatformSettin
             name="hostCancellationsPer90Days"
             label="Host cancellations in 90 days"
             description="A Host is flagged once they cancel this many bookings, no-shows included."
+          />
+          <NumberField
+            name="newAccountHours"
+            label="A new account is one under"
+            unit="hours"
+            description="A booking this large from an account this new is flagged."
+          />
+          <NumberField
+            name="newAccountHighValue"
+            label="Large booking for a new account"
+            money
+            description="The booking total that counts as large."
+          />
+
+          <h3 className="mt-2 text-sm font-semibold text-ink sm:col-span-2">Holding risky accounts</h3>
+          <SwitchField
+            name="autoHoldEnabled"
+            label="Hold Guests with enough flags"
+            description="A Guest whose open flags add up to the score below can’t start a new checkout until staff clear a flag. Stripe Radar warnings and a shared card or licence weigh 2; other Guest flags weigh 1."
+          />
+          <NumberField
+            name="holdScore"
+            label="Score that puts a Guest on hold"
+            description="Two serious flags, or three smaller ones, reach the launch default of 3."
           />
         </>
       )}

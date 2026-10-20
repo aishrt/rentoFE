@@ -97,6 +97,8 @@ export const RISK_FLAG_LABELS: Record<string, string> = {
   CARD_COUNTRY: 'Card from another country',
   RADAR_WARNING: 'Stripe Radar warning',
   REPEATED_REPORTS: 'Reported by several members',
+  SHARED_CARD: 'Card shared with another account',
+  NEW_ACCOUNT_HIGH_VALUE: 'New account, large booking',
 };
 
 export const riskFlagLabel = (code: string) =>

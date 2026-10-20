@@ -116,7 +116,16 @@ export const settingsFixture: PlatformSettings = {
   },
   search: { maxTripDays: 90, radiusKm: { min: 5, default: 25, max: 300 } },
   retention: { financialRecordsYears: 7, idImagesDays: 90, tripRecordsYears: 2, auditLogYears: 7 },
-  risk: { failedPaymentsPerDay: 3, bookingsPerDay: 5, reportsBeforeFlag: 3, hostCancellationsPer90Days: 3 },
+  risk: {
+    failedPaymentsPerDay: 3,
+    bookingsPerDay: 5,
+    reportsBeforeFlag: 3,
+    hostCancellationsPer90Days: 3,
+    autoHoldEnabled: true,
+    holdScore: 3,
+    newAccountHours: 24,
+    newAccountHighValueCents: 150000,
+  },
   sms: { quietHoursStart: '21:00', quietHoursEnd: '07:00' },
   hostEstimator: {
     bookedDaysPerMonth: 10,
