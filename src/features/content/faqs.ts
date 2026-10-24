@@ -48,3 +48,18 @@ export function faqPageJsonLd(faqs: readonly Faq[]) {
     })),
   };
 }
+
+/** Questions whose text matches every word typed, ignoring case. Nothing typed keeps them all. */
+export function searchFaqs(faqs: readonly Faq[], query: string): Faq[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [...faqs];
+  return faqs.filter((faq) => {
+    const text = `${faq.question} ${faq.answer} ${faq.category}`.toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+}
+
+/** The categories of these questions, in the order they first appear. */
+export function faqCategories(faqs: readonly Faq[]): string[] {
+  return groupFaqs(faqs).map((group) => group.category);
+}

@@ -1,4 +1,4 @@
-import { ArrowRight, MessageCircleQuestion } from 'lucide-react';
+import { ArrowRight, MessageCircleQuestion, Search } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -12,13 +12,21 @@ import { swapUp } from '@/components/motion/presets';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconBadge } from '@/components/ui/icon-badge';
+import { Input } from '@/components/ui/input';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { tabId, tabPanelId } from '@/components/ui/tab-ids';
 import { Accordion, AccordionSkeleton } from '@/features/content/accordion';
 import { useFaqs } from '@/features/content/content-api';
 import { CtaBand } from '@/features/content/cta-band';
-import { filterFaqs, faqPageJsonLd, groupFaqs, type FaqFilter } from '@/features/content/faqs';
+import {
+  faqCategories,
+  faqPageJsonLd,
+  filterFaqs,
+  groupFaqs,
+  searchFaqs,
+  type FaqFilter,
+} from '@/features/content/faqs';
 import { JsonLd } from '@/features/content/json-ld';
 import { PageHero } from '@/features/content/page-hero';
 import { seoPage } from '@/seo/pages';
@@ -113,7 +121,20 @@ function FaqSkeleton() {
  */
 export function FaqPage() {
   const [audience, setAudience] = useState<FaqFilter>('ALL');
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<string | null>(null);
   const faqs = useFaqs();
+
+  const forAudience = faqs.data ? filterFaqs(faqs.data, audience) : [];
+  const categories = faqCategories(forAudience);
+  // A category that this audience has no questions in is dropped, so the page never shows nothing by accident.
+  const activeCategory = category !== null && categories.includes(category) ? category : null;
+  const shown = searchFaqs(
+    activeCategory === null
+      ? forAudience
+      : forAudience.filter((faq) => faq.category.trim() === activeCategory),
+    query,
+  );
 
   return (
     <>
@@ -146,6 +167,36 @@ export function FaqPage() {
             className="w-full max-w-md"
           />
 
+          <div role="search" className="mt-6 grid max-w-2xl gap-4">
+            <Input
+              type="search"
+              aria-label="Search the questions"
+              placeholder="Search the questions"
+              leadingIcon={<Search />}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {categories.length > 1 && (
+              <div role="group" aria-label="Filter by topic" className="flex flex-wrap gap-2">
+                {[null, ...categories].map((name) => (
+                  <Button
+                    key={name ?? 'all'}
+                    type="button"
+                    size="sm"
+                    variant={activeCategory === name ? 'primary' : 'secondary'}
+                    aria-pressed={activeCategory === name}
+                    onClick={() => setCategory(name)}
+                  >
+                    {name ?? 'All topics'}
+                  </Button>
+                ))}
+              </div>
+            )}
+            <p aria-live="polite" className="sr-only">
+              {faqs.data ? `${shown.length} ${shown.length === 1 ? 'question' : 'questions'} shown` : ''}
+            </p>
+          </div>
+
           <div
             role="tabpanel"
             id={tabPanelId(TAB_PREFIX, audience)}
@@ -164,7 +215,7 @@ export function FaqPage() {
             {faqs.data && (
               <AnimatePresence mode="wait" initial={false}>
                 <m.div key={audience} {...swapUp}>
-                  <FaqGroups faqs={filterFaqs(faqs.data, audience)} />
+                  <FaqGroups faqs={shown} />
                 </m.div>
               </AnimatePresence>
             )}

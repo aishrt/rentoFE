@@ -60,6 +60,10 @@ describe('SiteFooter', () => {
         .map((heading) => heading.textContent),
     ).toEqual(['Rent', 'Host', 'Support', 'Legal']);
     expect(footer().getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', '/privacy');
-    expect(screen.queryByRole('list', { name: 'Rento Vroom on social media' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Rento Vroom on social media' })).getByRole('link', {
+        name: 'Instagram',
+      }),
+    ).toHaveAttribute('href', 'https://www.instagram.com/rento_vroom');
   });
 });

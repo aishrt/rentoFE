@@ -6,6 +6,19 @@ import { backendTaggedPages, seoPages } from '@/seo/pages';
 import { page } from './lazy-page';
 
 const loadComingSoon = page(() => import('@/routes/public/coming-soon-page'), 'ComingSoonPage');
+/** The draft policy pages (routes/legal/policy-documents.ts); kept here so their text stays in the lazy chunk. */
+const POLICY_PATHS = [
+  'community-guidelines',
+  'refund-policy',
+  'vehicle-eligibility',
+  'driver-eligibility',
+  'payment-and-fees',
+  'damage-and-claims',
+  'security-deposit',
+  'prohibited-uses',
+  'late-returns-and-charges',
+];
+
 const loadNotFound = page(() => import('@/routes/errors/not-found-page'), 'NotFoundPage');
 
 export const routes: RouteObject[] = [
@@ -67,6 +80,11 @@ export const routes: RouteObject[] = [
                   lazy: page(() => import('@/routes/legal/legal-page'), 'LegalPage'),
                 }),
               ),
+              // The draft policies beyond the five legal documents; see routes/legal/policy-documents.ts.
+              ...POLICY_PATHS.map((path) => ({
+                path,
+                lazy: page(() => import('@/routes/legal/policy-page'), 'PolicyPage'),
+              })),
               {
                 path: 'help',
                 lazy: page(() => import('@/routes/help/help-page'), 'HelpPage'),

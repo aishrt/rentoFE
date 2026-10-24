@@ -57,6 +57,22 @@ describe('FaqPage', () => {
     expect(question('How is Rento Vroom different from a rental company?')).toBeInTheDocument();
   });
 
+  it('searches the questions and filters them by topic', async () => {
+    const user = userEvent.setup();
+    renderFaqs();
+    await screen.findByRole('button', { name: 'Who can rent a car?' });
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search the questions' }), 'cancel');
+    expect(await screen.findByRole('button', { name: 'Can I cancel a booking?' })).toBeInTheDocument();
+    expect(question('Who can rent a car?')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByRole('searchbox', { name: 'Search the questions' }));
+    await user.click(screen.getByRole('button', { name: 'Hosting' }));
+    expect(screen.getByRole('button', { name: 'Hosting' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('button', { name: 'How do I list my car?' })).toBeInTheDocument();
+    expect(question('Who can rent a car?')).not.toBeInTheDocument();
+  });
+
   it('opens and closes each answer', async () => {
     const user = userEvent.setup();
     renderFaqs();

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { RuledLines } from '@/components/brand/patterns/ruled-lines';
 import { SectionError } from '@/components/errors/section-error';
@@ -80,10 +80,44 @@ function DocumentSkeleton() {
   );
 }
 
-function LegalDocumentView({ document }: { document: LegalDocument }) {
-  const legal = useLegalDocument(document.key);
-  const seo = seoPage(document.path);
-  const page = legal.data;
+export interface DocumentPage {
+  title: string;
+  /** Shown as "Version …" unless `versionLabel` is given. */
+  version: string;
+  updatedAt: string;
+  markdown: string;
+}
+
+interface DocumentFrameProps {
+  path: string;
+  eyebrow: string;
+  page: DocumentPage | undefined;
+  pending?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
+  versionLabel?: string;
+  /** Shown between the page title and the document, e.g. live figures or a draft notice. */
+  above?: ReactNode;
+  /** Shown inside the document's card, before its text. */
+  notice?: ReactNode;
+  /** Policies listed beside the document, besides the five legal documents. */
+  relatedPolicies?: readonly { path: string; label: string }[];
+}
+
+/** One layout for every document page: title, text, "On this page" and links to the related documents. */
+export function DocumentFrame({
+  path,
+  eyebrow,
+  page,
+  pending = false,
+  failed = false,
+  onRetry,
+  versionLabel,
+  above,
+  notice,
+  relatedPolicies,
+}: DocumentFrameProps) {
+  const seo = seoPage(path);
   const blocks = useMemo(
     () => (page ? withoutTitleHeading(parseMarkdown(page.markdown), page.title) : []),
     [page],
@@ -92,7 +126,7 @@ function LegalDocumentView({ document }: { document: LegalDocument }) {
 
   const title =
     page?.title ??
-    (legal.isError ? (
+    (failed ? (
       seo.title
     ) : (
       <>
@@ -104,6 +138,29 @@ function LegalDocumentView({ document }: { document: LegalDocument }) {
       </>
     ));
 
+  const linkList = (links: readonly { path: string; label: string }[]) => (
+    <ul className="mt-3 grid border-l border-line">
+      {links.map((other) => {
+        const current = other.path === path;
+        return (
+          <li key={other.path}>
+            <Link
+              to={other.path}
+              viewTransition
+              aria-current={current ? 'page' : undefined}
+              className={cn(
+                asideLinkClasses,
+                current ? 'border-primary font-semibold text-ink' : 'text-muted',
+              )}
+            >
+              {other.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
     <>
       <PageMeta page={seo} />
@@ -111,35 +168,36 @@ function LegalDocumentView({ document }: { document: LegalDocument }) {
         tone="light"
         art={RuledLines}
         compact
-        eyebrow="Legal"
+        eyebrow={eyebrow}
         title={title}
         lead={
           page ? (
             <p className="text-base">
-              Version {page.version} · Last updated{' '}
+              {versionLabel ?? `Version ${page.version}`} · Last updated{' '}
               <time dateTime={page.updatedAt}>{formatUpdatedDate(page.updatedAt)}</time>
             </p>
-          ) : legal.isPending ? (
+          ) : pending ? (
             <Skeleton className="h-5 w-64" />
           ) : null
         }
       />
 
-      {document.key === 'legal.cancellation-policy' && <LiveTiers />}
+      {above}
 
       <section aria-label={seo.title} className="py-12 sm:py-16 lg:py-20">
         <Container className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_15rem] lg:gap-16">
           <Reveal>
             <Card asChild className="p-6 sm:p-10 lg:p-14">
               <article>
-                {legal.isPending && <DocumentSkeleton />}
-                {legal.isError && (
+                {pending && <DocumentSkeleton />}
+                {failed && (
                   <SectionError
                     title="We couldn’t load this document"
                     description="Check your connection, then try again."
-                    onRetry={() => legal.refetch()}
+                    onRetry={onRetry ?? (() => undefined)}
                   />
                 )}
+                {page && notice}
                 {page && (
                   <Markdown
                     source={blocks}
@@ -172,31 +230,35 @@ function LegalDocumentView({ document }: { document: LegalDocument }) {
               <h2 id="documents-heading" className={asideHeadingClasses}>
                 Legal documents
               </h2>
-              <ul className="mt-3 grid border-l border-line">
-                {legalDocuments.map((other) => {
-                  const current = other.path === document.path;
-                  return (
-                    <li key={other.path}>
-                      <Link
-                        to={other.path}
-                        viewTransition
-                        aria-current={current ? 'page' : undefined}
-                        className={cn(
-                          asideLinkClasses,
-                          current ? 'border-primary font-semibold text-ink' : 'text-muted',
-                        )}
-                      >
-                        {other.label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              {linkList(legalDocuments)}
             </nav>
+            {relatedPolicies && (
+              <nav aria-labelledby="policies-heading">
+                <h2 id="policies-heading" className={asideHeadingClasses}>
+                  Related policies
+                </h2>
+                {linkList(relatedPolicies)}
+              </nav>
+            )}
           </aside>
         </Container>
       </section>
     </>
+  );
+}
+
+function LegalDocumentView({ document }: { document: LegalDocument }) {
+  const legal = useLegalDocument(document.key);
+  return (
+    <DocumentFrame
+      path={document.path}
+      eyebrow="Legal"
+      page={legal.data}
+      pending={legal.isPending}
+      failed={legal.isError}
+      onRetry={() => legal.refetch()}
+      above={document.key === 'legal.cancellation-policy' ? <LiveTiers /> : undefined}
+    />
   );
 }
 

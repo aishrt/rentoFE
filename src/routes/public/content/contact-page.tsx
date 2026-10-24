@@ -1,7 +1,8 @@
-import { ArrowRight, TriangleAlert } from 'lucide-react';
+import { ArrowRight, AtSign, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { ConnectionArcs } from '@/components/brand/patterns/connection-arcs';
 import { Container } from '@/components/layout/container';
+import { socialLinks } from '@/components/layout/site-nav';
 import { PageMeta } from '@/components/layout/page-meta';
 import { Reveal } from '@/components/motion/reveal';
 import { Card } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { EmergencyCall } from '@/features/content/emergency-call';
 import { PageHero } from '@/features/content/page-hero';
 import { seoPage } from '@/seo/pages';
 import { motion } from '@/styles/tokens';
-import { hero, quickAnswers, tripProblem } from './contact-content';
+import { hero, quickAnswers, social, tripProblem } from './contact-content';
 
 /** Contact Us (plan §9, Days 12–14): the form creates a support ticket; urgent help is one tap away beside it. */
 export function ContactPage() {
@@ -52,6 +53,32 @@ export function ContactPage() {
                   <div>
                     <h2 className="text-lg font-semibold">{tripProblem.title}</h2>
                     <p className="mt-1.5 leading-relaxed text-muted">{tripProblem.text}</p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-start gap-4">
+                  <IconBadge>
+                    <AtSign />
+                  </IconBadge>
+                  <div>
+                    <h2 className="text-lg font-semibold">{social.title}</h2>
+                    <p className="mt-1.5 leading-relaxed text-muted">{social.text}</p>
+                    <ul className="mt-3 grid">
+                      {socialLinks.map((link) => (
+                        <li key={link.href}>
+                          <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex min-h-11 items-center font-medium text-primary transition-colors duration-120 hover:text-primary-hover"
+                          >
+                            {link.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </Card>

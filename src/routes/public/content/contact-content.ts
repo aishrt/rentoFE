@@ -14,6 +14,11 @@ export const tripProblem = {
   text: 'Open your trip and choose Report an incident. It reaches our team with your booking attached, and you’ll get a case number to follow.',
 };
 
+export const social = {
+  title: 'Follow us',
+  text: 'See new cars and news from Rento Vroom on Instagram.',
+};
+
 export const quickAnswers = {
   title: 'Looking for a quick answer?',
   links: [

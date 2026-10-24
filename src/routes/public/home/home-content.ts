@@ -30,7 +30,7 @@ export const trustPoints: Feature[] = [
   { icon: BadgeCheck, title: 'Verified members', text: 'Identity and licence checks for guests and hosts' },
   { icon: Receipt, title: 'All-in NZD pricing', text: 'Mandatory fees included in every price' },
   { icon: Camera, title: 'Photo check-in', text: 'A timestamped condition record for every trip' },
-  { icon: LifeBuoy, title: 'Help on the road', text: 'Report an issue straight from your trip' },
+  { icon: LifeBuoy, title: 'Help on the road', text: 'Report an incident straight from your trip' },
 ];
 
 export interface Destination {

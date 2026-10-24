@@ -55,7 +55,9 @@ export const footerNav: { title: string; links: NavLinkItem[] }[] = [
 ];
 
 /**
- * Social accounts for the footer (spec §4), at launch. Empty until the client supplies them (admins add them
- * on the Content page); the footer hides the row.
+ * Social accounts for the footer and Contact Us (spec §4), at launch. Admins can change them on the Content
+ * page; the footer hides the row when there are none.
  */
-export const socialLinks: { label: string; href: string }[] = [];
+export const socialLinks: { label: string; href: string }[] = [
+  { label: 'Instagram', href: 'https://www.instagram.com/rento_vroom' },
+];
