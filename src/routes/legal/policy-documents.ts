@@ -321,6 +321,7 @@ Ask your Host to agree to a longer trip before the end time, so the price and av
 - **Extra distance.** If the listing has a distance limit, kilometres above it can be charged at the rate on the listing. Large amounts are checked by our staff before being charged.
 - **Fuel.** If the car comes back with less fuel than the listing requires.
 - **Cleaning.** If the car needs more than a normal clean.
+- **Tolls, fines and tickets.** You pay every toll, traffic fine, parking ticket and infringement notice (challan) from your trip, from pickup to check-out. If a notice reaches the Host, they report it with the notice attached. We may pass your driver details to the issuing authority so the notice is redirected to you, or charge the amount of the notice to your card on file.
 
 Each charge is shown to the Guest with the reason and the evidence, such as odometer readings and photos. You can dispute a charge by [contacting us](/contact).
 

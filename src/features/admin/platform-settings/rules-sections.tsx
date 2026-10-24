@@ -344,8 +344,8 @@ export function BookingRulesSection({ settings }: { settings: PlatformSettings }
           <div className="grid gap-1">
             <SwitchField
               name="vinOrChassisRequired"
-              label="Every listing needs a VIN or chassis number"
-              description="Checked before a listing can be sent for review."
+              label="Listings without a number plate need a VIN or chassis number"
+              description="Checked before a listing can be sent for review. Not needed once a number plate is entered."
             />
             <SwitchField
               name="enquiriesBeforeBooking"

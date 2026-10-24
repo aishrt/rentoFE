@@ -59,7 +59,7 @@ function LiveFigures({ live, policies }: { live: PolicyLive; policies: PublicPol
               className="mt-3"
               items={[
                 ...policies.vehicles.requiredDocuments.map((document) => documentLabels[document]),
-                ...(policies.vehicles.vinOrChassisRequired ? ['VIN or chassis number'] : []),
+                ...(policies.vehicles.vinOrChassisRequired ? ['VIN or chassis number (only without a number plate)'] : []),
               ]}
             />
           </div>

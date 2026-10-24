@@ -20,6 +20,8 @@ import {
 /** 17 letters and numbers, without I, O or Q. */
 export const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
 const NEXT_YEAR = new Date().getFullYear() + 1;
+/** Cars can be up to 15 years old; the API enforces the same limit. */
+const OLDEST_YEAR = new Date().getFullYear() - 15;
 
 const wholeNumber = (min: number, max: number, message: string) =>
   z
@@ -43,7 +45,11 @@ export const detailsSchema = z
     chassisNo: z.string().trim(),
     make: z.string().trim().max(40, 'Keep the make under 40 characters'),
     model: z.string().trim().max(40, 'Keep the model under 40 characters'),
-    year: wholeNumber(1950, NEXT_YEAR, `Enter a year from 1950 to ${NEXT_YEAR}`),
+    year: wholeNumber(
+      OLDEST_YEAR,
+      NEXT_YEAR,
+      `Cars must be 15 years old or newer: enter ${OLDEST_YEAR}–${NEXT_YEAR}`,
+    ),
     variant: z.string().trim().max(60, 'Keep the variant under 60 characters'),
     bodyType: z.string(),
     fuelType: z.string(),

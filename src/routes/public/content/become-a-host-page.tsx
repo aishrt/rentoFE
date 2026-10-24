@@ -155,7 +155,7 @@ function Requirements({ vehicles }: { vehicles: PublicPolicies['vehicles'] }) {
         <h3 className="text-lg font-semibold">Documents</h3>
         <CheckList items={vehicles.requiredDocuments.map((type) => documentLabels[type])} className="mt-4" />
         {vehicles.vinOrChassisRequired && (
-          <p className="mt-4 text-sm text-muted">You’ll also need the car’s VIN or chassis number.</p>
+          <p className="mt-4 text-sm text-muted">You’ll also need the car’s VIN or chassis number if it has no number plate.</p>
         )}
       </div>
 

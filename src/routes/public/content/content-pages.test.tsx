@@ -66,7 +66,7 @@ describe('BecomeAHostPage', () => {
 
     expect(await screen.findByText('You’d earn about')).toBeInTheDocument();
     expect(screen.getByText('Warrant of Fitness (WOF)')).toBeInTheDocument();
-    expect(screen.getByText('You’ll also need the car’s VIN or chassis number.')).toBeInTheDocument();
+    expect(screen.getByText('You’ll also need the car’s VIN or chassis number if it has no number plate.')).toBeInTheDocument();
     expect(screen.getByText('Driver’s side')).toBeInTheDocument();
     expect(screen.getByText('From $20 to $2,000 a day, set by you')).toBeInTheDocument();
 
