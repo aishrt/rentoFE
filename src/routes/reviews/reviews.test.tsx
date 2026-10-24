@@ -213,8 +213,9 @@ describe('WriteReviewPage', () => {
     renderWrite();
 
     expect(
+      // The sentence can follow "Our team approves every review…" in the same paragraph.
       await screen.findByText(
-        'Your review is published as soon as you send it, unless our team needs to check it first.',
+        /Your review is published as soon as you send it, unless our team needs to check it first\./,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/can’t see your review until/)).not.toBeInTheDocument();
