@@ -4,7 +4,6 @@ import { SectionError } from '@/components/errors/section-error';
 import { Container } from '@/components/layout/container';
 import { SectionHeading } from '@/components/layout/section-heading';
 import { Reveal } from '@/components/motion/reveal';
-import { Card } from '@/components/ui/card';
 import { CheckList } from '@/components/ui/check-list';
 import { CancellationTiers, CancellationTiersSkeleton } from '@/features/content/cancellation-tiers';
 import { usePolicies } from '@/features/content/content-api';
@@ -13,12 +12,7 @@ import { documentLabels, photoAngleLabels } from '@/features/content/policies';
 import { ExcessComparison } from '@/features/content/protection-plans';
 import { NotFoundPage } from '@/routes/errors/not-found-page';
 import { DocumentFrame } from './legal-page';
-import {
-  policyDocumentFor,
-  policyDocuments,
-  POLICY_DRAFT_UPDATED_AT,
-  type PolicyLive,
-} from './policy-documents';
+import { policyDocumentFor, policyDocuments, POLICY_UPDATED_AT, type PolicyLive } from './policy-documents';
 
 const LIVE_COPY: Record<PolicyLive, { title: string; description: string }> = {
   refunds: {
@@ -59,7 +53,9 @@ function LiveFigures({ live, policies }: { live: PolicyLive; policies: PublicPol
               className="mt-3"
               items={[
                 ...policies.vehicles.requiredDocuments.map((document) => documentLabels[document]),
-                ...(policies.vehicles.vinOrChassisRequired ? ['VIN or chassis number (only without a number plate)'] : []),
+                ...(policies.vehicles.vinOrChassisRequired
+                  ? ['VIN or chassis number (only without a number plate)']
+                  : []),
               ]}
             />
           </div>
@@ -120,17 +116,10 @@ function LiveSection({ live }: { live: PolicyLive }) {
   );
 }
 
-const DRAFT_NOTICE = (
-  <Card className="mb-8 border-line bg-surface-muted p-4 text-sm leading-relaxed">
-    <strong>Draft.</strong> This page describes how Rento Vroom works today. It hasn’t yet been reviewed by a
-    New Zealand lawyer, and items marked REQUIRES_BUSINESS_APPROVAL are decisions we haven’t made yet.
-  </Card>
-);
-
 /**
  * The policies beyond the five legal documents (spec §3): Community guidelines, Refund policy, Vehicle and
  * Driver eligibility, Payment and fees, Damage and claims, Security deposit, Prohibited uses, and Late
- * returns and charges. Drafts: `noindex`, and not linked from the footer until the owner signs them off.
+ * returns and charges.
  */
 export function PolicyPage() {
   const { pathname } = useLocation();
@@ -142,15 +131,13 @@ export function PolicyPage() {
       key={document.path}
       path={document.path}
       eyebrow="Policy"
-      versionLabel="Draft"
       page={{
         title: document.label,
-        version: 'Draft',
-        updatedAt: POLICY_DRAFT_UPDATED_AT,
+        version: '1.0',
+        updatedAt: POLICY_UPDATED_AT,
         markdown: document.markdown,
       }}
       above={document.live ? <LiveSection live={document.live} /> : undefined}
-      notice={DRAFT_NOTICE}
       relatedPolicies={policyDocuments}
     />
   );

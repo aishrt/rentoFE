@@ -58,7 +58,7 @@ describe('SiteFooter', () => {
       footer()
         .getAllByRole('heading')
         .map((heading) => heading.textContent),
-    ).toEqual(['Rent', 'Host', 'Support', 'Legal']);
+    ).toEqual(['Rent', 'Host', 'Support', 'Legal', 'Policies']);
     expect(footer().getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', '/privacy');
     expect(
       within(screen.getByRole('list', { name: 'Rento Vroom on social media' })).getByRole('link', {

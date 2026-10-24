@@ -52,6 +52,20 @@ export const footerNav: { title: string; links: NavLinkItem[] }[] = [
       { label: 'Guest agreement', to: '/guest-agreement' },
     ],
   },
+  {
+    title: 'Policies',
+    links: [
+      { label: 'Community guidelines', to: '/community-guidelines' },
+      { label: 'Refund policy', to: '/refund-policy' },
+      { label: 'Vehicle eligibility', to: '/vehicle-eligibility' },
+      { label: 'Driver eligibility', to: '/driver-eligibility' },
+      { label: 'Payment & fees', to: '/payment-and-fees' },
+      { label: 'Damage & claims', to: '/damage-and-claims' },
+      { label: 'Security deposit', to: '/security-deposit' },
+      { label: 'Prohibited uses', to: '/prohibited-uses' },
+      { label: 'Late returns & charges', to: '/late-returns-and-charges' },
+    ],
+  },
 ];
 
 /**

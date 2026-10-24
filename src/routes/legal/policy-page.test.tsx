@@ -11,15 +11,15 @@ afterEach(() => {
 });
 
 describe('PolicyPage', () => {
-  it('shows a draft policy with its notice, contents and related policies', async () => {
+  it('shows a policy with its contents and related policies', async () => {
     mockApi({ 'GET /policies': { status: 200, body: policiesFixture } });
     renderWithProviders(<PolicyPage />, '/late-returns-and-charges');
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Late returns and charges' }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Draft/, { selector: 'strong' })).toBeInTheDocument();
-    expect(screen.getAllByText(/REQUIRES_BUSINESS_APPROVAL/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/REQUIRES_BUSINESS_APPROVAL/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Draft/)).not.toBeInTheDocument();
     const related = screen.getByRole('navigation', { name: 'Related policies' });
     expect(within(related).getByRole('link', { name: 'Late returns and charges' })).toHaveAttribute(
       'aria-current',
@@ -38,11 +38,11 @@ describe('PolicyPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps every draft out of search results until it is signed off', () => {
+  it('lets search engines index every policy page', () => {
     for (const policy of policyDocuments) {
       const page = seoPages.find((entry) => entry.path === policy.path);
       expect(page, policy.path).toBeDefined();
-      expect(isIndexable(page!)).toBe(false);
+      expect(isIndexable(page!)).toBe(true);
     }
   });
 });

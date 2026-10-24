@@ -112,64 +112,46 @@ export const seoPages: SeoPage[] = [
     path: '/community-guidelines',
     title: 'Community guidelines',
     description: 'What we expect from guests and hosts on Rento Vroom.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/refund-policy',
     title: 'Refund policy',
     description: 'When money comes back to you after a cancellation or a problem with a trip.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/vehicle-eligibility',
     title: 'Vehicle eligibility',
     description: 'The documents, photos and condition a car needs to be listed.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/driver-eligibility',
     title: 'Driver eligibility',
     description: 'Who can rent a car: age, licence and identity checks.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/payment-and-fees',
     title: 'Payment and fees',
     description: 'How payments, fees, GST and payouts work on Rento Vroom.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/damage-and-claims',
     title: 'Damage and claims',
     description: 'What to do after an accident or damage, and how claims are handled.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/security-deposit',
     title: 'Security deposit',
     description: 'Whether a deposit is taken and what to expect on your card.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/prohibited-uses',
     title: 'Prohibited vehicle uses',
     description: 'How a rental car must not be used.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/late-returns-and-charges',
     title: 'Late returns and charges',
     description: 'What happens if a car comes back late, and the extra charges that can follow.',
-    // A draft until the owner signs it off: kept out of search results, the sitemap and the footer.
-    robots: 'noindex, follow',
   },
   {
     path: '/login',
